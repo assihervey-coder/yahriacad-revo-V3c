@@ -1,0 +1,64 @@
+# =============================================================================
+# Alertmanager — routing des alertes Prometheus
+# Slack (#pcb3-alerts) + webhook générique (placeholder à compléter).
+# =============================================================================
+global:
+  resolve_timeout: 5m
+  slack_api_url: "https://hooks.slack.com/services/XXXX/YYYY/ZZZZ"  # placeholder
+
+route:
+  receiver: default-webhook
+  group_by: ["alertname", "service", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Alertes critiques → Slack immédiatement + webhook on-call
+    - matchers:
+        - severity = "critical"
+      receiver: slack-critical
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: true
+
+    - matchers:
+        - severity = "critical"
+      receiver: default-webhook
+
+    # Alertes warning → Slack avec agrégation standard
+    - matchers:
+        - severity = "warning"
+      receiver: slack-warnings
+
+receivers:
+  - name: default-webhook
+    webhook_configs:
+      - url: "http://oncall-webhook:5001/alerts"      # placeholder
+        send_resolved: true
+
+  - name: slack-critical
+    slack_configs:
+      - channel: "#pcb3-alerts"
+        send_resolved: true
+        title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}'
+        text: >-
+          {{ range .Alerts }}*{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          {{ end }}
+
+  - name: slack-warnings
+    slack_configs:
+      - channel: "#pcb3-warnings"
+        send_resolved: true
+        title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+        text: >-
+          {{ range .Alerts }}{{ .Annotations.summary }}
+          {{ end }}
+
+inhibit_rules:
+  # Si l'API est down, inutile d'alerter aussi sur sa latence
+  - source_matchers:
+      - alertname = ApiHighLatency
+    target_matchers:
+      - severity = "warning"
+    equal: ["service"]

@@ -1,0 +1,126 @@
+version: "3.9"
+
+# PCB_AI_DESIGNER_V3 — orchestration locale complète
+# Backend API · AI Engine · Simulator · Router · Frontend · Workers
+# Infra : Postgres, Redis, MinIO, Prometheus, Grafana, Loki
+
+x-python-common: &python-common
+  build:
+    context: .
+    dockerfile: .infra/docker/backend/Dockerfile
+  env_file: [.env]
+  environment: &python-env
+    PYTHONPATH: /app:/app/backend
+    DATABASE_URL: postgresql+asyncpg://pcb:pcb@postgres:5432/pcb_ai_v3
+    REDIS_URL: redis://redis:6379/0
+    S3_ENDPOINT: http://minio:9000
+    EVENT_BUS_BACKEND: redis
+  volumes:
+    - ./data:/app/data
+  depends_on: [postgres, redis, minio]
+  restart: unless-stopped
+
+services:
+  api-gateway:
+    <<: *python-common
+    container_name: pcb3-api-gateway
+    command: uvicorn api_gateway.main:app --host 0.0.0.0 --port 8000
+    ports: ["8000:8000"]
+
+  orchestrator:
+    <<: *python-common
+    container_name: pcb3-orchestrator
+    command: python -m orchestrator.workflow_engine.runner
+
+  ai-engine:
+    <<: *python-common
+    container_name: pcb3-ai-engine
+    build:
+      context: .
+      dockerfile: .infra/docker/ai/Dockerfile
+    command: python -m services.ai_engine.worker
+    deploy:
+      resources:
+        reservations:
+          devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+
+  simulator:
+    <<: *python-common
+    container_name: pcb3-simulator
+    build:
+      context: .
+      dockerfile: .infra/docker/simulator/Dockerfile
+    command: python -m services.simulator.worker
+
+  router:
+    <<: *python-common
+    container_name: pcb3-router
+    build:
+      context: .
+      dockerfile: .infra/docker/router/Dockerfile
+    command: python -m services.router.worker
+
+  frontend:
+    container_name: pcb3-frontend
+    build:
+      context: ./frontend
+      dockerfile: ../.infra/docker/frontend/Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws
+    ports: ["3000:3000"]
+    depends_on: [api-gateway]
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: pcb3-postgres
+    environment:
+      POSTGRES_USER: pcb
+      POSTGRES_PASSWORD: pcb
+      POSTGRES_DB: pcb_ai_v3
+    volumes: [pgdata:/var/lib/postgresql/data]
+    ports: ["5432:5432"]
+
+  redis:
+    image: redis:7-alpine
+    container_name: pcb3-redis
+    command: redis-server --appendonly yes
+    volumes: [redisdata:/data]
+    ports: ["6379:6379"]
+
+  minio:
+    image: minio/minio:latest
+    container_name: pcb3-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: pcb
+      MINIO_ROOT_PASSWORD: pcb-secret
+    volumes: [miniodata:/data]
+    ports: ["9000:9000", "9001:9001"]
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: pcb3-prometheus
+    volumes:
+      - ./.infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pcb3-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: pcb
+    volumes:
+      - ./.infra/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports: ["3001:3000"]
+
+  loki:
+    image: grafana/loki:latest
+    container_name: pcb3-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports: ["3100:3100"]
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

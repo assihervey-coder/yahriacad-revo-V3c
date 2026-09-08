@@ -1,0 +1,38 @@
+[
+  {
+    "Ref": "C1",
+    "Qty": 1,
+    "Value": "100n",
+    "Footprint": "C_0402",
+    "MPN": "CL05B104KO5NNNC",
+    "Description": "100n C_0402",
+    "Price": 0.01
+  },
+  {
+    "Ref": "J1",
+    "Qty": 1,
+    "Value": "BarrelJack",
+    "Footprint": "DIP-2",
+    "MPN": "PJ-002A",
+    "Description": "BarrelJack DIP-2",
+    "Price": 0.42
+  },
+  {
+    "Ref": "R1",
+    "Qty": 1,
+    "Value": "10k",
+    "Footprint": "R_0402",
+    "MPN": "RC0402FR-0710KL",
+    "Description": "10k R_0402",
+    "Price": 0.0
+  },
+  {
+    "Ref": "U1",
+    "Qty": 1,
+    "Value": "ESP32-WROOM-32E",
+    "Footprint": "ESP32-WROOM",
+    "MPN": "ESP32-WROOM-32E-N4",
+    "Description": "ESP32-WROOM-32E ESP32-WROOM",
+    "Price": 0.0
+  }
+]

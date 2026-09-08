@@ -1,0 +1,40 @@
+# Grafana — datasources provisionnées au démarrage (prometheus + loki)
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prom-pcb3
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: 15s
+      httpMethod: POST
+
+  - name: Loki
+    uid: loki-pcb3
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        # Les logs structurés contiennent trace_id → lien vers Tempo
+        - name: TraceID
+          matcherRegex: "trace_id=(\\w+)"
+          datasourceUid: tempo-pcb3
+          url: "$${__value.raw}"
+
+  - name: Tempo
+    uid: tempo-pcb3
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: true
+    jsonData:
+      tracesToLogs:
+        datasourceUid: loki-pcb3
+        filterByTraceID: true

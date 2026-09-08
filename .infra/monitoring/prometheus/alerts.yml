@@ -1,0 +1,85 @@
+# =============================================================================
+# Alertes PCB_AI_DESIGNER_V3 — règles métier réelles
+# 5 alertes : latence p95, taux d'échec jobs, backlog simulateur,
+# politique RL périmée, score qualité bas.
+# =============================================================================
+groups:
+  - name: pcb3-api
+    interval: 30s
+    rules:
+      - alert: ApiHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="api-gateway"}[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Latence API p95 > 2s"
+          description: >-
+            Le p95 de latence de l'API Gateway dépasse 2 secondes depuis 5 minutes
+            (valeur actuelle : {{ $value | humanizeDuration }}). Vérifier la charge
+            des workers et l'HPA.
+
+  - name: pcb3-pipeline
+    interval: 30s
+    rules:
+      - alert: JobFailureRate
+        expr: |
+          sum(rate(pcb3_jobs_failed_total[10m]))
+            /
+          clamp_min(sum(rate(pcb3_jobs_total[10m])), 0.001) > 0.15
+        for: 10m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Taux d'échec des jobs > 15%"
+          description: >-
+            Plus de 15% des jobs de pipeline échouent depuis 10 minutes
+            ({{ $value | humanizePercentage }}). Inspecter les escalations
+            (ESCALATION_REQUESTED) et les étapes défaillantes.
+
+      - alert: SimulatorQueueBacklog
+        expr: pcb3_simulator_queue_depth > 50
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Backlog simulateur > 50 tâches"
+          description: >-
+            La file du worker simulator contient {{ $value }} tâches en attente.
+            Scaler le deployment pcb3-simulator ou augmenter SIM_MAX_WORKERS.
+
+  - name: pcb3-ai
+    interval: 5m
+    rules:
+      - alert: RLPolicyStale
+        # Timestamp du dernier checkpoint policy : > 24h = politique périmée
+        expr: time() - pcb3_rl_last_checkpoint_timestamp_seconds > 86400
+        for: 0m
+        labels:
+          severity: info
+          team: ai
+        annotations:
+          summary: "Aucun checkpoint RL depuis 24h"
+          description: >-
+            La politique de placement n'a pas été réentraînée depuis plus de 24h
+            (dernier checkpoint : {{ $value | humanizeDuration }}). Lancer
+            scripts/training/train_placement_policy.py.
+
+      - alert: LowQualityScore
+        expr: avg(pcb3_design_quality_score) < 60
+        for: 15m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "Score qualité moyen des designs < 60"
+          description: >-
+            Le score qualité moyen (ERC/DRC/DFM/routage) des designs récents est
+            de {{ $value | printf "%.0f" }}/100. Vérifier les violations récurrentes
+            et les contraintes du constraint_engine.

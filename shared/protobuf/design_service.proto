@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package pcb3.design.v1;
+
+// Service gRPC principal — consommé via gRPC-Web par le frontend.
+service DesignService {
+  rpc GetDesign(GetDesignRequest) returns (DesignSnapshot);
+  rpc StreamAgentEvents(EventStreamRequest) returns (stream AgentEvent);
+  rpc CommitHumanEdit(HumanEditRequest) returns (CommitReply);
+}
+
+message GetDesignRequest {
+  string tenant_id = 1;
+  string project_id = 2;
+  int32 revision = 0; // 0 = dernière
+}
+
+message DesignSnapshot {
+  string project_id = 1;
+  int32 revision = 2;
+  string json_payload = 3; // DesignSchema sérialisé
+}
+
+message EventStreamRequest {
+  string project_id = 1;
+  repeated string event_types = 2;
+}
+
+message AgentEvent {
+  string type = 1;
+  string agent_role = 2;
+  string payload_json = 3;
+  double timestamp = 4;
+}
+
+message HumanEditRequest {
+  string tenant_id = 1;
+  string project_id = 2;
+  string edit_kind = 3;          // component_move | route_edit | constraint_edit
+  string payload_json = 4;
+  string editor_user = 5;
+}
+
+message CommitReply {
+  int32 revision = 1;
+  bool accepted = 2;
+  string message = 3;
+}

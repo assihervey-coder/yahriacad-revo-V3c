@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1.6
+# =============================================================================
+# PCB_AI_DESIGNER_V3 — Toolchain EDA : KiCAD CLI + Python
+# Utilisé en CI pour les exports/règles EDA : kicad-cli (netlist, pcb, gerber).
+# Build : docker build -f .infra/docker_toolchain/toolchains/eda/Dockerfile.kicad -t pcb3/toolchain-kicad:v3.0.0 .
+# =============================================================================
+FROM ubuntu:24.04
+
+LABEL org.opencontainers.image.title="pcb3-toolchain-kicad" \
+      org.opencontainers.image.description="kicad-cli + python pour les exports EDA CI de PCB_AI_DESIGNER_V3"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1
+
+# kicad (paquet officiel Ubuntu 24.04 ≥ 8.0) + cli + python3
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        kicad kicad-cli \
+        python3 python3-pip python3-venv \
+        git curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Dépendances plateforme (design_core côté hôte, monté en volume en CI)
+RUN python3 -m pip install --no-cache-dir --break-system-packages \
+        pydantic pyyaml numpy
+
+# Utilisateur non-root (kicad-cli refuse de tourner en root sur certains plugins)
+RUN useradd -m -u 10001 eda
+USER 10001:10001
+WORKDIR /workspace
+
+# kicad-cli export gerber : kicad-cli pcb export gerbers <fichier.kicad_pcb> -o out/
+# Documentation d'usage intégrée à l'image :
+CMD ["kicad-cli", "--help"]

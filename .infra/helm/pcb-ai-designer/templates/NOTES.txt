@@ -1,0 +1,38 @@
+=====================================================================
+  PCB_AI_DESIGNER_V3 — {{ .Release.Name }} installé dans '{{ .Release.Namespace }}'
+=====================================================================
+
+1. Vérifier l'état des déploiements :
+
+   kubectl --namespace {{ .Release.Namespace }} get deployments,pods,svc,ingress
+
+2. Points d'entrée :
+
+   - Frontend  : http://{{ .Values.ingress.host }}/
+   - API REST  : http://{{ .Values.ingress.host }}/api/v1/...
+   - GraphQL   : http://{{ .Values.ingress.host }}/graphql
+   - WebSocket : ws://{{ .Values.ingress.host }}/ws/{project_id}
+   - MCP       : http://{{ .Values.ingress.host }}/mcp
+   - Health    : http://{{ .Values.ingress.host }}/health
+
+3. Test rapide de l'API (depuis le cluster) :
+
+   kubectl --namespace {{ .Release.Namespace }} run curl-test --rm -it --image=curlimages/curl -- \
+     curl -s http://{{ include "pcb-ai.fullname" . }}-api-gateway-svc:8000/health
+
+4. Suivre les logs des agents :
+
+   kubectl --namespace {{ .Release.Namespace }} logs -l app.kubernetes.io/component=orchestrator -f --tail=100
+
+{{- if not .Values.secrets.create }}
+
+ATTENTION : secrets.create=false — provisionnez le secret manuellement
+(`kubectl create secret generic {{ include "pcb-ai.secretName" . }} ...`).
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+
+Pour accéder via {{ .Values.ingress.host }} : ajoutez une entrée /etc/hosts
+pointant vers l'IP externe de l'ingress nginx :
+   kubectl -n ingress-nginx get svc ingress-nginx-controller
+{{- end }}

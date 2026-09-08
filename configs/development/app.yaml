@@ -1,0 +1,46 @@
+# =============================================================================
+# PCB_AI_DESIGNER_V3 — configuration DEVELOPMENT
+# Tout en local, LLM mock, bus d'événements in-process, RL sur CPU.
+# =============================================================================
+app_env: development
+log_level: DEBUG
+
+# --- Cerveau symbolique : mock déterministe (aucune clé API requise) ---------
+llm_provider: mock
+llm_model: gpt-4o
+llm_temperature: 0.2
+llm_max_tokens: 8192
+
+# --- Bus d'événements : in-process (asyncio) — un seul processus -------------
+event_bus: inprocess
+redis_url: redis://localhost:6379/0
+
+# --- Base de données ----------------------------------------------------------
+database_url: "postgresql+asyncpg://pcb:pcb@localhost:5432/pcb_ai_v3"
+# repli dev sans postgres : sqlite+aiosqlite:///./data/pcb_ai_v3.db
+
+# --- Cerveau décisionnel : RL sur CPU (torch optionnel) ----------------------
+rl_device: cpu
+rl_checkpoint_dir: data/trained_models/policies
+world_model_dir: data/trained_models/world_models
+
+# --- Cerveau physique ---------------------------------------------------------
+sim_max_workers: 2
+surrogate_models_dir: data/trained_models/surrogate_models
+
+# --- Services -----------------------------------------------------------------
+api_port: 8000
+frontend_port: 3000
+
+# --- Qualité / déploiement ----------------------------------------------------
+replicas: 1
+monitoring:
+  prometheus_enabled: false
+  grafana_enabled: false
+  tracing_enabled: false
+
+# --- Manufacturing (profils chargés de configs/factories) --------------------
+default_factory: jlcpcb
+
+# --- Crédits -------------------------------------------------------------------
+credits_free_tier: 100

@@ -1,0 +1,19 @@
+apiVersion: v2
+name: pcb-ai-designer
+description: >-
+  PCB_AI_DESIGNER_V3 — plateforme EDA AI-native : API Gateway FastAPI,
+  4 workers (orchestrator, ai-engine, simulator, router) et frontend Next.js.
+type: application
+version: 3.0.0          # version du chart
+appVersion: "3.0.0"     # version de l'application
+kubeVersion: ">=1.26.0-0"
+keywords:
+  - eda
+  - pcb
+  - ai
+  - llm
+  - reinforcement-learning
+home: https://github.com/pcb-ai/pcb-ai-designer-v3
+maintainers:
+  - name: PCB_AI_DESIGNER_V3 Contributors
+    email: infra@pcb-ai.designer

@@ -1,0 +1,1360 @@
+{
+  "task_effbcf3bccde42a2a5e4688fea36da56": {
+    "validator": {
+      "role": "validator",
+      "status": "succeeded",
+      "confidence": 0.84,
+      "ts": 1788905770.3451498,
+      "output": {
+        "verification": {
+          "self": {
+            "passed": true,
+            "issues": [
+              "1 nets non rout\u00e9s"
+            ],
+            "confidence": 0.92
+          },
+          "physical": {
+            "passed": true,
+            "issues": [],
+            "report": {
+              "drc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 3,
+                "violations": []
+              },
+              "erc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 4,
+                "violations": []
+              },
+              "dfm": {
+                "factory": "jlcpcb",
+                "passed": true,
+                "score": 1.0,
+                "checked": 5,
+                "violations": []
+              },
+              "passed": true
+            }
+          },
+          "local": {
+            "engine": "local_checks",
+            "passed": false,
+            "issues": [
+              "unrouted: net N1 non rout\u00e9",
+              "power: net d'alimentation GND absent",
+              "power: net d'alimentation VCC absent"
+            ],
+            "quality": 84.0,
+            "stats": {
+              "overlaps": 0,
+              "unrouted": 1,
+              "components": 2,
+              "nets": 1
+            }
+          },
+          "passed": true,
+          "suggestions": [
+            "1 nets non rout\u00e9s",
+            "unrouted: net N1 non rout\u00e9",
+            "power: net d'alimentation GND absent",
+            "power: net d'alimentation VCC absent"
+          ]
+        },
+        "passed": true,
+        "suggestions": [
+          "1 nets non rout\u00e9s",
+          "unrouted: net N1 non rout\u00e9",
+          "power: net d'alimentation GND absent",
+          "power: net d'alimentation VCC absent"
+        ]
+      }
+    },
+    "manufacturing": {
+      "role": "manufacturing",
+      "status": "succeeded",
+      "confidence": 0.8,
+      "ts": 1788905770.382873,
+      "output": {
+        "analysis": {
+          "factory": "jlcpcb",
+          "profile": {
+            "name": "jlcpcb",
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20,
+            "min_trace_oz": 1.0,
+            "lead_time_days": 4,
+            "unit_price_factor": 1.0,
+            "assembly": true
+          },
+          "cost": {
+            "board_usd": 10.8,
+            "assembly_usd": 26.0,
+            "components_usd": 0.0,
+            "total_usd": 36.8,
+            "details": {
+              "area_mm2": 1200.0,
+              "layers": 4,
+              "components": 2,
+              "smd_components": 2,
+              "factory": "jlcpcb",
+              "quantity": 1
+            }
+          },
+          "quote": {
+            "base_usd": 11.88,
+            "shipping_usd": 15.0,
+            "total_usd": 26.88,
+            "lead_time_days": 4,
+            "source": "estimate"
+          },
+          "yield": {
+            "expected_yield": 0.99,
+            "risk_factors": [
+              "aucun risque DFM majeur d\u00e9tect\u00e9"
+            ],
+            "model": "heuristic"
+          },
+          "cost_suggestions": [
+            "R\u00e9duire de 4 \u00e0 2 couches : ~4.00$ \u00e9conomis\u00e9s par carte",
+            "R\u00e9trecir la carte (1200 \u2192 5 mm\u00b2, occupation 0%) : ~1.79$"
+          ],
+          "dfm_feedback": {
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20
+          },
+          "part_availability": {}
+        },
+        "package_info": {
+          "status": "pending_export",
+          "factory": "jlcpcb"
+        },
+        "factory": "jlcpcb"
+      }
+    }
+  },
+  "task_c3bde514ebd24b60ac8bcae97e82f50c": {
+    "planner": {
+      "role": "planner",
+      "status": "succeeded",
+      "confidence": 0.75,
+      "ts": 1788905789.6912556,
+      "output": {
+        "plan": [
+          {
+            "delegation_id": "del_a566903e7619471099f7884e2818e642",
+            "role": "selector",
+            "objective": "S\u00e9lectionner les composants et construire le DesignGraph",
+            "acceptance_criteria": [
+              "tous les component hints match\u00e9s",
+              "graph avec \u22651 composant"
+            ]
+          },
+          {
+            "delegation_id": "del_400ce75b65ba4e08bbb4f16767d362fd",
+            "role": "placement",
+            "objective": "Placer les composants (HPWL minimal)",
+            "acceptance_criteria": [
+              "aucun recouvrement",
+              "longueur de fil r\u00e9duite"
+            ]
+          },
+          {
+            "delegation_id": "del_6bdb31995ac34b97ac80cee8ad1a032e",
+            "role": "routing",
+            "objective": "Router les nets (100% de routage vis\u00e9)",
+            "acceptance_criteria": [
+              "100% des nets rout\u00e9s ou \u00e9checs justifi\u00e9s"
+            ]
+          },
+          {
+            "delegation_id": "del_293ba050a1c047f39d884786b3c22ea2",
+            "role": "validator",
+            "objective": "V\u00e9rifier DRC/ERC/DFM et scorer la qualit\u00e9",
+            "acceptance_criteria": [
+              "rapport self + physique produits"
+            ]
+          },
+          {
+            "delegation_id": "del_5e048c36d22b4f38bdd9a2640e8a8a3c",
+            "role": "simulation",
+            "objective": "Simuler thermique / SI / PI / CEM",
+            "acceptance_criteria": [
+              "simulations ex\u00e9cut\u00e9es",
+              "verdicts disponibles"
+            ]
+          },
+          {
+            "delegation_id": "del_2e51576ec4a641caa2969f1e886c1e33",
+            "role": "corrector",
+            "objective": "Corriger les violations et optimiser",
+            "acceptance_criteria": [
+              "issues corrig\u00e9es ou escalade justifi\u00e9e"
+            ]
+          },
+          {
+            "delegation_id": "del_a44c077e5d85416ca73b96dfcc53c12c",
+            "role": "manufacturing",
+            "objective": "Analyser la manufacturabilit\u00e9 et pr\u00e9parer le package",
+            "acceptance_criteria": [
+              "analyse DFM + package pr\u00eats"
+            ]
+          }
+        ],
+        "steps": [
+          "selector",
+          "placement",
+          "routing",
+          "validator",
+          "simulation",
+          "corrector",
+          "manufacturing"
+        ],
+        "goal_count": 7,
+        "parse": {
+          "source": "fallback",
+          "error": "'IntentParser' object has no attribute 'to_intent_graph'"
+        }
+      }
+    },
+    "selector": {
+      "role": "selector",
+      "status": "succeeded",
+      "confidence": 0.6,
+      "ts": 1788905789.7005742,
+      "output": {
+        "built_with": "nl_to_skidl",
+        "hints": [],
+        "added": [],
+        "matched": 0,
+        "total": 0,
+        "power_nets": [
+          "VCC"
+        ],
+        "power_links": 1,
+        "graph_stats": {
+          "components": 7,
+          "placed": 0,
+          "nets": 10,
+          "routed": 0,
+          "layers": 4,
+          "wire_length_mm": 0,
+          "cost_usd": 3.083
+        },
+        "revision": 1
+      }
+    },
+    "placement": {
+      "role": "placement",
+      "status": "failed",
+      "confidence": 0.0,
+      "ts": 1788905790.0906696,
+      "output": {}
+    }
+  },
+  "task_241d55993737466185d5f757c2598eb7": {
+    "planner": {
+      "role": "planner",
+      "status": "succeeded",
+      "confidence": 0.75,
+      "ts": 1788905803.8022022,
+      "output": {
+        "plan": [
+          {
+            "delegation_id": "del_d21b2e1b162d4d449093437d91a2cd6c",
+            "role": "selector",
+            "objective": "S\u00e9lectionner les composants et construire le DesignGraph",
+            "acceptance_criteria": [
+              "tous les component hints match\u00e9s",
+              "graph avec \u22651 composant"
+            ]
+          },
+          {
+            "delegation_id": "del_5cf41b2b290f40c3bc9906d33cfcbaa3",
+            "role": "placement",
+            "objective": "Placer les composants (HPWL minimal)",
+            "acceptance_criteria": [
+              "aucun recouvrement",
+              "longueur de fil r\u00e9duite"
+            ]
+          },
+          {
+            "delegation_id": "del_a71def13857741ea8481f86ef2da0914",
+            "role": "routing",
+            "objective": "Router les nets (100% de routage vis\u00e9)",
+            "acceptance_criteria": [
+              "100% des nets rout\u00e9s ou \u00e9checs justifi\u00e9s"
+            ]
+          },
+          {
+            "delegation_id": "del_6ba991f9a1534d729e2313d0447c1eb8",
+            "role": "validator",
+            "objective": "V\u00e9rifier DRC/ERC/DFM et scorer la qualit\u00e9",
+            "acceptance_criteria": [
+              "rapport self + physique produits"
+            ]
+          },
+          {
+            "delegation_id": "del_3e32b0bfb03140ab8184b5615236926f",
+            "role": "simulation",
+            "objective": "Simuler thermique / SI / PI / CEM",
+            "acceptance_criteria": [
+              "simulations ex\u00e9cut\u00e9es",
+              "verdicts disponibles"
+            ]
+          },
+          {
+            "delegation_id": "del_c17835b52cc74b2393f82978b988ee37",
+            "role": "corrector",
+            "objective": "Corriger les violations et optimiser",
+            "acceptance_criteria": [
+              "issues corrig\u00e9es ou escalade justifi\u00e9e"
+            ]
+          },
+          {
+            "delegation_id": "del_d95d956d05a34c33914335bfdf3c4787",
+            "role": "manufacturing",
+            "objective": "Analyser la manufacturabilit\u00e9 et pr\u00e9parer le package",
+            "acceptance_criteria": [
+              "analyse DFM + package pr\u00eats"
+            ]
+          }
+        ],
+        "steps": [
+          "selector",
+          "placement",
+          "routing",
+          "validator",
+          "simulation",
+          "corrector",
+          "manufacturing"
+        ],
+        "goal_count": 7,
+        "parse": {
+          "source": "fallback",
+          "error": "'IntentParser' object has no attribute 'to_intent_graph'"
+        }
+      }
+    },
+    "selector": {
+      "role": "selector",
+      "status": "succeeded",
+      "confidence": 0.6,
+      "ts": 1788905803.8087816,
+      "output": {
+        "built_with": "nl_to_skidl",
+        "hints": [],
+        "added": [],
+        "matched": 0,
+        "total": 0,
+        "power_nets": [
+          "VCC"
+        ],
+        "power_links": 0,
+        "graph_stats": {
+          "components": 1,
+          "placed": 0,
+          "nets": 5,
+          "routed": 0,
+          "layers": 4,
+          "wire_length_mm": 0,
+          "cost_usd": 0.18
+        },
+        "revision": 1
+      }
+    },
+    "placement": {
+      "role": "placement",
+      "status": "failed",
+      "confidence": 0.0,
+      "ts": 1788905804.0014586,
+      "output": {}
+    }
+  },
+  "task_33a73308368b4755b68960b3ee1a37a2": {
+    "validator": {
+      "role": "validator",
+      "status": "succeeded",
+      "confidence": 0.84,
+      "ts": 1788906193.3800852,
+      "output": {
+        "verification": {
+          "self": {
+            "passed": true,
+            "issues": [
+              "1 nets non rout\u00e9s"
+            ],
+            "confidence": 0.92
+          },
+          "physical": {
+            "passed": true,
+            "issues": [],
+            "report": {
+              "drc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 3,
+                "violations": []
+              },
+              "erc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 4,
+                "violations": []
+              },
+              "dfm": {
+                "factory": "jlcpcb",
+                "passed": true,
+                "score": 1.0,
+                "checked": 5,
+                "violations": []
+              },
+              "passed": true
+            }
+          },
+          "local": {
+            "engine": "local_checks",
+            "passed": false,
+            "issues": [
+              "unrouted: net N1 non rout\u00e9",
+              "power: net d'alimentation GND absent",
+              "power: net d'alimentation VCC absent"
+            ],
+            "quality": 84.0,
+            "stats": {
+              "overlaps": 0,
+              "unrouted": 1,
+              "components": 2,
+              "nets": 1
+            }
+          },
+          "passed": true,
+          "suggestions": [
+            "1 nets non rout\u00e9s",
+            "unrouted: net N1 non rout\u00e9",
+            "power: net d'alimentation GND absent",
+            "power: net d'alimentation VCC absent"
+          ]
+        },
+        "passed": true,
+        "suggestions": [
+          "1 nets non rout\u00e9s",
+          "unrouted: net N1 non rout\u00e9",
+          "power: net d'alimentation GND absent",
+          "power: net d'alimentation VCC absent"
+        ]
+      }
+    },
+    "manufacturing": {
+      "role": "manufacturing",
+      "status": "succeeded",
+      "confidence": 0.8,
+      "ts": 1788906193.3941298,
+      "output": {
+        "analysis": {
+          "factory": "jlcpcb",
+          "profile": {
+            "name": "jlcpcb",
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20,
+            "min_trace_oz": 1.0,
+            "lead_time_days": 4,
+            "unit_price_factor": 1.0,
+            "assembly": true
+          },
+          "cost": {
+            "board_usd": 10.8,
+            "assembly_usd": 26.0,
+            "components_usd": 0.0,
+            "total_usd": 36.8,
+            "details": {
+              "area_mm2": 1200.0,
+              "layers": 4,
+              "components": 2,
+              "smd_components": 2,
+              "factory": "jlcpcb",
+              "quantity": 1
+            }
+          },
+          "quote": {
+            "base_usd": 11.88,
+            "shipping_usd": 15.0,
+            "total_usd": 26.88,
+            "lead_time_days": 4,
+            "source": "estimate"
+          },
+          "yield": {
+            "expected_yield": 0.99,
+            "risk_factors": [
+              "aucun risque DFM majeur d\u00e9tect\u00e9"
+            ],
+            "model": "heuristic"
+          },
+          "cost_suggestions": [
+            "R\u00e9duire de 4 \u00e0 2 couches : ~4.00$ \u00e9conomis\u00e9s par carte",
+            "R\u00e9trecir la carte (1200 \u2192 5 mm\u00b2, occupation 0%) : ~1.79$"
+          ],
+          "dfm_feedback": {
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20
+          },
+          "part_availability": {}
+        },
+        "package_info": {
+          "status": "pending_export",
+          "factory": "jlcpcb"
+        },
+        "factory": "jlcpcb"
+      }
+    }
+  },
+  "task_0ad340da2ca44b3fbabed312b1c018aa": {
+    "planner": {
+      "role": "planner",
+      "status": "succeeded",
+      "confidence": 0.75,
+      "ts": 1788906200.7483323,
+      "output": {
+        "plan": [
+          {
+            "delegation_id": "del_ba953fc817b3410b8b14f4c83c828a30",
+            "role": "selector",
+            "objective": "S\u00e9lectionner les composants et construire le DesignGraph",
+            "acceptance_criteria": [
+              "tous les component hints match\u00e9s",
+              "graph avec \u22651 composant"
+            ]
+          },
+          {
+            "delegation_id": "del_8b89873e499f4c9c8c1798343438277c",
+            "role": "placement",
+            "objective": "Placer les composants (HPWL minimal)",
+            "acceptance_criteria": [
+              "aucun recouvrement",
+              "longueur de fil r\u00e9duite"
+            ]
+          },
+          {
+            "delegation_id": "del_e4004cabc3c948899ec72ae50dd17e19",
+            "role": "routing",
+            "objective": "Router les nets (100% de routage vis\u00e9)",
+            "acceptance_criteria": [
+              "100% des nets rout\u00e9s ou \u00e9checs justifi\u00e9s"
+            ]
+          },
+          {
+            "delegation_id": "del_30503ea9ebd34dad8499764719b84632",
+            "role": "validator",
+            "objective": "V\u00e9rifier DRC/ERC/DFM et scorer la qualit\u00e9",
+            "acceptance_criteria": [
+              "rapport self + physique produits"
+            ]
+          },
+          {
+            "delegation_id": "del_31eaeb88644948939d272af31ceb1af9",
+            "role": "simulation",
+            "objective": "Simuler thermique / SI / PI / CEM",
+            "acceptance_criteria": [
+              "simulations ex\u00e9cut\u00e9es",
+              "verdicts disponibles"
+            ]
+          },
+          {
+            "delegation_id": "del_a26a32a85e444de2bf6f06c063d074f8",
+            "role": "corrector",
+            "objective": "Corriger les violations et optimiser",
+            "acceptance_criteria": [
+              "issues corrig\u00e9es ou escalade justifi\u00e9e"
+            ]
+          },
+          {
+            "delegation_id": "del_fe85c98e10b64c4caded2e80d32f3d8e",
+            "role": "manufacturing",
+            "objective": "Analyser la manufacturabilit\u00e9 et pr\u00e9parer le package",
+            "acceptance_criteria": [
+              "analyse DFM + package pr\u00eats"
+            ]
+          }
+        ],
+        "steps": [
+          "selector",
+          "placement",
+          "routing",
+          "validator",
+          "simulation",
+          "corrector",
+          "manufacturing"
+        ],
+        "goal_count": 7,
+        "parse": {
+          "source": "fallback",
+          "error": "'IntentParser' object has no attribute 'to_intent_graph'"
+        }
+      }
+    },
+    "selector": {
+      "role": "selector",
+      "status": "succeeded",
+      "confidence": 0.6,
+      "ts": 1788906200.7606795,
+      "output": {
+        "built_with": "nl_to_skidl",
+        "hints": [],
+        "added": [],
+        "matched": 0,
+        "total": 0,
+        "power_nets": [
+          "VCC"
+        ],
+        "power_links": 1,
+        "graph_stats": {
+          "components": 3,
+          "placed": 0,
+          "nets": 5,
+          "routed": 0,
+          "layers": 4,
+          "wire_length_mm": 0,
+          "cost_usd": 4.508
+        },
+        "revision": 1
+      }
+    },
+    "placement": {
+      "role": "placement",
+      "status": "failed",
+      "confidence": 0.0,
+      "ts": 1788906201.095222,
+      "output": {}
+    }
+  },
+  "task_4cf6c12f28ba4b8c859588d199f52a3a": {
+    "validator": {
+      "role": "validator",
+      "status": "succeeded",
+      "confidence": 0.84,
+      "ts": 1788906214.6709776,
+      "output": {
+        "verification": {
+          "self": {
+            "passed": true,
+            "issues": [
+              "1 nets non rout\u00e9s"
+            ],
+            "confidence": 0.92
+          },
+          "physical": {
+            "passed": true,
+            "issues": [],
+            "report": {
+              "drc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 3,
+                "violations": []
+              },
+              "erc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 4,
+                "violations": []
+              },
+              "dfm": {
+                "factory": "jlcpcb",
+                "passed": true,
+                "score": 1.0,
+                "checked": 5,
+                "violations": []
+              },
+              "passed": true
+            }
+          },
+          "local": {
+            "engine": "local_checks",
+            "passed": false,
+            "issues": [
+              "unrouted: net N1 non rout\u00e9",
+              "power: net d'alimentation GND absent",
+              "power: net d'alimentation VCC absent"
+            ],
+            "quality": 84.0,
+            "stats": {
+              "overlaps": 0,
+              "unrouted": 1,
+              "components": 2,
+              "nets": 1
+            }
+          },
+          "passed": true,
+          "suggestions": [
+            "1 nets non rout\u00e9s",
+            "unrouted: net N1 non rout\u00e9",
+            "power: net d'alimentation GND absent",
+            "power: net d'alimentation VCC absent"
+          ]
+        },
+        "passed": true,
+        "suggestions": [
+          "1 nets non rout\u00e9s",
+          "unrouted: net N1 non rout\u00e9",
+          "power: net d'alimentation GND absent",
+          "power: net d'alimentation VCC absent"
+        ]
+      }
+    },
+    "manufacturing": {
+      "role": "manufacturing",
+      "status": "succeeded",
+      "confidence": 0.8,
+      "ts": 1788906214.6828706,
+      "output": {
+        "analysis": {
+          "factory": "jlcpcb",
+          "profile": {
+            "name": "jlcpcb",
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20,
+            "min_trace_oz": 1.0,
+            "lead_time_days": 4,
+            "unit_price_factor": 1.0,
+            "assembly": true
+          },
+          "cost": {
+            "board_usd": 10.8,
+            "assembly_usd": 26.0,
+            "components_usd": 0.0,
+            "total_usd": 36.8,
+            "details": {
+              "area_mm2": 1200.0,
+              "layers": 4,
+              "components": 2,
+              "smd_components": 2,
+              "factory": "jlcpcb",
+              "quantity": 1
+            }
+          },
+          "quote": {
+            "base_usd": 11.88,
+            "shipping_usd": 15.0,
+            "total_usd": 26.88,
+            "lead_time_days": 4,
+            "source": "estimate"
+          },
+          "yield": {
+            "expected_yield": 0.99,
+            "risk_factors": [
+              "aucun risque DFM majeur d\u00e9tect\u00e9"
+            ],
+            "model": "heuristic"
+          },
+          "cost_suggestions": [
+            "R\u00e9duire de 4 \u00e0 2 couches : ~4.00$ \u00e9conomis\u00e9s par carte",
+            "R\u00e9trecir la carte (1200 \u2192 5 mm\u00b2, occupation 0%) : ~1.79$"
+          ],
+          "dfm_feedback": {
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20
+          },
+          "part_availability": {}
+        },
+        "package_info": {
+          "status": "pending_export",
+          "factory": "jlcpcb"
+        },
+        "factory": "jlcpcb"
+      }
+    }
+  },
+  "task_1eb14842c7ea4d5fb621e9ec7ee769d9": {
+    "validator": {
+      "role": "validator",
+      "status": "succeeded",
+      "confidence": 0.84,
+      "ts": 1788906218.6031833,
+      "output": {
+        "verification": {
+          "self": {
+            "passed": true,
+            "issues": [
+              "1 nets non rout\u00e9s"
+            ],
+            "confidence": 0.92
+          },
+          "physical": {
+            "passed": true,
+            "issues": [],
+            "report": {
+              "drc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 3,
+                "violations": []
+              },
+              "erc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 4,
+                "violations": []
+              },
+              "dfm": {
+                "factory": "jlcpcb",
+                "passed": true,
+                "score": 1.0,
+                "checked": 5,
+                "violations": []
+              },
+              "passed": true
+            }
+          },
+          "local": {
+            "engine": "local_checks",
+            "passed": false,
+            "issues": [
+              "unrouted: net N1 non rout\u00e9",
+              "power: net d'alimentation GND absent",
+              "power: net d'alimentation VCC absent"
+            ],
+            "quality": 84.0,
+            "stats": {
+              "overlaps": 0,
+              "unrouted": 1,
+              "components": 2,
+              "nets": 1
+            }
+          },
+          "passed": true,
+          "suggestions": [
+            "1 nets non rout\u00e9s",
+            "unrouted: net N1 non rout\u00e9",
+            "power: net d'alimentation GND absent",
+            "power: net d'alimentation VCC absent"
+          ]
+        },
+        "passed": true,
+        "suggestions": [
+          "1 nets non rout\u00e9s",
+          "unrouted: net N1 non rout\u00e9",
+          "power: net d'alimentation GND absent",
+          "power: net d'alimentation VCC absent"
+        ]
+      }
+    },
+    "manufacturing": {
+      "role": "manufacturing",
+      "status": "succeeded",
+      "confidence": 0.8,
+      "ts": 1788906218.6162038,
+      "output": {
+        "analysis": {
+          "factory": "jlcpcb",
+          "profile": {
+            "name": "jlcpcb",
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20,
+            "min_trace_oz": 1.0,
+            "lead_time_days": 4,
+            "unit_price_factor": 1.0,
+            "assembly": true
+          },
+          "cost": {
+            "board_usd": 10.8,
+            "assembly_usd": 26.0,
+            "components_usd": 0.0,
+            "total_usd": 36.8,
+            "details": {
+              "area_mm2": 1200.0,
+              "layers": 4,
+              "components": 2,
+              "smd_components": 2,
+              "factory": "jlcpcb",
+              "quantity": 1
+            }
+          },
+          "quote": {
+            "base_usd": 11.88,
+            "shipping_usd": 15.0,
+            "total_usd": 26.88,
+            "lead_time_days": 4,
+            "source": "estimate"
+          },
+          "yield": {
+            "expected_yield": 0.99,
+            "risk_factors": [
+              "aucun risque DFM majeur d\u00e9tect\u00e9"
+            ],
+            "model": "heuristic"
+          },
+          "cost_suggestions": [
+            "R\u00e9duire de 4 \u00e0 2 couches : ~4.00$ \u00e9conomis\u00e9s par carte",
+            "R\u00e9trecir la carte (1200 \u2192 5 mm\u00b2, occupation 0%) : ~1.79$"
+          ],
+          "dfm_feedback": {
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20
+          },
+          "part_availability": {}
+        },
+        "package_info": {
+          "status": "pending_export",
+          "factory": "jlcpcb"
+        },
+        "factory": "jlcpcb"
+      }
+    }
+  },
+  "task_7f5591ecb2b64b86af18bf491e026e32": {
+    "validator": {
+      "role": "validator",
+      "status": "succeeded",
+      "confidence": 0.84,
+      "ts": 1788906764.5003393,
+      "output": {
+        "verification": {
+          "self": {
+            "passed": true,
+            "issues": [
+              "1 nets non rout\u00e9s"
+            ],
+            "confidence": 0.92
+          },
+          "physical": {
+            "passed": true,
+            "issues": [],
+            "report": {
+              "drc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 3,
+                "violations": []
+              },
+              "erc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 4,
+                "violations": []
+              },
+              "dfm": {
+                "factory": "jlcpcb",
+                "passed": true,
+                "score": 1.0,
+                "checked": 5,
+                "violations": []
+              },
+              "passed": true
+            }
+          },
+          "local": {
+            "engine": "local_checks",
+            "passed": false,
+            "issues": [
+              "unrouted: net N1 non rout\u00e9",
+              "power: net d'alimentation GND absent",
+              "power: net d'alimentation VCC absent"
+            ],
+            "quality": 84.0,
+            "stats": {
+              "overlaps": 0,
+              "unrouted": 1,
+              "components": 2,
+              "nets": 1
+            }
+          },
+          "passed": true,
+          "suggestions": [
+            "1 nets non rout\u00e9s",
+            "unrouted: net N1 non rout\u00e9",
+            "power: net d'alimentation GND absent",
+            "power: net d'alimentation VCC absent"
+          ]
+        },
+        "passed": true,
+        "suggestions": [
+          "1 nets non rout\u00e9s",
+          "unrouted: net N1 non rout\u00e9",
+          "power: net d'alimentation GND absent",
+          "power: net d'alimentation VCC absent"
+        ]
+      }
+    },
+    "manufacturing": {
+      "role": "manufacturing",
+      "status": "succeeded",
+      "confidence": 0.8,
+      "ts": 1788906764.5142436,
+      "output": {
+        "analysis": {
+          "factory": "jlcpcb",
+          "profile": {
+            "name": "jlcpcb",
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20,
+            "min_trace_oz": 1.0,
+            "lead_time_days": 4,
+            "unit_price_factor": 1.0,
+            "assembly": true
+          },
+          "cost": {
+            "board_usd": 10.8,
+            "assembly_usd": 26.0,
+            "components_usd": 0.0,
+            "total_usd": 36.8,
+            "details": {
+              "area_mm2": 1200.0,
+              "layers": 4,
+              "components": 2,
+              "smd_components": 2,
+              "factory": "jlcpcb",
+              "quantity": 1
+            }
+          },
+          "quote": {
+            "base_usd": 11.88,
+            "shipping_usd": 15.0,
+            "total_usd": 26.88,
+            "lead_time_days": 4,
+            "source": "estimate"
+          },
+          "yield": {
+            "expected_yield": 0.99,
+            "risk_factors": [
+              "aucun risque DFM majeur d\u00e9tect\u00e9"
+            ],
+            "model": "heuristic"
+          },
+          "cost_suggestions": [
+            "R\u00e9duire de 4 \u00e0 2 couches : ~4.00$ \u00e9conomis\u00e9s par carte",
+            "R\u00e9trecir la carte (1200 \u2192 5 mm\u00b2, occupation 0%) : ~1.79$"
+          ],
+          "dfm_feedback": {
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20
+          },
+          "part_availability": {}
+        },
+        "package_info": {
+          "status": "pending_export",
+          "factory": "jlcpcb"
+        },
+        "factory": "jlcpcb"
+      }
+    }
+  },
+  "task_03e54442c95c4d2aa8c6daf8624aef16": {
+    "validator": {
+      "role": "validator",
+      "status": "succeeded",
+      "confidence": 0.84,
+      "ts": 1788906963.6311862,
+      "output": {
+        "verification": {
+          "self": {
+            "passed": true,
+            "issues": [
+              "1 nets non rout\u00e9s"
+            ],
+            "confidence": 0.92
+          },
+          "physical": {
+            "passed": true,
+            "issues": [],
+            "report": {
+              "drc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 3,
+                "violations": []
+              },
+              "erc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 4,
+                "violations": []
+              },
+              "dfm": {
+                "factory": "jlcpcb",
+                "passed": true,
+                "score": 1.0,
+                "checked": 5,
+                "violations": []
+              },
+              "passed": true
+            }
+          },
+          "local": {
+            "engine": "local_checks",
+            "passed": false,
+            "issues": [
+              "unrouted: net N1 non rout\u00e9",
+              "power: net d'alimentation GND absent",
+              "power: net d'alimentation VCC absent"
+            ],
+            "quality": 84.0,
+            "stats": {
+              "overlaps": 0,
+              "unrouted": 1,
+              "components": 2,
+              "nets": 1
+            }
+          },
+          "passed": true,
+          "suggestions": [
+            "1 nets non rout\u00e9s",
+            "unrouted: net N1 non rout\u00e9",
+            "power: net d'alimentation GND absent",
+            "power: net d'alimentation VCC absent"
+          ]
+        },
+        "passed": true,
+        "suggestions": [
+          "1 nets non rout\u00e9s",
+          "unrouted: net N1 non rout\u00e9",
+          "power: net d'alimentation GND absent",
+          "power: net d'alimentation VCC absent"
+        ]
+      }
+    },
+    "manufacturing": {
+      "role": "manufacturing",
+      "status": "succeeded",
+      "confidence": 0.8,
+      "ts": 1788906963.6463141,
+      "output": {
+        "analysis": {
+          "factory": "jlcpcb",
+          "profile": {
+            "name": "jlcpcb",
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20,
+            "min_trace_oz": 1.0,
+            "lead_time_days": 4,
+            "unit_price_factor": 1.0,
+            "assembly": true
+          },
+          "cost": {
+            "board_usd": 10.8,
+            "assembly_usd": 26.0,
+            "components_usd": 0.0,
+            "total_usd": 36.8,
+            "details": {
+              "area_mm2": 1200.0,
+              "layers": 4,
+              "components": 2,
+              "smd_components": 2,
+              "factory": "jlcpcb",
+              "quantity": 1
+            }
+          },
+          "quote": {
+            "base_usd": 11.88,
+            "shipping_usd": 15.0,
+            "total_usd": 26.88,
+            "lead_time_days": 4,
+            "source": "estimate"
+          },
+          "yield": {
+            "expected_yield": 0.99,
+            "risk_factors": [
+              "aucun risque DFM majeur d\u00e9tect\u00e9"
+            ],
+            "model": "heuristic"
+          },
+          "cost_suggestions": [
+            "R\u00e9duire de 4 \u00e0 2 couches : ~4.00$ \u00e9conomis\u00e9s par carte",
+            "R\u00e9trecir la carte (1200 \u2192 5 mm\u00b2, occupation 0%) : ~1.79$"
+          ],
+          "dfm_feedback": {
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20
+          },
+          "part_availability": {}
+        },
+        "package_info": {
+          "status": "pending_export",
+          "factory": "jlcpcb"
+        },
+        "factory": "jlcpcb"
+      }
+    }
+  },
+  "task_6ff354c2d8c94260ae6df9b808c3141e": {
+    "validator": {
+      "role": "validator",
+      "status": "succeeded",
+      "confidence": 0.84,
+      "ts": 1788908197.7334862,
+      "output": {
+        "verification": {
+          "self": {
+            "passed": true,
+            "issues": [
+              "1 nets non rout\u00e9s"
+            ],
+            "confidence": 0.92
+          },
+          "physical": {
+            "passed": true,
+            "issues": [],
+            "report": {
+              "drc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 3,
+                "violations": []
+              },
+              "erc": {
+                "passed": true,
+                "score": 1.0,
+                "checked": 4,
+                "violations": []
+              },
+              "dfm": {
+                "factory": "jlcpcb",
+                "passed": true,
+                "score": 1.0,
+                "checked": 5,
+                "violations": []
+              },
+              "passed": true
+            }
+          },
+          "local": {
+            "engine": "local_checks",
+            "passed": false,
+            "issues": [
+              "unrouted: net N1 non rout\u00e9",
+              "power: net d'alimentation GND absent",
+              "power: net d'alimentation VCC absent"
+            ],
+            "quality": 84.0,
+            "stats": {
+              "overlaps": 0,
+              "unrouted": 1,
+              "components": 2,
+              "nets": 1
+            }
+          },
+          "passed": true,
+          "suggestions": [
+            "1 nets non rout\u00e9s",
+            "unrouted: net N1 non rout\u00e9",
+            "power: net d'alimentation GND absent",
+            "power: net d'alimentation VCC absent"
+          ]
+        },
+        "passed": true,
+        "suggestions": [
+          "1 nets non rout\u00e9s",
+          "unrouted: net N1 non rout\u00e9",
+          "power: net d'alimentation GND absent",
+          "power: net d'alimentation VCC absent"
+        ]
+      }
+    },
+    "manufacturing": {
+      "role": "manufacturing",
+      "status": "succeeded",
+      "confidence": 0.8,
+      "ts": 1788908197.7487712,
+      "output": {
+        "analysis": {
+          "factory": "jlcpcb",
+          "profile": {
+            "name": "jlcpcb",
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20,
+            "min_trace_oz": 1.0,
+            "lead_time_days": 4,
+            "unit_price_factor": 1.0,
+            "assembly": true
+          },
+          "cost": {
+            "board_usd": 10.8,
+            "assembly_usd": 26.0,
+            "components_usd": 0.0,
+            "total_usd": 36.8,
+            "details": {
+              "area_mm2": 1200.0,
+              "layers": 4,
+              "components": 2,
+              "smd_components": 2,
+              "factory": "jlcpcb",
+              "quantity": 1
+            }
+          },
+          "quote": {
+            "base_usd": 11.88,
+            "shipping_usd": 15.0,
+            "total_usd": 26.88,
+            "lead_time_days": 4,
+            "source": "estimate"
+          },
+          "yield": {
+            "expected_yield": 0.99,
+            "risk_factors": [
+              "aucun risque DFM majeur d\u00e9tect\u00e9"
+            ],
+            "model": "heuristic"
+          },
+          "cost_suggestions": [
+            "R\u00e9duire de 4 \u00e0 2 couches : ~4.00$ \u00e9conomis\u00e9s par carte",
+            "R\u00e9trecir la carte (1200 \u2192 5 mm\u00b2, occupation 0%) : ~1.79$"
+          ],
+          "dfm_feedback": {
+            "min_trace_mm": 0.127,
+            "min_clearance_mm": 0.127,
+            "min_hole_mm": 0.2,
+            "min_annular_ring_mm": 0.15,
+            "max_layers": 20
+          },
+          "part_availability": {}
+        },
+        "package_info": {
+          "status": "pending_export",
+          "factory": "jlcpcb"
+        },
+        "factory": "jlcpcb"
+      }
+    }
+  }
+}

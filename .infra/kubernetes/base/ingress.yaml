@@ -1,0 +1,65 @@
+# Ingress nginx — routage :
+#   /                        → frontend (Next.js :3000)
+#   /api, /ws, /graphql, /mcp → api-gateway (:8000)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pcb3-ingress
+  namespace: pcb-ai-v3
+  labels:
+    app.kubernetes.io/name: pcb-ai-designer
+    app.kubernetes.io/component: ingress
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # WebSocket /ws : connexions longues
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          # --- API Gateway ---
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: pcb3-api-svc
+                port:
+                  number: 8000
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: pcb3-api-svc
+                port:
+                  number: 8000
+          - path: /graphql
+            pathType: Prefix
+            backend:
+              service:
+                name: pcb3-api-svc
+                port:
+                  number: 8000
+          - path: /mcp
+            pathType: Prefix
+            backend:
+              service:
+                name: pcb3-api-svc
+                port:
+                  number: 8000
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: pcb3-api-svc
+                port:
+                  number: 8000
+          # --- Frontend (racine, en dernier) ---
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pcb3-frontend-svc
+                port:
+                  number: 3000

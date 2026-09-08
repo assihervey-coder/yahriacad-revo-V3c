@@ -1,0 +1,28 @@
+{{- if .Values.config }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pcb-ai.configName" . }}
+  labels:
+    {{- include "pcb-ai.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.config }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.secrets.create }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "pcb-ai.secretName" . }}
+  labels:
+    {{- include "pcb-ai.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  {{- range $key, $value := omit .Values.secrets "create" }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}

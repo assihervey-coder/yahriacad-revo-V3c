@@ -1,0 +1,60 @@
+# Environnement PRODUCTION — 3 répliques, ressources élargies, autoscaling HPA
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: pcb-ai-v3
+
+resources:
+  - ../../base
+  - hpa.yaml
+
+patches:
+  # API : 3 répliques + ressources élargies
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 500m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 1Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "2"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 2Gi
+    target:
+      kind: Deployment
+      name: pcb3-api-gateway
+
+  # Workers : 3 répliques chacun
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+    target:
+      kind: Deployment
+      labelSelector: app.kubernetes.io/name=pcb-ai-designer,app.kubernetes.io/component in (orchestrator,ai,simulator,router)
+
+  - patch: |-
+      - op: replace
+        path: /data/APP_ENV
+        value: production
+      - op: replace
+        path: /data/LOG_LEVEL
+        value: INFO
+      - op: replace
+        path: /data/EVENT_BUS_BACKEND
+        value: redis
+    target:
+      kind: ConfigMap
+      name: pcb3-config
+
+images:
+  - name: pcb3/backend
+    newTag: v3.0.0
+  - name: pcb3/frontend
+    newTag: v3.0.0

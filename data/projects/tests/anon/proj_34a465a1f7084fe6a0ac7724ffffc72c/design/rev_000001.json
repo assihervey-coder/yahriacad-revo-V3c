@@ -1,0 +1,580 @@
+{
+  "rev": 1,
+  "ts": 1788905789.7040377,
+  "graph": {
+    "project_id": "skidl_10ba77fb34e24478aaad77e2fb99a66e",
+    "name": "skidl-design",
+    "board_size": [
+      100.0,
+      80.0
+    ],
+    "layers": [
+      {
+        "index": 0,
+        "name": "F.Cu",
+        "ltype": "signal",
+        "thickness_um": 35.0,
+        "er": 4.3
+      },
+      {
+        "index": 1,
+        "name": "GND",
+        "ltype": "ground",
+        "thickness_um": 35.0,
+        "er": 4.3
+      },
+      {
+        "index": 2,
+        "name": "PWR",
+        "ltype": "power",
+        "thickness_um": 35.0,
+        "er": 4.3
+      },
+      {
+        "index": 3,
+        "name": "B.Cu",
+        "ltype": "signal",
+        "thickness_um": 35.0,
+        "er": 4.3
+      }
+    ],
+    "components": [
+      {
+        "ref": "U1",
+        "value": "AMS1117-3.3",
+        "footprint": "SOT-223",
+        "mpn": "AMS1117-3.3",
+        "x": 0.0,
+        "y": 0.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          6.5,
+          3.5
+        ],
+        "power_w": 0.4,
+        "price_usd": 0.12,
+        "pads": [
+          {
+            "name": "VI",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "VIN",
+            "layer": 0
+          },
+          {
+            "name": "VO",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "PWR",
+            "layer": 0
+          },
+          {
+            "name": "GND",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "GND",
+            "layer": 0
+          }
+        ],
+        "placed": false
+      },
+      {
+        "ref": "C1",
+        "value": "10uF",
+        "footprint": "0805",
+        "mpn": "CL21A106KOQNNNE",
+        "x": 0.0,
+        "y": 0.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          2.0,
+          1.25
+        ],
+        "power_w": 0.0,
+        "price_usd": 0.02,
+        "pads": [
+          {
+            "name": "1",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "VIN",
+            "layer": 0
+          },
+          {
+            "name": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "GND",
+            "layer": 0
+          }
+        ],
+        "placed": false
+      },
+      {
+        "ref": "C2",
+        "value": "22uF",
+        "footprint": "0805",
+        "mpn": "CL21A226MQQNNNE",
+        "x": 0.0,
+        "y": 0.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          2.0,
+          1.25
+        ],
+        "power_w": 0.0,
+        "price_usd": 0.03,
+        "pads": [
+          {
+            "name": "1",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "PWR",
+            "layer": 0
+          },
+          {
+            "name": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "GND",
+            "layer": 0
+          }
+        ],
+        "placed": false
+      },
+      {
+        "ref": "U2",
+        "value": "ESP32-WROOM-32E",
+        "footprint": "ESP32-WROOM-32E",
+        "mpn": "ESP32-WROOM-32E-N8",
+        "x": 0.0,
+        "y": 0.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          18.0,
+          25.5
+        ],
+        "power_w": 0.5,
+        "price_usd": 2.9,
+        "pads": [
+          {
+            "name": "VDD",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "VCC",
+            "layer": 0
+          },
+          {
+            "name": "GND",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "GND",
+            "layer": 0
+          },
+          {
+            "name": "EN",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "RESET",
+            "layer": 0
+          },
+          {
+            "name": "IO0",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "BOOT",
+            "layer": 0
+          },
+          {
+            "name": "TXD0",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "UART_TX",
+            "layer": 0
+          },
+          {
+            "name": "RXD0",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "UART_RX",
+            "layer": 0
+          },
+          {
+            "name": "IO21",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "I2C_SDA",
+            "layer": 0
+          },
+          {
+            "name": "IO22",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "I2C_SCL",
+            "layer": 0
+          }
+        ],
+        "placed": false
+      },
+      {
+        "ref": "C3",
+        "value": "100nF",
+        "footprint": "0402",
+        "mpn": "CL05B104KO5NNNC",
+        "x": 0.0,
+        "y": 0.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          1.0,
+          0.5
+        ],
+        "power_w": 0.0,
+        "price_usd": 0.004,
+        "pads": [
+          {
+            "name": "1",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "PWR",
+            "layer": 0
+          },
+          {
+            "name": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "GND",
+            "layer": 0
+          }
+        ],
+        "placed": false
+      },
+      {
+        "ref": "R1",
+        "value": "10k",
+        "footprint": "0402",
+        "mpn": "RC0402FR-0710KL",
+        "x": 0.0,
+        "y": 0.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          1.0,
+          0.5
+        ],
+        "power_w": 0.0,
+        "price_usd": 0.004,
+        "pads": [
+          {
+            "name": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "PWR",
+            "layer": 0
+          },
+          {
+            "name": "1",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "RESET",
+            "layer": 0
+          }
+        ],
+        "placed": false
+      },
+      {
+        "ref": "C4",
+        "value": "1uF",
+        "footprint": "0402",
+        "mpn": "CL05A105KA5NNNC",
+        "x": 0.0,
+        "y": 0.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          1.0,
+          0.5
+        ],
+        "power_w": 0.0,
+        "price_usd": 0.005,
+        "pads": [
+          {
+            "name": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "GND",
+            "layer": 0
+          },
+          {
+            "name": "1",
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "RESET",
+            "layer": 0
+          }
+        ],
+        "placed": false
+      }
+    ],
+    "nets": [
+      {
+        "net_id": "VIN",
+        "name": "VIN",
+        "class_name": "power",
+        "pins": [
+          [
+            "U1",
+            "VI"
+          ],
+          [
+            "C1",
+            "1"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      },
+      {
+        "net_id": "PWR",
+        "name": "PWR",
+        "class_name": "power",
+        "pins": [
+          [
+            "U1",
+            "VO"
+          ],
+          [
+            "C2",
+            "1"
+          ],
+          [
+            "U2",
+            "VDD"
+          ],
+          [
+            "C3",
+            "1"
+          ],
+          [
+            "R1",
+            "2"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      },
+      {
+        "net_id": "GND",
+        "name": "GND",
+        "class_name": "power",
+        "pins": [
+          [
+            "U1",
+            "GND"
+          ],
+          [
+            "C1",
+            "2"
+          ],
+          [
+            "C2",
+            "2"
+          ],
+          [
+            "U2",
+            "GND"
+          ],
+          [
+            "C3",
+            "2"
+          ],
+          [
+            "C4",
+            "2"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      },
+      {
+        "net_id": "RESET",
+        "name": "RESET",
+        "class_name": "default",
+        "pins": [
+          [
+            "U2",
+            "EN"
+          ],
+          [
+            "R1",
+            "1"
+          ],
+          [
+            "C4",
+            "1"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      },
+      {
+        "net_id": "BOOT",
+        "name": "BOOT",
+        "class_name": "default",
+        "pins": [
+          [
+            "U2",
+            "IO0"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      },
+      {
+        "net_id": "UART_TX",
+        "name": "UART_TX",
+        "class_name": "default",
+        "pins": [
+          [
+            "U2",
+            "TXD0"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      },
+      {
+        "net_id": "UART_RX",
+        "name": "UART_RX",
+        "class_name": "default",
+        "pins": [
+          [
+            "U2",
+            "RXD0"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      },
+      {
+        "net_id": "I2C_SDA",
+        "name": "I2C_SDA",
+        "class_name": "default",
+        "pins": [
+          [
+            "U2",
+            "IO21"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      },
+      {
+        "net_id": "I2C_SCL",
+        "name": "I2C_SCL",
+        "class_name": "default",
+        "pins": [
+          [
+            "U2",
+            "IO22"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      },
+      {
+        "net_id": "VCC",
+        "name": {
+          "name": "VCC",
+          "class_name": "power"
+        },
+        "class_name": "default",
+        "pins": [
+          [
+            "U2",
+            "VDD"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      }
+    ],
+    "keepouts": []
+  }
+}

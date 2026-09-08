@@ -1,0 +1,54 @@
+# =============================================================================
+# PCB_AI_DESIGNER_V3 — configuration PRODUCTION
+# LLM réel, bus Redis, 3 répliques, observabilité stricte.
+# =============================================================================
+app_env: production
+log_level: INFO
+
+# --- Cerveau symbolique : provider réel (clé via secret, jamais en clair) ----
+llm_provider: openai
+llm_model: gpt-4o
+llm_temperature: 0.2
+llm_max_tokens: 8192
+# openai_api_key / zai_api_key injectées depuis pcb3-secret (k8s) ou .env
+
+# --- Bus d'événements : Redis (pub/sub durable entre les 6 services) ---------
+event_bus: redis
+redis_url: redis://pcb3-redis:6379/0
+
+# --- Base de données ----------------------------------------------------------
+database_url: "postgresql+asyncpg://pcb:pcb@pcb3-postgres:5432/pcb_ai_v3"
+
+# --- Cerveau décisionnel : GPU si nœuds CUDA disponibles ----------------------
+rl_device: cpu             # "cuda" sur cluster GPU (toolchain-cuda)
+rl_checkpoint_dir: /app/data/trained_models/policies
+world_model_dir: /app/data/trained_models/world_models
+
+# --- Cerveau physique ---------------------------------------------------------
+sim_max_workers: 4
+surrogate_models_dir: /app/data/trained_models/surrogate_models
+
+# --- Services -----------------------------------------------------------------
+api_port: 8000
+frontend_port: 3000
+
+# --- Qualité / déploiement ----------------------------------------------------
+replicas: 3
+hpa:
+  enabled: true
+  min_replicas: 3
+  max_replicas: 10
+  cpu_target_percent: 70
+
+monitoring:
+  prometheus_enabled: true
+  grafana_enabled: true
+  tracing_enabled: true
+  alerting_enabled: true    # ApiHighLatency, JobFailureRate, RLPolicyStale...
+  strict: true              # métriques + alertes métier obligatoires au boot
+
+# --- Manufacturing ------------------------------------------------------------
+default_factory: jlcpcb
+
+# --- Crédits -------------------------------------------------------------------
+credits_free_tier: 100

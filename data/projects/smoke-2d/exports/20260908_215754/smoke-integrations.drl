@@ -1,0 +1,12 @@
+; smoke-integrations.drl — PCB_AI_DESIGNER_V3
+; drill: vias (Excellon, METRIC)
+M48
+METRIC,TZ
+T1 C0.3
+%
+G90
+G05
+T1
+X36.000Y7.100
+X40.000Y7.100
+M30

@@ -1,0 +1,34 @@
+# Environnement STAGING — 2 répliques, APP_ENV=staging, miroir de la prod à échelle réduite
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: pcb-ai-staging
+
+resources:
+  - ../../base
+
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+    target:
+      kind: Deployment
+      labelSelector: app.kubernetes.io/name=pcb-ai-designer
+
+  - patch: |-
+      - op: replace
+        path: /data/APP_ENV
+        value: staging
+      - op: replace
+        path: /data/LOG_LEVEL
+        value: INFO
+    target:
+      kind: ConfigMap
+      name: pcb3-config
+
+images:
+  - name: pcb3/backend
+    newTag: v3.0.0-rc
+  - name: pcb3/frontend
+    newTag: v3.0.0-rc

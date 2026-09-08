@@ -1,0 +1,140 @@
+{
+  "job_id": "job_3208f9b6d7ca42f685fcda750574a7de",
+  "task_id": "task_c3bde514ebd24b60ac8bcae97e82f50c",
+  "current_step": "place",
+  "status": "escalated",
+  "state": {
+    "project_id": "proj_34a465a1f7084fe6a0ac7724ffffc72c",
+    "tenant_id": "tests",
+    "correlation_id": "cmd_88c16a6119de4bbf9977b5aa02a80f1f",
+    "pipeline": "full_design",
+    "initial_stats": {
+      "components": 0,
+      "nets": 0
+    },
+    "steps": [
+      "parse",
+      "select",
+      "place",
+      "route",
+      "simulate",
+      "verify",
+      "optimize",
+      "manufacture",
+      "export"
+    ],
+    "failure": {
+      "escalated": true,
+      "error": "exception: name 'call_probe' is not defined"
+    },
+    "completed_steps": [
+      "parse",
+      "select"
+    ],
+    "duration_s": 0.417,
+    "graph_stats": {
+      "components": 7,
+      "placed": 7,
+      "nets": 10,
+      "routed": 0,
+      "layers": 4,
+      "wire_length_mm": 0,
+      "cost_usd": 3.083
+    },
+    "revision": 1
+  },
+  "created_ts": 1788905789.6750145,
+  "updated_ts": 1788905790.0922515,
+  "events_log": [
+    {
+      "ts": 1788905789.69,
+      "type": "step.started",
+      "step": "parse",
+      "agent_role": "planner",
+      "attempt": 1
+    },
+    {
+      "ts": 1788905789.692,
+      "type": "step.completed",
+      "step": "parse",
+      "attempt": 1,
+      "confidence": 0.75
+    },
+    {
+      "ts": 1788905789.692,
+      "type": "checkpoint",
+      "step": "parse",
+      "checkpoint_id": "job_3208f9b6d7ca42f685fcda750574a7de_parse_1788905789691"
+    },
+    {
+      "ts": 1788905789.692,
+      "type": "step.started",
+      "step": "select",
+      "agent_role": "selector",
+      "attempt": 1
+    },
+    {
+      "ts": 1788905789.702,
+      "type": "step.completed",
+      "step": "select",
+      "attempt": 1,
+      "confidence": 0.6
+    },
+    {
+      "ts": 1788905789.704,
+      "type": "checkpoint",
+      "step": "select",
+      "checkpoint_id": "job_3208f9b6d7ca42f685fcda750574a7de_select_1788905789702"
+    },
+    {
+      "ts": 1788905789.705,
+      "type": "step.started",
+      "step": "place",
+      "agent_role": "placement",
+      "attempt": 1
+    },
+    {
+      "ts": 1788905790.021,
+      "type": "step.failed",
+      "step": "place",
+      "attempt": 1,
+      "reason": "exception: name 'call_probe' is not defined"
+    },
+    {
+      "ts": 1788905790.022,
+      "type": "rollback",
+      "step": "place",
+      "to_rev": null,
+      "restored": false,
+      "reason": "exception: name 'call_probe' is not defined"
+    },
+    {
+      "ts": 1788905790.022,
+      "type": "step.started",
+      "step": "place",
+      "agent_role": "placement",
+      "attempt": 2
+    },
+    {
+      "ts": 1788905790.091,
+      "type": "step.failed",
+      "step": "place",
+      "attempt": 2,
+      "reason": "exception: name 'call_probe' is not defined"
+    },
+    {
+      "ts": 1788905790.092,
+      "type": "rollback",
+      "step": "place",
+      "to_rev": null,
+      "restored": false,
+      "reason": "exception: name 'call_probe' is not defined"
+    },
+    {
+      "ts": 1788905790.092,
+      "type": "escalation",
+      "step": "place",
+      "reason": "exception: name 'call_probe' is not defined"
+    }
+  ]
+}

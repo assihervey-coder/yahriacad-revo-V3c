@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pcb-ai-designer-v3"
+version = "3.0.0"
+description = "AI-Native Electronic Design Automation Platform — from natural language to manufacturing package"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "PCB_AI_DESIGNER_V3 Contributors" }]
+keywords = ["eda", "pcb", "ai", "llm", "reinforcement-learning", "kicad", "gerber"]
+
+dependencies = [
+  "pydantic>=2.5",
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "strawberry-graphql>=0.219",
+  "websockets>=12.0",
+  "httpx>=0.27",
+  "numpy>=1.26",
+  "networkx>=3.2",
+  "shapely>=2.0",
+  "sqlalchemy>=2.0",
+  "aiosqlite>=0.19",
+  "redis>=5.0",
+  "orjson>=3.9",
+  "python-multipart>=0.0.9",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+ai = [
+  "torch>=2.2",
+  "scipy>=1.11",
+  "scikit-learn>=1.4",
+  "openai>=1.12",
+  "tiktoken>=0.6",
+  "faiss-cpu>=1.7.4",
+]
+sim = ["numba>=0.59", "pyfftw>=0.13"]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "pytest-cov>=4.1",
+  "ruff>=0.3",
+  "mypy>=1.8",
+  "hypothesis>=6.99",
+]
+training = ["torch>=2.2", "tensorboard>=2.16", "wandb>=0.16"]
+
+[tool.setuptools.packages.find]
+where = ["backend", "."]
+include = ["services*", "orchestrator*", "api_gateway*", "shared*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "backend"]
+asyncio_mode = "auto"
+addopts = "-q --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["backend", "shared", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+namespace_packages = true
+explicit_package_bases = true
+
+[tool.coverage.run]
+source = ["backend", "shared"]

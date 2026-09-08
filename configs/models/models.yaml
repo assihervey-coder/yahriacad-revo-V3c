@@ -1,0 +1,77 @@
+# =============================================================================
+# PCB_AI_DESIGNER_V3 — registre des modèles (configs/models/models.yaml)
+# Chaque entrée : nom logique → artefact (chemin data/), provider, méta.
+# Chargé par services.ai_engine (checkpoint_manager, rag_engine, llm_orchestrator).
+# =============================================================================
+
+models:
+  # --- Cerveau symbolique : LLM ---------------------------------------------
+  llm:
+    provider: mock            # mock | openai | zai (override par LLM_PROVIDER)
+    openai_model: gpt-4o
+    zai_model: glm-4
+    temperature: 0.2
+    max_tokens: 8192
+    # Le mock est déterministe : réponses structurées par mots-clés, zéro coût.
+    fallback_chain: [openai, zai, mock]
+
+  # --- World model (dynamique d'état pour le RL) ------------------------------
+  world_model:
+    name: world_v1
+    path: data/trained_models/world_models/world_v1.npz
+    format: npz               # encoder 16 features + dynamics linéaire numpy
+    state_features: 16
+    device: cpu
+
+  # --- Politique de placement (REINFORCE) -------------------------------------
+  policy:
+    name: placement_policy_v1
+    path: data/trained_models/policies/placement_policy_v1.npz
+    feature_dim: 16
+    hidden_layers: [64, 64]
+    device: cpu               # cuda si toolchain-cuda
+    checkpoint_retention: 5
+
+  # --- Surrogate thermique (remplace la FDM quand réponse < 50 ms requise) ----
+  surrogates:
+    thermal:
+      name: thermal_surrogate_v1
+      path: data/trained_models/surrogate_models/thermal_surrogate_v1.npz
+      grid_mm: 5.0
+      input: power_map        # (x, y, watts) → champ de température
+    signal_integrity:
+      name: si_surrogate_v1
+      path: data/trained_models/surrogate_models/si_surrogate_v1.npz
+
+  # --- RAG : index TF-IDF du corpus data/knowledge ----------------------------
+  rag:
+    index_path: data/knowledge/index.json
+    chunk_size: 500           # caractères (paragraphe)
+    top_k: 5
+
+# =============================================================================
+# Hyperparamètres RL (REINFORCE + world model)
+# =============================================================================
+rl:
+  gamma: 0.99                 # facteur d'escompte des retours
+  learning_rate: 1.0e-3       # policy + value networks
+  epsilon: 0.1                # exploration ε-greedy
+  entropy_bonus: 0.01         # régularisation d'exploration
+  value_loss_coef: 0.5
+  batch_size: 32
+  steps_per_episode: 12
+  episodes_default: 100
+  baseline: running_mean      # réduction de variance REINFORCE
+  grad_clip: 5.0
+
+# =============================================================================
+# Hyperparamètres simulateurs (physique)
+# =============================================================================
+simulation:
+  thermal:
+    grid_mm: 5.0
+    max_iter: 2000
+    tol: 1.0e-4
+  signal_integrity:
+    rise_time_ps: 100
+    sample_points: 256

@@ -1,0 +1,42 @@
+# Environnement DEVELOPMENT — 1 réplique, LOG_LEVEL=DEBUG, image fraîche (Never pull-cache)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: pcb-ai-dev
+
+resources:
+  - ../../base
+
+patches:
+  # Replicas = 1 partout
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      labelSelector: app.kubernetes.io/name=pcb-ai-designer
+
+  # Config de développement
+  - patch: |-
+      - op: replace
+        path: /data/APP_ENV
+        value: development
+      - op: replace
+        path: /data/LOG_LEVEL
+        value: DEBUG
+      - op: replace
+        path: /data/EVENT_BUS_BACKEND
+        value: inprocess
+      - op: replace
+        path: /data/LLM_PROVIDER
+        value: mock
+    target:
+      kind: ConfigMap
+      name: pcb3-config
+
+images:
+  - name: pcb3/backend
+    newTag: dev
+  - name: pcb3/frontend
+    newTag: dev

@@ -1,0 +1,29 @@
+{{/*
+HPA : un par service ayant hpa.enabled=true (range conditionnel).
+*/}}
+{{- range $name, $svc := .Values.services }}
+{{- if and $svc.enabled $svc.hpa $svc.hpa.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "pcb-ai.fullname" $ }}-{{ $name }}-hpa
+  labels:
+    {{- include "pcb-ai.labels" $ | nindent 4 }}
+    {{- include "pcb-ai.selectorLabels" $svc.component | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "pcb-ai.fullname" $ }}-{{ $name }}
+  minReplicas: {{ $svc.hpa.minReplicas }}
+  maxReplicas: {{ $svc.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $svc.hpa.cpuTargetPercent }}
+{{- end }}
+{{- end }}

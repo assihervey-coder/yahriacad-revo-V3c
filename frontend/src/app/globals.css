@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                */
+/* ------------------------------------------------------------------ */
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-base text-ink antialiased;
+    font-feature-settings: "cv02", "cv03";
+  }
+  ::selection {
+    background: rgba(34, 211, 238, 0.3);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Composants utilitaires                                              */
+/* ------------------------------------------------------------------ */
+@layer components {
+  /* Panneau premium : fond #12161F, bordure discrète, coins 12px */
+  .panel {
+    @apply rounded-xl border border-panel-border bg-panel shadow-panel;
+  }
+  /* Badge pill (couleur posée par Badge.tsx) */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium leading-4;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply border-accent-cyan/40 bg-accent-cyan/15 text-accent-cyan hover:bg-accent-cyan/25;
+  }
+  .btn-violet {
+    @apply border-accent-violet/40 bg-accent-violet/15 text-accent-violet hover:bg-accent-violet/25;
+  }
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-ink-dim hover:bg-panel-soft hover:text-ink;
+  }
+  .input {
+    @apply w-full rounded-lg border border-panel-border bg-base px-3 py-2 text-sm text-ink placeholder:text-ink-dim/60 focus:border-accent-cyan/60 focus:outline-none;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium uppercase tracking-wider text-ink-dim;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Scrollbar custom                                                    */
+/* ------------------------------------------------------------------ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0e14;
+}
+::-webkit-scrollbar-thumb {
+  background: #232a38;
+  border-radius: 8px;
+  border: 2px solid #0b0e14;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2f394d;
+}
+* {
+  scrollbar-color: #232a38 #0b0e14;
+}

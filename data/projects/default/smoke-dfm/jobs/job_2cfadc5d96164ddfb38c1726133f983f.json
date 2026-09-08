@@ -1,0 +1,25 @@
+{
+  "job_id": "job_2cfadc5d96164ddfb38c1726133f983f",
+  "task_id": "task_3ee32c10a6a7446c97e9480a4fc03dfb",
+  "current_step": "",
+  "status": "failed",
+  "state": {
+    "project_id": "smoke-dfm",
+    "tenant_id": "default",
+    "correlation_id": "",
+    "pipeline": "pipeline_fantome",
+    "initial_stats": {
+      "components": 2,
+      "placed": 2,
+      "nets": 1,
+      "routed": 0,
+      "layers": 4,
+      "wire_length_mm": 0,
+      "cost_usd": 0.0
+    },
+    "error": "pipeline inconnu: 'pipeline_fantome' \u2014 disponibles: ['dfm_only', 'full_design', 'reoptimize']"
+  },
+  "created_ts": 1788906963.651433,
+  "updated_ts": 1788906963.6524086,
+  "events_log": []
+}

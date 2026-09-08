@@ -1,0 +1,31 @@
+# =============================================================================
+# Elasticsearch — option full-text (recherche dans les logs/exports/audit).
+# Mode single-node, sécurité désactivée : DEV UNIQUEMENT.
+# =============================================================================
+cluster:
+  name: pcb3-logs
+
+node:
+  name: pcb3-es-01
+  store:
+    allow_mmap: false           # conteneur : mmap limité par défaut
+
+path:
+  data: /usr/share/elasticsearch/data
+
+network:
+  host: 0.0.0.0
+  port: 9200
+
+discovery:
+  type: single-node            # pas de quorum, un seul nœud
+
+# --- DEV UNIQUEMENT — sécuriser avec TLS + RBAC avant production ------------
+xpack:
+  security:
+    enabled: false
+
+# Index lifecycle : logs bruts 7 jours puis suppression
+ingest:
+  pipeline:
+    warn_if_deprecated: true

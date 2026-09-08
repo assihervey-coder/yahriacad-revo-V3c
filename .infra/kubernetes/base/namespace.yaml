@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pcb-ai-v3
+  labels:
+    app.kubernetes.io/name: pcb-ai-designer
+    app.kubernetes.io/part-of: pcb-ai-designer-v3
+    app.kubernetes.io/managed-by: kustomize

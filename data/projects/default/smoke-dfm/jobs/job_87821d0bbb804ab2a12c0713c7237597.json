@@ -1,0 +1,84 @@
+{
+  "job_id": "job_87821d0bbb804ab2a12c0713c7237597",
+  "task_id": "task_4cf6c12f28ba4b8c859588d199f52a3a",
+  "current_step": "manufacture",
+  "status": "completed",
+  "state": {
+    "project_id": "smoke-dfm",
+    "tenant_id": "default",
+    "correlation_id": "",
+    "pipeline": "dfm_only",
+    "initial_stats": {
+      "components": 2,
+      "placed": 2,
+      "nets": 1,
+      "routed": 0,
+      "layers": 4,
+      "wire_length_mm": 0,
+      "cost_usd": 0.0
+    },
+    "steps": [
+      "verify",
+      "manufacture"
+    ],
+    "completed_steps": [
+      "verify",
+      "manufacture"
+    ],
+    "duration_s": 0.329,
+    "graph_stats": {
+      "components": 2,
+      "placed": 2,
+      "nets": 1,
+      "routed": 0,
+      "layers": 4,
+      "wire_length_mm": 0,
+      "cost_usd": 0.0
+    },
+    "revision": 2
+  },
+  "created_ts": 1788906214.3562562,
+  "updated_ts": 1788906214.6853251,
+  "events_log": [
+    {
+      "ts": 1788906214.357,
+      "type": "step.started",
+      "step": "verify",
+      "agent_role": "validator",
+      "attempt": 1
+    },
+    {
+      "ts": 1788906214.672,
+      "type": "step.completed",
+      "step": "verify",
+      "attempt": 1,
+      "confidence": 0.84
+    },
+    {
+      "ts": 1788906214.673,
+      "type": "checkpoint",
+      "step": "verify",
+      "checkpoint_id": "job_87821d0bbb804ab2a12c0713c7237597_verify_1788906214672"
+    },
+    {
+      "ts": 1788906214.674,
+      "type": "step.started",
+      "step": "manufacture",
+      "agent_role": "manufacturing",
+      "attempt": 1
+    },
+    {
+      "ts": 1788906214.684,
+      "type": "step.completed",
+      "step": "manufacture",
+      "attempt": 1,
+      "confidence": 0.8
+    },
+    {
+      "ts": 1788906214.685,
+      "type": "checkpoint",
+      "step": "manufacture",
+      "checkpoint_id": "job_87821d0bbb804ab2a12c0713c7237597_manufacture_1788906214684"
+    }
+  ]
+}

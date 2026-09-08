@@ -1,0 +1,80 @@
+# =============================================================================
+# Profil usine JLCPCB — configs/factories/jlcpcb.yaml
+# Consommé par services.manufacturing_intelligence (DFM, devis, yield)
+# et par le constraint_engine (caps 0.127 mm injectées au parsing NL).
+# =============================================================================
+factory: jlcpcb
+display_name: "JLCPCB"
+website: "https://jlcpcb.com"
+api_key_env: JLCPCB_API_KEY
+
+# --- Clés canoniques plates (lues par services.verification.ManufacturingRules
+#     et le DFM engine — mêmes noms que les profils embarqués) ----------------
+name: JLCPCB
+min_trace_mm: 0.127
+min_clearance_mm: 0.127
+min_hole_mm: 0.2
+min_annular_ring_mm: 0.13
+max_layers: 20
+max_aspect_ratio: 10.0
+lead_time_days: 4
+assembly: true
+unit_price_factor: 1.0
+
+# --- Capacités de fabrication détaillées (règles DRC-DFM absolues) -----------
+capabilities:
+  min_trace_mm: 0.127         # 5 mil
+  min_clearance_mm: 0.127     # 5 mil
+  min_hole_mm: 0.2            # 8 mil (forage mécanique)
+  min_annular_ring_mm: 0.125
+  max_layers: 20
+  min_board_mm: [10.0, 10.0]
+  max_board_mm: [480.0, 430.0]
+  min_track_spacing_soldermask: 0.075
+
+# --- Stackup ------------------------------------------------------------------
+stackup:
+  material: FR4               # S1000-2 standard
+  er: 4.5
+  copper_oz_options: [1.0, 2.0]
+  board_thickness_mm: [0.6, 0.8, 1.0, 1.2, 1.6, 2.0]
+  solder_mask: [green, red, blue, black, white, yellow]
+  silk_screen: [white, black]
+
+# --- Délais -------------------------------------------------------------------
+lead_time:
+  pcb_days: [2, 4]            # standard express : 2-4 jours
+  pcb_assembly_days: [4, 7]
+  options:
+    - { name: economic, days: [4, 6], multiplier: 1.0 }
+    - { name: express, days: [2, 3], multiplier: 1.6 }
+
+# --- Assemblage ----------------------------------------------------------------
+assembly:
+  enabled: true
+  min_parts: 2
+  max_parts_per_board: 2000
+  part_library: "JLCPCB Basic + Extended (LCSC)"
+  extended_part_fee_usd: 3.0   # par référence non-basic
+  setup_fee_usd: 25.0
+  stencil_fee_usd: 7.0
+
+# --- Tarification (estimation : CostEstimator) --------------------------------
+pricing:
+  currency: USD
+  pcb_base_usd: 2.0            # frais fixes panier (jusqu'à 100x100mm 4 couches)
+  pcb_per_mm2_usd: 0.02        # surfacique au-delà (prix/m² ramené au mm²)
+  layer_multiplier:            # multiplicateur par tranche de couches
+    2: 1.0
+    4: 1.15
+    6: 1.5
+    8: 2.0
+    10: 2.8
+  vias_per_100_usd: 0.05
+  gold_fingers_usd: 0.5
+
+# --- Contrôles qualité ---------------------------------------------------------
+qa:
+  flying_probe: false          # e-test sur panels uniquement
+  ipc_class: 2                 # standard électronique grand public
+  xray_bga: true

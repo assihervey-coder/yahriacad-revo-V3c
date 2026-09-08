@@ -1,0 +1,153 @@
+# =============================================================================
+# values.yaml — PCB_AI_DESIGNER_V3 (chart helm pcb-ai-designer)
+# `helm install pcb3 .infra/helm/pcb-ai-designer -f mes-valeurs.yaml`
+# =============================================================================
+
+global:
+  # Namespace cible (créé si nonexistent == true)
+  namespace: pcb-ai-v3
+  namespaceCreate: true
+  imageRegistry: ""          # ex: registry.example.com/pcb3 ("" = registre local)
+  imagePullPolicy: IfNotPresent
+
+image:
+  backend:
+    repository: pcb3/backend
+    tag: v3.0.0
+  frontend:
+    repository: pcb3/frontend
+    tag: v3.0.0
+
+# ---------------------------------------------------------------------------
+# Un déploiement par service ; seul `command` change pour les workers.
+# ---------------------------------------------------------------------------
+services:
+  api-gateway:
+    enabled: true
+    replicas: 2
+    component: api
+    command: ["uvicorn", "api_gateway.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    port: 8000
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      cpuTargetPercent: 70
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "1", memory: 1Gi }
+
+  orchestrator:
+    enabled: true
+    replicas: 2
+    component: orchestrator
+    command: ["python", "-m", "orchestrator.workflow_engine.runner"]
+    port: 8000            # /health exposée par le runner
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "1", memory: 1Gi }
+
+  ai-engine:
+    enabled: true
+    replicas: 2
+    component: ai
+    command: ["python", "-m", "services.ai_engine.worker"]
+    port: 8000
+    resources:
+      requests: { cpu: 500m, memory: 1Gi }
+      limits: { cpu: "2", memory: 2Gi }
+
+  simulator:
+    enabled: true
+    replicas: 2
+    component: simulator
+    command: ["python", "-m", "services.simulator.worker"]
+    port: 8000
+    resources:
+      requests: { cpu: 500m, memory: 1Gi }
+      limits: { cpu: "2", memory: 2Gi }
+
+  router:
+    enabled: true
+    replicas: 2
+    component: router
+    command: ["python", "-m", "services.router.worker"]
+    port: 8000
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "2", memory: 1Gi }
+
+frontend:
+  enabled: true
+  replicas: 2
+  port: 3000
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+# ---------------------------------------------------------------------------
+# Configuration applicative (ConfigMap pcb3-config)
+# ---------------------------------------------------------------------------
+config:
+  APP_ENV: production
+  LOG_LEVEL: INFO
+  PYTHONPATH: /app:/app/backend
+  EVENT_BUS_BACKEND: redis
+  LLM_PROVIDER: mock
+  LLM_MODEL: gpt-4o
+  RL_DEVICE: cpu
+  SIM_MAX_WORKERS: "4"
+
+# Secrets — passer par external-secrets/vault en production (valeurs vides = templées)
+secrets:
+  create: true
+  JWT_SECRET_KEY: ""
+  OPENAI_API_KEY: ""
+  ZAI_API_KEY: ""
+  DATABASE_PASSWORD: ""
+  S3_ACCESS_KEY: ""
+  S3_SECRET_KEY: ""
+
+# ---------------------------------------------------------------------------
+# Bases de données (charts de dépendances à activer)
+# ---------------------------------------------------------------------------
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  database: pcb_ai_v3
+  username: pcb
+  storageClass: ""
+  storageSize: 20Gi
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+  storageSize: 5Gi
+
+# ---------------------------------------------------------------------------
+# Ingress
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  host: pcb.local            # ex: pcb.example.com
+  tls:
+    enabled: false
+    secretName: pcb3-tls
+
+# ---------------------------------------------------------------------------
+# Observabilité (services d'infra déployés séparément — cf. .infra/monitoring)
+# ---------------------------------------------------------------------------
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true           # nécessite prometheus-operator (CRD ServiceMonitor)
+    interval: 15s
+  lokiEnabled: true
+  tempoEnabled: true
+
+persistence:
+  # data/ partagé (datasets, trained_models, exports)
+  enabled: true
+  storageClass: ""
+  size: 50Gi

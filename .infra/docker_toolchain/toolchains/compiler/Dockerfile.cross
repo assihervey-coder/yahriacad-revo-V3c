@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1.6
+# =============================================================================
+# PCB_AI_DESIGNER_V3 — Toolchain cross-compilation firmware (ARM Cortex-M)
+# gcc-arm-none-eabi pour le firmware bridge (headers pinout Zephyr/STM32/Arduino).
+# Build : docker build -f .infra/docker_toolchain/toolchains/compiler/Dockerfile.cross -t pcb3/toolchain-cross:v3.0.0 .
+# =============================================================================
+FROM ubuntu:24.04
+
+LABEL org.opencontainers.image.title="pcb3-toolchain-cross" \
+      org.opencontainers.image.description="gcc-arm-none-eabi pour le firmware bridge de PCB_AI_DESIGNER_V3"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi \
+        make cmake ninja-build python3 python3-pip \
+        git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 10001 builder
+USER 10001:10001
+WORKDIR /workspace
+
+# Vérification toolchain à l'exécution : arm-none-eabi-gcc --version
+CMD ["arm-none-eabi-gcc", "--version"]

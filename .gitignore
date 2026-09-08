@@ -1,0 +1,50 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Node / Frontend ---
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+
+# --- Environnement & secrets ---
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+!**/configs/**/*.example.yaml
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- Données volumineuses (garde les .gitkeep et exemples) ---
+data/trained_models/**/*.bin
+data/trained_models/**/*.safetensors
+data/datasets/**/*.parquet
+data/knowledge/datasheets/*.pdf
+*.h5
+*.pt
+*.ckpt
+
+# --- Infra runtime ---
+*.tfstate
+*.tfstate.backup
+.terraform/
+k8s-secrets/

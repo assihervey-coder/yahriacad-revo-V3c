@@ -1,0 +1,59 @@
+# =============================================================================
+# Prometheus — PCB_AI_DESIGNER_V3
+# Scrape : api-gateway /metrics, node-exporter (hosts), cadvisor (conteneurs)
+# Alertes : alerts.yml (règles métier plateforme)
+# =============================================================================
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: pcb-ai-v3
+    environment: production
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # --- API Gateway FastAPI (uvicorn + middleware metrics /metrics) -----------
+  - job_name: api-gateway
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api-gateway:8000"]
+        labels:
+          service: api-gateway
+          component: api
+
+  # --- Workers (orchestrator / ai / simulator / router) ----------------------
+  - job_name: pcb3-workers
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - orchestrator:8000
+          - ai-engine:8000
+          - simulator:8000
+          - router:8000
+        labels:
+          service: workers
+
+  # --- Métal / VM (CPU, RAM, disque, réseau) ---------------------------------
+  - job_name: node-exporter
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: infra
+
+  # --- Conteneurs Docker / k8s (CPU, mem, net par conteneur) -----------------
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          service: infra
+
+  # --- Infra données ----------------------------------------------------------
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+  - job_name: redis
+    static_configs:
+      - targets: ["redis-exporter:9121"]

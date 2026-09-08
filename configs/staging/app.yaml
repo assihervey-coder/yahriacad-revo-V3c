@@ -1,0 +1,46 @@
+# =============================================================================
+# PCB_AI_DESIGNER_V3 — configuration STAGING
+# Miroir de la production à échelle réduite, LLM réel si clé fournie.
+# =============================================================================
+app_env: staging
+log_level: INFO
+
+# --- Cerveau symbolique : provider réel si OPENAI_API_KEY sinon mock ---------
+llm_provider: mock          # "openai" en staging avancé (coût maîtrisé)
+llm_model: gpt-4o
+llm_temperature: 0.2
+llm_max_tokens: 8192
+
+# --- Bus d'événements : Redis partagé entre API et workers -------------------
+event_bus: redis
+redis_url: redis://redis:6379/0
+
+# --- Base de données ----------------------------------------------------------
+database_url: "postgresql+asyncpg://pcb:pcb@postgres:5432/pcb_ai_v3"
+
+# --- Cerveau décisionnel ------------------------------------------------------
+rl_device: cpu
+rl_checkpoint_dir: data/trained_models/policies
+world_model_dir: data/trained_models/world_models
+
+# --- Cerveau physique ---------------------------------------------------------
+sim_max_workers: 4
+surrogate_models_dir: data/trained_models/surrogate_models
+
+# --- Services -----------------------------------------------------------------
+api_port: 8000
+frontend_port: 3000
+
+# --- Qualité / déploiement ----------------------------------------------------
+replicas: 2
+monitoring:
+  prometheus_enabled: true
+  grafana_enabled: true
+  tracing_enabled: true
+  alerting_enabled: false   # pas de pages on-call en staging
+
+# --- Manufacturing ------------------------------------------------------------
+default_factory: jlcpcb
+
+# --- Crédits -------------------------------------------------------------------
+credits_free_tier: 100

@@ -1,0 +1,28 @@
+# =============================================================================
+# terraform.tfvars.example — copier vers terraform.tfvars et ajuster.
+#   cp .infra/terraform/terraform.tfvars.example .infra/terraform/terraform.tfvars
+# =============================================================================
+
+cloud_provider = "local"        # "aws" pour un déploiement cloud réel
+region         = "eu-west-1"
+project        = "pcb-ai-v3"
+environment    = "production"
+
+# Networking
+vpc_cidr    = "10.42.0.0/16"
+# subnet_cidrs = ["10.42.1.0/24", "10.42.2.0/24"]
+
+# Bases de données
+db_instance_class   = "db.t4g.medium"
+cache_instance_class = "cache.t4g.micro"
+
+# Storage
+versioning_enabled = true
+
+# Tags
+common_tags = {
+  Project     = "pcb-ai-designer-v3"
+  ManagedBy   = "terraform"
+  Environment = "production"
+  CostCenter  = "eda-ai"
+}

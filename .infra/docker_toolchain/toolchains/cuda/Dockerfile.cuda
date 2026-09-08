@@ -1,0 +1,37 @@
+# syntax=docker/dockerfile:1.6
+# =============================================================================
+# PCB_AI_DESIGNER_V3 — Toolchain GPU : CUDA 12.4 runtime + Python 3.11 + torch cu124
+# Pour l'entraînement RL (policy/world models) et les surrogates GPU.
+# Build : docker build -f .infra/docker_toolchain/toolchains/cuda/Dockerfile.cuda -t pcb3/toolchain-cuda:v3.0.0 .
+# Runtime : docker run --gpus all pcb3/toolchain-cuda:v3.0.0 python scripts/training/train_placement_policy.py --episodes 5000
+# =============================================================================
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+LABEL org.opencontainers.image.title="pcb3-toolchain-cuda" \
+      org.opencontainers.image.description="CUDA 12.4 + torch cu124 pour l'entraînement RL de PCB_AI_DESIGNER_V3"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+# deadsnakes → python3.11 sur 22.04 (base = 3.10)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        software-properties-common gnupg curl ca-certificates git \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        python3.11 python3.11-venv python3.11-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3.11 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --upgrade pip
+
+# Dépendances plateforme + torch avec roues CUDA 12.4 officielles
+COPY pyproject.toml /tmp/pyproject.toml
+RUN pip install torch --index-url https://download.pytorch.org/whl/cu124 \
+    && pip install numpy pydantic pyyaml
+
+WORKDIR /workspace
+CMD ["python", "--version"]
