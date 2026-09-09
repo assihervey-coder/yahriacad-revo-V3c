@@ -97,19 +97,42 @@ class AltiumBridge:
         from services.pcb_plugin._compat import graph_to_dict
         data = graph_to_dict(graph)
         # symétrisation : listes ordonnées, pads/nets avec le vocabulaire du pont
-        components = []
-        for ref, comp in (data.get("components") or {}).items():
-            comp = dict(comp)
-            comp["ref"] = comp.get("ref", ref)
-            components.append(comp)
+        # (graph_to_dict peut renvoyer components/nets en listes OU en dicts
+        #  selon le backend design_core — les deux formats sont gérés ici)
+        raw_components = data.get("components") or {}
+        raw_nets = data.get("nets") or {}
+        if isinstance(raw_components, dict):
+            component_items = [dict(c, ref=str(c.get("ref", ref)))
+                               for ref, c in raw_components.items()]
+        else:
+            component_items = [dict(c) for c in raw_components]
+        for comp in component_items:
+            comp.setdefault("ref", "")
+            pads = comp.get("pads")
+            if isinstance(pads, dict):
+                comp["pads"] = [dict(p, name=str(p.get("name", name)))
+                                for name, p in pads.items()]
+        components = component_items
+
         nets = []
-        for net_id, net in (data.get("nets") or {}).items():
-            net = dict(net)
-            net["net_id"] = net.get("net_id", net_id)
+        if isinstance(raw_nets, dict):
+            net_items = [dict(n, net_id=str(n.get("net_id", nid)))
+                         for nid, n in raw_nets.items()]
+        else:
+            net_items = [dict(n) for n in raw_nets]
+        for net in net_items:
+            net.setdefault("net_id", net.get("name", ""))
             path = net.get("path")
-            if hasattr(path, "points"):  # RoutePath non sérialisé
+            if isinstance(path, dict):
+                # déjà sérialisé — normalise les vias si nécessaire
+                vias = path.get("vias") or []
+                if vias and isinstance(vias[0], (list, tuple)):
+                    path["vias"] = [{"x": v[0].x, "y": v[0].y,
+                                     "from_layer": v[1], "to_layer": v[2]}
+                                    for v in vias]
+            elif path is not None and hasattr(path, "points"):
                 net["path"] = {
-                    "net_id": getattr(path, "net_id", net_id),
+                    "net_id": getattr(path, "net_id", net.get("net_id", "")),
                     "points": [{"x": p.x, "y": p.y} for p in path.points],
                     "layer": int(getattr(path, "layer", 0)),
                     "width_mm": float(getattr(path, "width_mm", 0.2)),

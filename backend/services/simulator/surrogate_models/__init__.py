@@ -11,7 +11,9 @@ from services.simulator.surrogate_models.manager import (
     BenchmarkResult,
     SurrogateManager,
     SurrogateStatus,
+    get_manager,
 )
+from services.simulator.surrogate_models.beta_path import AUTOTRAIN_EVERY, run_sim_smart
 
 __all__ = [
     "NeuralSurrogate",
@@ -21,4 +23,7 @@ __all__ = [
     "SurrogateManager",
     "SurrogateStatus",
     "BenchmarkResult",
+    "get_manager",
+    "run_sim_smart",
+    "AUTOTRAIN_EVERY",
 ]

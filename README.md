@@ -47,11 +47,45 @@ PCB_AI_DESIGNER_V3 est la troisième génération, unifiée et révolutionnaire,
   `LLM_API_KEY`), modèle via `LLM_MODEL` ; le provider `mock` déterministe
   reste la valeur par défaut pour tests et démo.
 
+## 🔌 Intégrations EDA fonctionnelles (V3+)
+
+- **pcb_plugin · KiCad** — import auto-détecté (netlist s-expression,
+  `.kicad_pcb`, schéma JSON, session PCB), export **.kicad_pcb + netlist**
+  (round-trip vérifié par tests), hôte **live WebSocket** (`push`/`pull` vers
+  pcbnew sur `ws://localhost:7999`).
+- **Altium Designer — bridge** — import/export du JSON pont symétrique
+  (round-trip vérifié) + **synchronisation** locale ↔ Altium comparant
+  (ref, position, nets) par composant avec détection des conflits
+  (`local_wins`/`remote_wins`).
+- **session_restorer** — sauvegarde **atomique** (tmp→rename) des sessions
+  (graphe + versioning) sous `data/projects/{tenant}/{user}/{project}/`,
+  listing par tenant, restauration avec application en nouvelle révision.
+- **Voie β branchée sur le solveur** — `run_sim_smart()` est LE point de
+  passage unique : surrogate entraîné → SimResult β en ~µs (solveur contourné,
+  marqué `source=surrogate`) ; sinon solveur complet **+ enregistrement de
+  l'échantillon + auto-entraînement périodique**. Utilisée par la boucle
+  multi-physique ET l'agent simulation.
+- **API Intégrations** — `POST /api/v1/integrations/kicad/import`,
+  `GET /kicad/export/{id}?fmt=pcb|netlist|both`, `POST /kicad/live/push|pull`,
+  `POST /altium/import`, `GET /altium/export/{id}`, `POST /altium/sync/{id}`,
+  `POST /sessions/save/{id}`, `GET /sessions`, `GET /sessions/{id}/restore`.
+- **API propositions RL/LLM après verdict VALID** —
+  `POST /api/v1/optimization/{id}/proposals` : porte SelfVerifier (409 + issues
+  si INVALID), propositions LLM + RL + world model, keeper conservatif,
+  `apply=true` pour committer le graphe gagnant en nouvelle révision.
+- **Page Intégrations** (`/integrations`) — panneaux KiCad / Altium / Sessions /
+  Surrogates β (échantillons, R², latence) / optimiseur autonome + journal
+  d'activité.
+- **API surrogates** — `GET /api/v1/simulations/surrogates/status`,
+  `POST /surrogates/train` (persistance dans `data/model_registry/surrogates/`,
+  rechargé au démarrage).
+
 ### Démarrage rapide des enrichissements
 ```bash
 make setup && make dev     # plateforme complète
 make demo                  # E2E réel : NL → SKIDL → placement → routage → DRC → β → Gerber
 make smoke                 # smoke test diff pairs + world model + surrogates + corrector
+make smoke-integrations    # smoke test KiCad/Altium/sessions + voie β + optimizer VALID
 ```
 
 

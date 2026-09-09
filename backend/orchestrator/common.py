@@ -389,7 +389,15 @@ def graph_stats(graph: Any) -> Dict[str, Any]:
 
 
 def deserialize_graph(data: Optional[Dict[str, Any]]) -> Any:
-    """Reconstruit un graphe depuis un dict (DesignGraph réel si dispo, sinon duck-typé)."""
+    """Reconstruit un graphe depuis un dict (DesignGraph réel si dispo, sinon duck-typé).
+
+    Deux formats de snapshot coexistent et sont TOUS DEUX acceptés :
+      - format canonique design_core (to_dict) : components/nets en LISTES ;
+      - format duck-typé / SimpleDesignGraph : components/nets en DICTS.
+    Le format canonique est rechargé via DesignGraph.from_dict (inverse exact
+    de to_dict) — c'était le bug silencieux qui rendait les révisions
+    sauvegardées par DesignStateManager illisibles.
+    """
     if not data:
         return None
     comps = data.get("components") or {}
@@ -397,6 +405,15 @@ def deserialize_graph(data: Optional[Dict[str, Any]]) -> Any:
     mods = try_import("services.design_core", ["DesignGraph"])
     cls = mods.get("DesignGraph")
     if cls is not None:
+        # 1) format canonique (listes) → inverse exact de to_dict()
+        if isinstance(comps, list) or isinstance(nets, list):
+            try:
+                graph = cls.from_dict(data)
+                if graph is not None:
+                    return graph
+            except Exception:
+                log.debug("DesignGraph.from_dict (format liste) impossible", exc_info=True)
+        # 2) format duck-typé (dicts) → reconstruction add_component/add_net
         try:
             try:
                 graph = cls()
@@ -551,17 +568,34 @@ class SimpleDesignGraph:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SimpleDesignGraph":
         data = data or {}
+        raw_comps = data.get("components") or {}
         comps = {}
-        for ref, comp in (data.get("components") or {}).items():
-            comp = dict(comp) if isinstance(comp, dict) else {"ref": ref}
-            comp.setdefault("pads", ["1", "2"])
-            comps[ref] = comp
+        if isinstance(raw_comps, list):
+            for comp in raw_comps:
+                comp = dict(comp) if isinstance(comp, dict) else {"ref": str(comp)}
+                ref = str(comp.get("ref") or len(comps))
+                comp.setdefault("pads", ["1", "2"])
+                comps[ref] = comp
+        else:
+            for ref, comp in raw_comps.items():
+                comp = dict(comp) if isinstance(comp, dict) else {"ref": ref}
+                comp.setdefault("pads", ["1", "2"])
+                comps[ref] = comp
+        raw_nets = data.get("nets") or {}
         nets = {}
-        for net_id, net in (data.get("nets") or {}).items():
-            net = dict(net) if isinstance(net, dict) else {"net_id": net_id}
-            net.setdefault("pins", [])
-            net.setdefault("routed", False)
-            nets[net_id] = net
+        if isinstance(raw_nets, list):
+            for net in raw_nets:
+                net = dict(net) if isinstance(net, dict) else {"net_id": str(net)}
+                net_id = str(net.get("net_id") or net.get("name") or len(nets))
+                net.setdefault("pins", [])
+                net.setdefault("routed", False)
+                nets[net_id] = net
+        else:
+            for net_id, net in raw_nets.items():
+                net = dict(net) if isinstance(net, dict) else {"net_id": net_id}
+                net.setdefault("pins", [])
+                net.setdefault("routed", False)
+                nets[net_id] = net
         board = data.get("board_size") or data.get("board_size_mm") or (100.0, 80.0)
         return cls(components=comps, nets=nets,
                    board_size=(float(board[0]), float(board[1])),

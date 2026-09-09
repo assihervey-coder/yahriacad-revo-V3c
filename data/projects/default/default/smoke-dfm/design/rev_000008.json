@@ -1,0 +1,123 @@
+{
+  "rev": 8,
+  "ts": 1788933300.6377633,
+  "graph": {
+    "project_id": "smoke-dfm",
+    "name": "smoke",
+    "board_size": [
+      40.0,
+      30.0
+    ],
+    "layers": [
+      {
+        "index": 0,
+        "name": "F.Cu",
+        "ltype": "signal",
+        "thickness_um": 35.0,
+        "er": 4.3
+      },
+      {
+        "index": 1,
+        "name": "GND",
+        "ltype": "ground",
+        "thickness_um": 35.0,
+        "er": 4.3
+      },
+      {
+        "index": 2,
+        "name": "PWR",
+        "ltype": "power",
+        "thickness_um": 35.0,
+        "er": 4.3
+      },
+      {
+        "index": 3,
+        "name": "B.Cu",
+        "ltype": "signal",
+        "thickness_um": 35.0,
+        "er": 4.3
+      }
+    ],
+    "components": [
+      {
+        "ref": "R1",
+        "value": "10k",
+        "footprint": "0603",
+        "mpn": "",
+        "x": 10.0,
+        "y": 10.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          1.6,
+          0.8
+        ],
+        "power_w": 0.0,
+        "price_usd": 0.0,
+        "pads": [
+          {
+            "name": "1",
+            "x": -0.525,
+            "y": 0.0,
+            "w": 0.45,
+            "h": 0.55,
+            "net_id": "N1",
+            "layer": 0
+          }
+        ],
+        "placed": true
+      },
+      {
+        "ref": "C1",
+        "value": "100n",
+        "footprint": "0603",
+        "mpn": "",
+        "x": 25.0,
+        "y": 10.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          1.6,
+          0.8
+        ],
+        "power_w": 0.0,
+        "price_usd": 0.0,
+        "pads": [
+          {
+            "name": "1",
+            "x": -0.525,
+            "y": 0.0,
+            "w": 0.45,
+            "h": 0.55,
+            "net_id": "N1",
+            "layer": 0
+          }
+        ],
+        "placed": true
+      }
+    ],
+    "nets": [
+      {
+        "net_id": "N1",
+        "name": "SIG",
+        "class_name": "default",
+        "pins": [
+          [
+            "R1",
+            "1"
+          ],
+          [
+            "C1",
+            "1"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": null
+      }
+    ],
+    "keepouts": []
+  }
+}

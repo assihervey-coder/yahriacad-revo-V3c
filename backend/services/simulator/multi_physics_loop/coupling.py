@@ -1,14 +1,21 @@
-"""Couplage multi-physique — exécute les sims, consolide les feedbacks."""
+"""Couplage multi-physique — exécute les sims, consolide les feedbacks.
+
+Chaque simulation passe par la voie β (`run_sim_smart`) : si un surrogate
+neuronal entraîné couvre le kind demandé, l'inférence rapide (~µs) REMPLACE
+le solveur complet (bêta) ; sinon le solveur complet tourne et alimente
+l'apprentissage continu du surrogate (enregistrement + auto-train).
+"""
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from shared.utilities import get_logger, new_id
 
 from services.design_core import DesignGraph
 
 from services.simulator.base import BaseSim, SimResult
+from services.simulator.surrogate_models.beta_path import run_sim_smart
 
 log = get_logger("simulator.coupling")
 
@@ -16,14 +23,23 @@ log = get_logger("simulator.coupling")
 class MultiPhysicsCoupling:
     """Exécute un ensemble de sims et détermine les feedbacks inter-domaines."""
 
-    def run(self, graph: DesignGraph,
-            sims: Sequence[BaseSim]) -> Dict[str, Any]:
-        """Retourne {"results": {kind: SimResult}, "feedbacks": [...], "passed": bool}."""
+    def run(self, graph: DesignGraph, sims: Sequence[BaseSim],
+            surrogate_manager: Optional[Any] = None) -> Dict[str, Any]:
+        """Retourne {"results": {kind: SimResult}, "feedbacks": [...], "passed": bool}.
+
+        `surrogate_manager` (optionnel) active la voie β : surrogate entraîné
+        → inférence rapide à la place du solveur complet.
+        """
         t0 = time.perf_counter()
         results: Dict[str, SimResult] = {}
+        beta_kinds: List[str] = []
         for sim in sims:
             try:
-                results[sim.sim_kind] = sim.run(graph)
+                result, beta_used = run_sim_smart(sim, graph,
+                                                  manager=surrogate_manager)
+                results[sim.sim_kind] = result
+                if beta_used:
+                    beta_kinds.append(sim.sim_kind)
             except Exception:  # une sim défaillante n'arrête pas la boucle
                 log.exception("simulation %s en échec", sim.sim_kind)
                 results[sim.sim_kind] = SimResult(
@@ -31,12 +47,14 @@ class MultiPhysicsCoupling:
                     runtime_s=0.0, notes=["exception pendant la simulation"])
         feedbacks = self._feedbacks(graph, results)
         passed = all(r.passed for r in results.values()) if results else True
-        log.info("couplage multi-physique : %d sims, %d feedback(s) (%.0f ms)",
-                 len(results), len(feedbacks), (time.perf_counter() - t0) * 1000)
+        log.info("couplage multi-physique : %d sims (%d via β), %d feedback(s) (%.0f ms)",
+                 len(results), len(beta_kinds), len(feedbacks),
+                 (time.perf_counter() - t0) * 1000)
         return {
             "results": results,
             "feedbacks": feedbacks,
             "passed": passed,
+            "beta_kinds": beta_kinds,
             "correlation_id": new_id("mp"),
         }
 

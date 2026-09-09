@@ -263,3 +263,33 @@ class SurrogateManager:
             except (OSError, KeyError, ValueError) as exc:
                 log.warning("surrogate %s non chargé : %s", fname, exc)
         return loaded
+
+
+# ---------------------------------------------------------------- singleton
+_MANAGER: Optional[SurrogateManager] = None
+
+
+def get_manager() -> SurrogateManager:
+    """Singleton SurrogateManager de la plateforme (datasets persistants)."""
+    global _MANAGER
+    if _MANAGER is None:
+        import os
+
+        _MANAGER = SurrogateManager(
+            min_samples=int(os.environ.get("SURROGATE_MIN_SAMPLES", 25)),
+            data_root=os.environ.get("SURROGATE_DATA_DIR") or None,
+        )
+        # recharge les modèles entraînés précédemment (modèle registry disque)
+        try:
+            from orchestrator.common import data_root
+
+            registry = str(data_root() / "model_registry" / "surrogates")
+        except Exception:
+            registry = os.path.join("data", "model_registry", "surrogates")
+        try:
+            n = _MANAGER.load(registry)
+            if n:
+                log.info("surrogates rechargés depuis %s : %d", registry, n)
+        except Exception as exc:
+            log.debug("rechargement surrogates impossible: %s", exc)
+    return _MANAGER

@@ -1,0 +1,159 @@
+{
+  "rev": 0,
+  "ts": 1788934088.7265673,
+  "graph": {
+    "project_id": "kicad-import",
+    "name": "kicad_netlist_import",
+    "board_size": [
+      40.0,
+      30.0
+    ],
+    "layers": [
+      {
+        "index": 0,
+        "name": "F.Cu",
+        "ltype": "signal",
+        "thickness_um": 35.0,
+        "er": 4.4
+      },
+      {
+        "index": 1,
+        "name": "B.Cu",
+        "ltype": "signal",
+        "thickness_um": 35.0,
+        "er": 4.4
+      }
+    ],
+    "components": [
+      {
+        "ref": "U1",
+        "value": "ESP32",
+        "footprint": "ESP32-WROOM-32E",
+        "mpn": "",
+        "x": 26.0,
+        "y": 10.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          4.140000000000001,
+          2.4
+        ],
+        "power_w": 0.0,
+        "price_usd": 0.0,
+        "pads": [
+          {
+            "name": "1",
+            "x": -0.635,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "PWR",
+            "layer": 0
+          },
+          {
+            "name": "2",
+            "x": 0.635,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "GND",
+            "layer": 0
+          }
+        ],
+        "placed": false
+      },
+      {
+        "ref": "R1",
+        "value": "10k",
+        "footprint": "R_0603_1608Metric",
+        "mpn": "",
+        "x": 12.0,
+        "y": 10.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          4.140000000000001,
+          2.4
+        ],
+        "power_w": 0.0,
+        "price_usd": 0.0,
+        "pads": [
+          {
+            "name": "1",
+            "x": -0.635,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "GND",
+            "layer": 0
+          },
+          {
+            "name": "2",
+            "x": 0.635,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "PWR",
+            "layer": 0
+          }
+        ],
+        "placed": false
+      }
+    ],
+    "nets": [
+      {
+        "net_id": "GND",
+        "name": "GND",
+        "class_name": "power",
+        "pins": [
+          [
+            "R1",
+            "1"
+          ],
+          [
+            "U1",
+            "2"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": {
+          "net_id": "GND",
+          "points": [],
+          "layer": 0,
+          "width_mm": 0.2,
+          "vias": []
+        }
+      },
+      {
+        "net_id": "PWR",
+        "name": "PWR",
+        "class_name": "signal",
+        "pins": [
+          [
+            "R1",
+            "2"
+          ],
+          [
+            "U1",
+            "1"
+          ]
+        ],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": {
+          "net_id": "PWR",
+          "points": [],
+          "layer": 0,
+          "width_mm": 0.2,
+          "vias": []
+        }
+      }
+    ],
+    "keepouts": []
+  }
+}

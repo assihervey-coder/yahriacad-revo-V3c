@@ -7,7 +7,7 @@ PIP := $(VENV)/bin/pip
 PYV := $(VENV)/bin/python
 export PYTHONPATH := $(CURDIR):$(CURDIR)/backend
 
-.PHONY: help setup dev backend frontend worker test test-ai test-all demo smoke lint format typecheck benchmark docker-up docker-down logs clean
+.PHONY: help setup dev backend frontend worker test test-ai test-all demo smoke smoke-integrations lint format typecheck benchmark docker-up docker-down logs clean
 
 help: ## Affiche l'aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -43,6 +43,9 @@ demo: ## Pipeline E2E réel : NL → SKIDL → placement → routage → DRC →
 
 smoke: ## Smoke test des enrichissements (diff pairs, world model, surrogates, corrector)
 	$(PYV) scripts/smoke_enrichments.py
+
+smoke-integrations: ## Smoke test intégrations EDA (KiCad, Altium, sessions, voie β, optimizer VALID)
+	$(PYV) scripts/smoke_integrations.py
 
 lint: ## Ruff check
 	$(VENV)/bin/ruff check backend shared tests

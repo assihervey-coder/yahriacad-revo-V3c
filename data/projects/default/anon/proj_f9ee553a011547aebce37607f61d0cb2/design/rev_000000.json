@@ -1,0 +1,118 @@
+{
+  "rev": 0,
+  "ts": 1788934335.2565486,
+  "graph": {
+    "project_id": "altium-import",
+    "name": "altium_import",
+    "board_size": [
+      40.0,
+      30.0
+    ],
+    "layers": [
+      {
+        "index": 0,
+        "name": "F.Cu",
+        "ltype": "signal",
+        "thickness_um": 35.0,
+        "er": 4.3
+      },
+      {
+        "index": 1,
+        "name": "GND",
+        "ltype": "ground",
+        "thickness_um": 35.0,
+        "er": 4.3
+      },
+      {
+        "index": 2,
+        "name": "PWR",
+        "ltype": "power",
+        "thickness_um": 35.0,
+        "er": 4.3
+      },
+      {
+        "index": 3,
+        "name": "B.Cu",
+        "ltype": "signal",
+        "thickness_um": 35.0,
+        "er": 4.3
+      }
+    ],
+    "components": [
+      {
+        "ref": "U1",
+        "value": "MCU",
+        "footprint": "QFN-16_0.5mm",
+        "mpn": "",
+        "x": 10.0,
+        "y": 10.0,
+        "rotation": 0.0,
+        "side": "top",
+        "bbox": [
+          2.0,
+          2.0
+        ],
+        "power_w": 0.0,
+        "price_usd": 0.0,
+        "pads": [
+          {
+            "name": "1",
+            "x": -1.5,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "PWR",
+            "layer": 0
+          },
+          {
+            "name": "2",
+            "x": 1.5,
+            "y": 0.0,
+            "w": 0.6,
+            "h": 0.6,
+            "net_id": "GND",
+            "layer": 0
+          }
+        ],
+        "placed": false
+      }
+    ],
+    "nets": [
+      {
+        "net_id": "PWR",
+        "name": "PWR",
+        "class_name": "signal",
+        "pins": [],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": {
+          "net_id": "PWR",
+          "points": [],
+          "layer": 0,
+          "width_mm": 0.2,
+          "vias": []
+        }
+      },
+      {
+        "net_id": "GND",
+        "name": "GND",
+        "class_name": "signal",
+        "pins": [],
+        "impedance_target_ohm": null,
+        "max_length_mm": null,
+        "matched_group": null,
+        "routed": false,
+        "path": {
+          "net_id": "GND",
+          "points": [],
+          "layer": 0,
+          "width_mm": 0.2,
+          "vias": []
+        }
+      }
+    ],
+    "keepouts": []
+  }
+}

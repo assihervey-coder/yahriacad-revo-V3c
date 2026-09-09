@@ -11,6 +11,8 @@ from services.simulator.multi_physics_loop import (
     run_loop,
 )
 from services.simulator.surrogate_models import FastPredictor, NeuralSurrogate
+from services.simulator.surrogate_models.beta_path import AUTOTRAIN_EVERY, run_sim_smart
+from services.simulator.surrogate_models.manager import SurrogateManager, get_manager
 from services.simulator.worker import SIM_REQUEST_TOPIC, SimulationWorker
 
 __all__ = [
@@ -18,6 +20,7 @@ __all__ = [
     "ThermalSim", "EMIProxySim", "SignalIntegritySim",
     "PowerIntegritySim", "MechanicalSim",
     "MultiPhysicsCoupling", "ConvergenceMonitor", "run_loop",
-    "NeuralSurrogate", "FastPredictor",
+    "NeuralSurrogate", "FastPredictor", "SurrogateManager", "get_manager",
+    "run_sim_smart", "AUTOTRAIN_EVERY",
     "SimulationWorker", "SIM_REQUEST_TOPIC",
 ]

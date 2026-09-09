@@ -35,6 +35,7 @@ from api_gateway.routes import (
     components_router,
     designs_router,
     exports_router,
+    integrations_router,
     optimization_router,
     projects_router,
     simulations_router,
@@ -111,6 +112,7 @@ app.include_router(optimization_router)
 app.include_router(exports_router)
 app.include_router(billing_router)
 app.include_router(chat_router)
+app.include_router(integrations_router)
 app.include_router(graphql_router)
 app.include_router(websocket_router)
 app.include_router(mcp_router)

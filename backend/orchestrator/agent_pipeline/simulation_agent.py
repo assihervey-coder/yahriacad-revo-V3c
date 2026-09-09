@@ -52,11 +52,30 @@ class SimulationAgent(BaseAgent):
                     sim = cls()
                 except TypeError:
                     sim = cls(self.orchestrator)
-                sim_result = call_probe(sim, "run", (graph,))
+                # voie β : surrogate entraîné → inférence rapide au lieu du
+                # solveur complet ; sinon solveur complet + apprentissage
+                beta_used = False
+                try:
+                    from services.simulator.surrogate_models.beta_path import (
+                        run_sim_smart,
+                    )
+                    from services.simulator.surrogate_models.manager import (
+                        get_manager,
+                    )
+
+                    sim_result, beta_used = run_sim_smart(sim, graph,
+                                                          manager=get_manager())
+                except Exception as exc:
+                    self.log.debug("voie β inactive (%s) — solveur complet", exc)
+                    sim_result = call_probe(sim, "run", (graph,))
                 metrics = get_field(sim_result, "metrics", default={}) or {}
                 passed = bool(get_field(sim_result, "passed", default=True))
-                results[kind] = {"metrics": _jsonable(metrics), "passed": passed,
-                                 "skipped": False}
+                entry: Dict[str, Any] = {"metrics": _jsonable(metrics),
+                                         "passed": passed, "skipped": False}
+                if beta_used:
+                    entry["beta"] = True
+                    entry["engine"] = "surrogate β"
+                results[kind] = entry
                 ran_any = True
                 if not passed:
                     all_passed = False

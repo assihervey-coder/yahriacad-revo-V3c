@@ -477,6 +477,114 @@ export class ApiClient {
     });
     return constraint;
   }
+
+  // ------------------------------------------------------------------
+  // Intégrations EDA (pcb_plugin : KiCad, Altium, sessions) + surrogates β
+  // ------------------------------------------------------------------
+
+  /** Import KiCad (netlist/PCB s-expr, schéma JSON, session PCB) → projet réel. */
+  async importKiCad(content: string, name = ""): Promise<IntegrationImportResult> {
+    const data = await this.request<{ project_id: string; name: string; format: string; stats: Record<string, unknown> }>(
+      "/api/v1/integrations/kicad/import",
+      { method: "POST", body: JSON.stringify({ content, name }) },
+    );
+    if (data?.project_id) return { ok: true, ...data, source: "api" };
+    return { ok: false, detail: "API injoignable ou import refusé (format non reconnu)", source: "api" };
+  }
+
+  /** Export KiCad du design courant (.kicad_pcb et/ou netlist .net). */
+  async exportKiCad(projectId: string, fmt = "both"): Promise<Record<string, { path: string; bytes: number; preview: string }> | null> {
+    const data = await this.request<{ files: Record<string, { path: string; bytes: number; preview: string }> }>(
+      `/api/v1/integrations/kicad/export/${encodeURIComponent(projectId)}?fmt=${fmt}`,
+    );
+    return data?.files ?? null;
+  }
+
+  /** Pousse le design vers un KiCad live (WebSocket). */
+  async kicadLivePush(projectId: string, wsUrl = "ws://localhost:7999"): Promise<{ pushed: boolean; connected: boolean; detail?: string } | null> {
+    const data = await this.request<{ pushed: boolean; connected: boolean; detail?: string }>(
+      "/api/v1/integrations/kicad/live/push",
+      { method: "POST", body: JSON.stringify({ project_id: projectId, ws_url: wsUrl }) },
+    );
+    return data;
+  }
+
+  /** Import du pont Altium (JSON) → projet réel. */
+  async importAltium(payload: unknown, name = ""): Promise<IntegrationImportResult> {
+    const data = await this.request<{ project_id: string; name: string; format: string; stats: Record<string, unknown> }>(
+      "/api/v1/integrations/altium/import",
+      { method: "POST", body: JSON.stringify({ payload, name }) },
+    );
+    if (data?.project_id) return { ok: true, ...data, source: "api" };
+    return { ok: false, detail: "API injoignable ou pont Altium invalide", source: "api" };
+  }
+
+  /** Export Altium (JSON pont symétrique, ré-importable). */
+  async exportAltium(projectId: string): Promise<Record<string, unknown> | null> {
+    const data = await this.request<{ payload: Record<string, unknown> }>(
+      `/api/v1/integrations/altium/export/${encodeURIComponent(projectId)}`,
+    );
+    return data?.payload ?? null;
+  }
+
+  /** Synchronisation locale ↔ Altium (détection conflits). */
+  async syncAltium(projectId: string, remote: unknown, resolution = "local_wins"): Promise<Record<string, unknown> | null> {
+    return this.request<Record<string, unknown>>(
+      `/api/v1/integrations/altium/sync/${encodeURIComponent(projectId)}`,
+      { method: "POST", body: JSON.stringify({ remote, resolution }) },
+    );
+  }
+
+  /** Sauvegarde la session (graphe + versioning) du projet. */
+  async saveSession(projectId: string): Promise<{ saved: boolean; path?: string } | null> {
+    return this.request<{ saved: boolean; path: string }>(
+      `/api/v1/integrations/sessions/save/${encodeURIComponent(projectId)}`,
+      { method: "POST" },
+    );
+  }
+
+  /** Liste les sessions sauvegardées du tenant. */
+  async listSessions(): Promise<SessionMeta[]> {
+    const data = await this.request<{ sessions: SessionMeta[] }>("/api/v1/integrations/sessions");
+    return data?.sessions ?? [];
+  }
+
+  /** Restaure la session d'un projet (apply = crée une révision courante). */
+  async restoreSession(projectId: string, apply = false): Promise<Record<string, unknown> | null> {
+    return this.request<Record<string, unknown>>(
+      `/api/v1/integrations/sessions/${encodeURIComponent(projectId)}/restore?apply=${apply}`,
+    );
+  }
+
+  /** Statut β des surrogates neuronaux (échantillons / R² / latence). */
+  async surrogateStatus(): Promise<SurrogateStatusMap | null> {
+    return this.request<SurrogateStatusMap>("/api/v1/simulations/surrogates/status");
+  }
+
+  /** Entraîne les surrogates disposant d'assez d'échantillons. */
+  async trainSurrogates(): Promise<{ count: number; trained: Record<string, SurrogateStatusEntry> } | null> {
+    return this.request<{ count: number; trained: Record<string, SurrogateStatusEntry> }>(
+      "/api/v1/simulations/surrogates/train",
+      { method: "POST" },
+    );
+  }
+
+  /**
+   * Propositions RL/LLM de l'AutonomousOptimizer — uniquement après verdict
+   * VALID (409 avec issues sinon). apply=true committe le graphe gagnant.
+   */
+  async runProposals(projectId: string, opts: { apply?: boolean; maxIters?: number; objective?: string } = {}): Promise<ProposalsResult | ProposalsRefused> {
+    const data = await this.request<ProposalsResult & { detail?: { verdict?: string; issues?: string[]; reason?: string } } & { verdict_gate?: string }>(
+      `/api/v1/optimization/${encodeURIComponent(projectId)}/proposals`,
+      { method: "POST", body: JSON.stringify({ apply: opts.apply ?? false, max_iters: opts.maxIters ?? 12, objective: opts.objective ?? "balanced" }) },
+    );
+    if (!data) return { ok: false, reason: "API injoignable" };
+    if (data.detail && data.detail.verdict === "INVALID") {
+      return { ok: false, verdict: "INVALID", issues: data.detail.issues ?? [], reason: data.detail.reason };
+    }
+    const { detail: _detail, ...rest } = data;
+    return { ...rest, ok: true } as ProposalsResult;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -548,6 +656,58 @@ export function augmentDesign(d: DesignSchema): DesignSchema {
         ],
     nets,
   };
+}
+
+// Types des intégrations EDA + surrogates β
+export interface IntegrationImportResult {
+  ok: boolean;
+  project_id?: string;
+  name?: string;
+  format?: string;
+  stats?: Record<string, unknown>;
+  detail?: string;
+  source: string;
+}
+
+export interface SessionMeta {
+  user_id: string;
+  project_id: string;
+  path: string;
+  saved_at: number;
+  name?: string;
+}
+
+export interface SurrogateStatusEntry {
+  kind: string;
+  n_samples: number;
+  trained: boolean;
+  val_mae?: number | null;
+  r2?: number | null;
+  last_latency_ms?: number | null;
+}
+
+export type SurrogateStatusMap = { beta: boolean; min_samples: number; surrogates: Record<string, SurrogateStatusEntry> };
+
+export interface ProposalsResult {
+  ok: true;
+  verdict_gate?: string;
+  engine?: string;
+  objective?: string;
+  baseline_score?: number;
+  best_score?: number;
+  improvement?: number;
+  iterations?: number;
+  proposals?: Record<string, unknown>[];
+  proposals_kept?: number;
+  applied?: boolean;
+  revision?: number;
+}
+
+export interface ProposalsRefused {
+  ok: false;
+  verdict?: string;
+  issues?: string[];
+  reason?: string;
 }
 
 /** Singleton partagé (muté à chaud par la page Paramètres). */

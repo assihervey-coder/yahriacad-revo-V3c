@@ -181,3 +181,52 @@ def export_kicad_pcb(graph: Any) -> str:
     pcb = "\n".join(lines) + "\n"
     log.info("export KiCad: %d modules, %d nets", len(graph.components), len(graph.nets))
     return pcb
+
+
+def export_kicad_netlist(graph: Any) -> str:
+    """Génère une netlist s-expression KiCad (components + nets + nodes).
+
+    Symétrique de import_kicad_netlist : le fichier produit se recharge dans
+    la plateforme (ou dans KiCad) sans perte de composants/nets/pins.
+    """
+    lines: List[str] = [
+        '(export (version "E") (design (source "pcb_ai_designer_v3")',
+        f'  (date "") (tool "PCB_AI_DESIGNER_V3"))',
+        "  (components",
+    ]
+    for ref in sorted(graph.components):
+        comp = graph.components[ref]
+        value = str(getattr(comp, "value", "") or "")
+        fp = str(getattr(comp, "footprint", "") or "")
+        mpn = str(getattr(comp, "mpn", "") or "")
+        line = f'    (comp (ref {_q(ref)}) (value {_q(value)})'
+        if fp:
+            line += f' (footprint {_q(fp)})'
+        if mpn:
+            line += f' (property (name MPN) (value {_q(mpn)}))'
+        line += ')'
+        lines.append(line)
+    lines.append("  )")
+    lines.append("  (nets")
+
+    # pins par net depuis les pads des composants
+    nets_pins: Dict[str, List[tuple]] = {}
+    for ref in sorted(graph.components):
+        comp = graph.components[ref]
+        for pad in list(getattr(comp, "pads", []) or []):
+            net_id = str(getattr(pad, "net_id", "") or "")
+            if net_id:
+                nets_pins.setdefault(net_id, []).append((ref, str(getattr(pad, "name", "") or "")))
+
+    code = 0
+    for net_id in sorted(nets_pins):
+        code += 1
+        nodes = "".join(
+            f' (node (ref {_q(ref)}) (pin {_q(pin)}))' for ref, pin in nets_pins[net_id])
+        lines.append(f'    (net (code {code}) (name {_q(net_id)}){nodes})')
+    lines.append("  )")
+    lines.append(")")
+    out = "\n".join(lines) + "\n"
+    log.info("export netlist KiCad: %d composants, %d nets",
+             len(graph.components), len(nets_pins))
+    return out

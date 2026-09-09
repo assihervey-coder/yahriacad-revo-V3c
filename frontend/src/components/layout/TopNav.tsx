@@ -11,6 +11,7 @@ const LINKS: { href: string; label: string }[] = [
   { href: "/projects", label: "Projets" },
   { href: "/designer", label: "Designer" },
   { href: "/simulations", label: "Simulations" },
+  { href: "/integrations", label: "Intégrations" },
   { href: "/settings", label: "Paramètres" },
 ];
 

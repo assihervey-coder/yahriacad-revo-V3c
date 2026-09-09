@@ -48,3 +48,15 @@ data/knowledge/datasheets/*.pdf
 *.tfstate.backup
 .terraform/
 k8s-secrets/
+
+# --- État runtime volatile (tests / smokes) ---
+data/projects/agent_state.json
+data/projects/rollback_state.json
+data/projects/checkpoints/
+data/projects/pytest-chat/
+data/projects/*/jobs/
+data/projects/*/*/jobs/
+data/projects/*/*/*/jobs/
+data/projects/*/*/*/session.json
+data/projects/*/*/*/versions.json
+backend/data/

@@ -26,8 +26,13 @@ def default_sims() -> List[BaseSim]:
 
 
 def run_loop(graph: DesignGraph, max_iters: int = 3,
-             sims: Optional[List[BaseSim]] = None) -> Dict[str, Any]:
+             sims: Optional[List[BaseSim]] = None,
+             surrogate_manager: Optional[Any] = None) -> Dict[str, Any]:
     """Boucle simuler → feedbacks → corriger → re-simuler (max `max_iters` tours).
+
+    `surrogate_manager` (optionnel) : active la voie β — les surrogates
+    neuronaux entraînés remplacent le solveur complet (inférence rapide) ;
+    sinon le solveur complet tourne et alimente leur apprentissage continu.
 
     Feedbacks appliqués :
     - thermal fail  → éloigne les composants coupables du hotspot (place) puis
@@ -51,7 +56,7 @@ def run_loop(graph: DesignGraph, max_iters: int = 3,
     applied: List[Dict[str, Any]] = []
 
     for iteration in range(1, max_iters + 1):
-        outcome = coupling.run(g, sims)
+        outcome = coupling.run(g, sims, surrogate_manager=surrogate_manager)
         metrics = {kind: (res.metrics.get("max_temp_c", 0.0) if kind == "thermal"
                           else res.metrics.get("worst_gamma", 0.0) if kind == "si"
                           else res.metrics.get("worst_ir_drop_mv", 0.0) if kind == "pi"

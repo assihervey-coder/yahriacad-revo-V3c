@@ -67,6 +67,47 @@ async def _run_all(project_id: str, job_id: str, graph: Any, kinds: List[str]) -
     log.info("simulation %s/%s terminée (%d types)", project_id, job_id, len(results))
 
 
+@router.get("/surrogates/status")
+async def surrogates_status() -> Dict[str, Any]:
+    """État β des surrogates neuronaux (échantillons, entraînement, R², latence)."""
+    try:
+        from services.simulator.surrogate_models.manager import get_manager
+
+        manager = get_manager()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"surrogates indisponibles: {exc}")
+    return {
+        "beta": True,
+        "description": "inférence rapide à la place du solveur complet (bêta)",
+        "min_samples": manager.min_samples,
+        "surrogates": manager.status_all(),
+    }
+
+
+@router.post("/surrogates/train")
+async def surrogates_train() -> Dict[str, Any]:
+    """Entraîne tous les surrogates disposant d'assez d'échantillons."""
+    try:
+        from services.simulator.surrogate_models.manager import get_manager
+
+        manager = get_manager()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"surrogates indisponibles: {exc}")
+    trained = manager.train_all()
+    # persiste dans le registre de modèles (rechargé au démarrage)
+    saved_to = None
+    try:
+        from orchestrator.common import data_root
+
+        registry = str(data_root() / "model_registry" / "surrogates")
+        manager.save(registry)
+        saved_to = registry
+    except Exception:
+        log.debug("sauvegarde registre surrogates impossible", exc_info=True)
+    return {"trained": {k: v.to_dict() for k, v in trained.items()},
+            "count": len(trained), "saved_to": saved_to}
+
+
 @router.post("/{project_id}")
 async def start_simulation(project_id: str, payload: SimulationRequest,
                            request: Request) -> Dict[str, Any]:
