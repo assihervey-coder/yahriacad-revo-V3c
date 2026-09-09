@@ -1,6 +1,11 @@
 from shared.contracts.agent_contracts import (
-    AgentRole, BrainType, ROLE_BRAIN, ArbitrationPolicy,
-    AgentMessage, Delegation, SuperAgentDecision,
+    ROLE_BRAIN,
+    AgentMessage,
+    AgentRole,
+    ArbitrationPolicy,
+    BrainType,
+    Delegation,
+    SuperAgentDecision,
 )
 
 __all__ = [

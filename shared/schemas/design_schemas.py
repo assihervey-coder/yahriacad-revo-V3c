@@ -4,12 +4,12 @@ ces schémas en sont la représentation filaire.
 """
 from __future__ import annotations
 
-from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
 
 
-class LayerType(str, Enum):
+class LayerType(StrEnum):
     SIGNAL = "signal"
     POWER = "power"
     GROUND = "ground"
@@ -31,7 +31,7 @@ class PadSchema(BaseModel):
     y_mm: float = 0.0
     width_mm: float = 0.6
     height_mm: float = 0.6
-    net_id: Optional[str] = None
+    net_id: str | None = None
     layer: int = 0
 
 
@@ -44,8 +44,8 @@ class ComponentSchema(BaseModel):
     y_mm: float = 0.0
     rotation_deg: float = 0.0
     side: str = "top"              # top | bottom
-    bbox_mm: Tuple[float, float] = (1.0, 0.5)
-    pads: List[PadSchema] = Field(default_factory=list)
+    bbox_mm: tuple[float, float] = (1.0, 0.5)
+    pads: list[PadSchema] = Field(default_factory=list)
     power_w: float = 0.0           # dissipation thermique estimée
     price_usd: float = 0.0
 
@@ -54,10 +54,10 @@ class NetSchema(BaseModel):
     net_id: str
     name: str = ""
     class_name: str = "default"    # default | power | high_speed | differential | analog
-    pins: List[Tuple[str, str]] = Field(default_factory=list)  # (ref, pad)
-    impedance_target_ohm: Optional[float] = None
-    max_length_mm: Optional[float] = None
-    matched_group: Optional[str] = None   # groupe de longueur appariée
+    pins: list[tuple[str, str]] = Field(default_factory=list)  # (ref, pad)
+    impedance_target_ohm: float | None = None
+    max_length_mm: float | None = None
+    matched_group: str | None = None   # groupe de longueur appariée
     routed: bool = False
 
 
@@ -67,18 +67,18 @@ class DesignSchema(BaseModel):
     project_id: str
     name: str = "untitled"
     revision: int = 0
-    board_size_mm: Tuple[float, float] = (100.0, 80.0)
-    layers: List[LayerSchema] = Field(default_factory=lambda: [
+    board_size_mm: tuple[float, float] = (100.0, 80.0)
+    layers: list[LayerSchema] = Field(default_factory=lambda: [
         LayerSchema(index=0, name="F.Cu"),
         LayerSchema(index=1, name="GND", type=LayerType.GROUND),
         LayerSchema(index=2, name="PWR", type=LayerType.POWER),
         LayerSchema(index=3, name="B.Cu"),
     ])
-    components: List[ComponentSchema] = Field(default_factory=list)
-    nets: List[NetSchema] = Field(default_factory=list)
-    keepouts: List[dict] = Field(default_factory=list)
+    components: list[ComponentSchema] = Field(default_factory=list)
+    nets: list[NetSchema] = Field(default_factory=list)
+    keepouts: list[dict] = Field(default_factory=list)
 
-    def summary(self) -> Dict[str, int]:
+    def summary(self) -> dict[str, int]:
         return {
             "components": len(self.components),
             "nets": len(self.nets),

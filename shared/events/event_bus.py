@@ -10,7 +10,8 @@ import asyncio
 import logging
 import os
 from collections import defaultdict
-from typing import Awaitable, Callable, Dict, List, Protocol
+from collections.abc import Awaitable, Callable
+from typing import Protocol
 
 from shared.events.events import Event
 
@@ -29,8 +30,8 @@ class InProcessEventBus:
     """Bus en mémoire — livré avec la plateforme, zéro dépendance."""
 
     def __init__(self) -> None:
-        self._subs: Dict[str, List[Handler]] = defaultdict(list)
-        self._history: List[Event] = []
+        self._subs: dict[str, list[Handler]] = defaultdict(list)
+        self._history: list[Event] = []
         self._max_history = 10_000
 
     async def publish(self, event: Event) -> None:
@@ -53,7 +54,7 @@ class InProcessEventBus:
         if handler in self._subs.get(event_type, []):
             self._subs[event_type].remove(handler)
 
-    def history(self, event_type: str | None = None) -> List[Event]:
+    def history(self, event_type: str | None = None) -> list[Event]:
         if event_type is None:
             return list(self._history)
         return [e for e in self._history if e.type == event_type]

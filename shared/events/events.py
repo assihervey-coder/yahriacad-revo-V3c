@@ -4,7 +4,7 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class EventTypes:
@@ -43,7 +43,7 @@ class EventTypes:
 @dataclass
 class Event:
     type: str
-    payload: Dict[str, Any] = field(default_factory=dict)
+    payload: dict[str, Any] = field(default_factory=dict)
     project_id: str = ""
     tenant_id: str = "default"
     source: str = ""               # module émetteur, ex "design_core"
@@ -54,7 +54,7 @@ class Event:
 
 def make_event(
     type: str,
-    payload: Optional[Dict[str, Any]] = None,
+    payload: dict[str, Any] | None = None,
     *,
     project_id: str = "",
     tenant_id: str = "default",

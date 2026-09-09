@@ -6,11 +6,10 @@ manipule des dimensions doit passer par ces helpers (aucun float nu sans unité)
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
-from typing import Union
+from enum import StrEnum
 
 
-class LengthUnit(str, Enum):
+class LengthUnit(StrEnum):
     MM = "mm"
     CM = "cm"
     UM = "um"
@@ -18,7 +17,7 @@ class LengthUnit(str, Enum):
     INCH = "inch"
 
 
-class MassUnit(str, Enum):
+class MassUnit(StrEnum):
     G = "g"
     KG = "kg"
     OZ = "oz"  # oz/ft² pour le cuivre
@@ -36,13 +35,13 @@ MM_PER = {
 COPPER_WEIGHT_UM = {0.5: 17.5, 1.0: 35.0, 2.0: 70.0, 3.0: 105.0}
 
 
-def to_mm(value: float, unit: Union[LengthUnit, str]) -> float:
+def to_mm(value: float, unit: LengthUnit | str) -> float:
     """Convertit une longueur vers le millimètre (format interne)."""
     unit = LengthUnit(unit)
     return value * MM_PER[unit]
 
 
-def from_mm(value_mm: float, unit: Union[LengthUnit, str]) -> float:
+def from_mm(value_mm: float, unit: LengthUnit | str) -> float:
     """Convertit depuis le millimètre vers l'unité demandée."""
     unit = LengthUnit(unit)
     return value_mm / MM_PER[unit]
@@ -65,7 +64,7 @@ class Dimension:
     value_mm: float
 
     @classmethod
-    def of(cls, value: float, unit: LengthUnit | str = LengthUnit.MM) -> "Dimension":
+    def of(cls, value: float, unit: LengthUnit | str = LengthUnit.MM) -> Dimension:
         return cls(to_mm(value, unit))
 
     @property
@@ -76,10 +75,10 @@ class Dimension:
     def mil(self) -> float:
         return from_mm(self.value_mm, LengthUnit.MIL)
 
-    def __add__(self, other: "Dimension") -> "Dimension":
+    def __add__(self, other: Dimension) -> Dimension:
         return Dimension(self.value_mm + other.value_mm)
 
-    def __sub__(self, other: "Dimension") -> "Dimension":
+    def __sub__(self, other: Dimension) -> Dimension:
         return Dimension(self.value_mm - other.value_mm)
 
     def __repr__(self) -> str:  # pragma: no cover

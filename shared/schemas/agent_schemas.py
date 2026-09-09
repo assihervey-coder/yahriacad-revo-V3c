@@ -1,12 +1,13 @@
 """Schémas des agents — tâches, résultats, messages inter-agents."""
 from __future__ import annotations
 
-from enum import Enum
-from typing import Any, Dict, Optional
+from enum import StrEnum
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
-class AgentStatus(str, Enum):
+class AgentStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCEEDED = "succeeded"
@@ -19,10 +20,10 @@ class AgentTaskSchema(BaseModel):
     task_id: str
     role: str                      # AgentRole value
     action: str                    # "place_all", "route_net", "verify_drc"...
-    payload: Dict[str, Any] = Field(default_factory=dict)
+    payload: dict[str, Any] = Field(default_factory=dict)
     project_id: str = ""
     revision: int = 0
-    deadline_ms: Optional[int] = None
+    deadline_ms: int | None = None
     priority: int = 5              # 1 (haute) → 9 (basse)
 
 
@@ -30,9 +31,9 @@ class AgentResultSchema(BaseModel):
     task_id: str
     role: str
     status: AgentStatus = AgentStatus.PENDING
-    output: Dict[str, Any] = Field(default_factory=dict)
+    output: dict[str, Any] = Field(default_factory=dict)
     confidence: float = 0.0        # 0..1 — écrit aussi dans shared_mental_model
     rationale: str = ""
-    revision_created: Optional[int] = None
-    rollback_to: Optional[int] = None
-    artifacts: Dict[str, str] = Field(default_factory=dict)  # nom → uri
+    revision_created: int | None = None
+    rollback_to: int | None = None
+    artifacts: dict[str, str] = Field(default_factory=dict)  # nom → uri

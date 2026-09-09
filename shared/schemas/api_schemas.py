@@ -1,7 +1,8 @@
 """Schémas API — requêtes/réponses du chat et erreurs normalisées."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -10,7 +11,7 @@ class ChatCommandRequest(BaseModel):
     project_id: str = ""
     tenant_id: str = "default"
     session_id: str = ""
-    attachments: List[str] = Field(default_factory=list)
+    attachments: list[str] = Field(default_factory=list)
 
 
 class ChatCommandResponse(BaseModel):
@@ -19,10 +20,10 @@ class ChatCommandResponse(BaseModel):
     plan_summary: str = ""
     job_id: str = ""
     reply: str = ""
-    agent_activity: List[Dict[str, Any]] = Field(default_factory=list)
+    agent_activity: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ApiError(BaseModel):
     code: str
     message: str
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None

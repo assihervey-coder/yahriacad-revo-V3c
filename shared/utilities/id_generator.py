@@ -1,8 +1,8 @@
 """Génération d'identifiants uniques (jobs, révisions, événements)."""
 from __future__ import annotations
 
-import uuid
 import time
+import uuid
 
 
 def new_id(prefix: str = "") -> str:

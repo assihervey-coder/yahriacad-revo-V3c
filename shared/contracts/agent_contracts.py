@@ -5,11 +5,11 @@ Ces contrats sont la référence unique pour orchestrator/, ai_engine/ et l'API.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Dict, List, Optional
+from enum import StrEnum
+from typing import Any
 
 
-class AgentRole(str, Enum):
+class AgentRole(StrEnum):
     """Les 10 agents spécialisés de la plateforme."""
 
     PLANNER = "planner"
@@ -24,7 +24,7 @@ class AgentRole(str, Enum):
     MANUFACTURING = "manufacturing"
 
 
-class BrainType(str, Enum):
+class BrainType(StrEnum):
     """Les trois cerveaux V3 — chaque agent appartient à un cerveau dominant."""
 
     SYMBOLIC = "symbolic"      # 🧠 LLM/RAG/KG — quoi construire
@@ -32,7 +32,7 @@ class BrainType(str, Enum):
     PHYSICAL = "physical"      # 🔬 simulateurs — est-ce vrai
 
 
-ROLE_BRAIN: Dict[AgentRole, BrainType] = {
+ROLE_BRAIN: dict[AgentRole, BrainType] = {
     AgentRole.PLANNER: BrainType.SYMBOLIC,
     AgentRole.RESEARCHER: BrainType.SYMBOLIC,
     AgentRole.SELECTOR: BrainType.SYMBOLIC,
@@ -46,7 +46,7 @@ ROLE_BRAIN: Dict[AgentRole, BrainType] = {
 }
 
 
-class ArbitrationPolicy(str, Enum):
+class ArbitrationPolicy(StrEnum):
     """Résolution de conflits entre agents (super_agent/arbitration)."""
 
     CONSENSUS_CONFIDENCE = "consensus_confidence"   # vote pondéré par confiance
@@ -62,7 +62,7 @@ class AgentMessage:
     sender: AgentRole
     recipient: AgentRole | str      # rôle ou "super_agent" / "broadcast"
     subject: str                    # ex "placement_done", "drc_violations"
-    body: Dict[str, Any] = field(default_factory=dict)
+    body: dict[str, Any] = field(default_factory=dict)
     requires_reply: bool = False
 
 
@@ -73,8 +73,8 @@ class Delegation:
     delegation_id: str
     role: AgentRole
     objective: str
-    context: Dict[str, Any] = field(default_factory=dict)
-    acceptance_criteria: List[str] = field(default_factory=list)
+    context: dict[str, Any] = field(default_factory=dict)
+    acceptance_criteria: list[str] = field(default_factory=list)
     max_iterations: int = 3
     requires_verification: bool = True
     on_fail: str = "rollback"       # rollback | escalate | retry
@@ -86,8 +86,8 @@ class SuperAgentDecision:
 
     cycle_id: str
     next_action: str                # delegate | verify | optimize | escalate | export | done
-    delegations: List[Delegation] = field(default_factory=list)
+    delegations: list[Delegation] = field(default_factory=list)
     rationale: str = ""
     global_confidence: float = 0.0
     arbitration: ArbitrationPolicy = ArbitrationPolicy.CONSENSUS_CONFIDENCE
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
