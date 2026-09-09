@@ -193,3 +193,110 @@ def test_proposals_gate_and_flow(client):
     r2 = client.post(f"/api/v1/optimization/{state.project_id}/proposals",
                      json={"apply": True, "max_iters": 5})
     assert r2.status_code == 200
+
+
+# ------------------------------------------------- Altium formats natifs
+ALTIUM_ASCII_PCB = """PCB FILE - Protel for Windows - PCB File Version 5.0
+|RECORD=2|INDEX=0|DESIGNATOR=U1|PATTERN=LQFP-48|COMMENT=STM32F103C8T6|X=11811|Y=9843|ROTATION=0|LAYER=TOPLAYER|
+|RECORD=8|OWNERINDEX=0|NAME=1|X=11417|Y=9843|TOPXSIZE=59|TOPYSIZE=157|HOLESIZE=0|TOPSHAPE=ROUND|LAYER=TOPLAYER|NETNAME=PWR|
+|RECORD=8|OWNERINDEX=0|NAME=44|X=12205|Y=9843|TOPXSIZE=59|TOPYSIZE=157|HOLESIZE=0|TOPSHAPE=ROUND|LAYER=TOPLAYER|NETNAME=GND|
+|RECORD=2|INDEX=1|DESIGNATOR=C1|PATTERN=C_0603|COMMENT=100nF|X=15748|Y=9843|ROTATION=90|LAYER=TOPLAYER|
+|RECORD=8|OWNERINDEX=1|NAME=1|X=15748|Y=10236|TOPXSIZE=39|TOPYSIZE=59|HOLESIZE=0|TOPSHAPE=RECT|LAYER=TOPLAYER|NETNAME=PWR|
+|RECORD=27|NAME=PWR|NODES=2|
+|RECORD=27|NAME=GND|NODES=1|
+|RECORD=3|X1=11811|Y1=7874|X2=15748|Y2=7874|WIDTH=39|LAYER=TOPLAYER|NETNAME=PWR|
+"""
+
+ALTIUM_NETLIST = """[
+U1
+LQFP-48
+STM32F103C8T6
+]
+[
+C1
+C_0603
+100nF
+]
+
+(
+PWR
+U1-1
+C1-1
+)
+(
+GND
+U1-44
+)
+"""
+
+
+def test_altium_ascii_import_creates_project(client):
+    r = client.post("/api/v1/integrations/altium/import",
+                    json={"content": ALTIUM_ASCII_PCB, "name": "altium_ascii_it"})
+    assert r.status_code == 201, r.text
+    data = r.json()
+    assert data["format"] == "ascii_pcb"
+    assert data["source"] == "altium:ascii_pcb"
+    assert data["stats"]["components"] == 2
+    assert data["stats"]["nets"] == 2
+
+
+def test_altium_netlist_import_creates_project(client):
+    r = client.post("/api/v1/integrations/altium/import",
+                    json={"content": ALTIUM_NETLIST, "name": "altium_netlist_it"})
+    assert r.status_code == 201, r.text
+    data = r.json()
+    assert data["format"] == "netlist"
+    assert data["stats"]["components"] == 2
+    assert data["stats"]["nets"] == 2
+
+
+def test_altium_export_netlist_roundtrip(client):
+    imp = client.post("/api/v1/integrations/altium/import",
+                      json={"content": ALTIUM_NETLIST, "name": "altium_net_rt"})
+    pid = imp.json()["project_id"]
+    exp = client.get(f"/api/v1/integrations/altium/export/{pid}?fmt=netlist")
+    assert exp.status_code == 200, exp.text
+    body = exp.json()
+    assert body["format"] == "netlist"
+    assert "(PWR" in body["content"].replace("\n", "").replace(" ", "")
+    assert body["file"]["path"].endswith(".net")
+
+    imp2 = client.post("/api/v1/integrations/altium/import",
+                       json={"content": body["content"], "name": "altium_net_rt2"})
+    assert imp2.status_code == 201, imp2.text
+    assert imp2.json()["format"] == "netlist"
+    assert imp2.json()["stats"]["nets"] == 2
+    assert imp2.json()["stats"]["components"] == 2
+
+
+def test_altium_export_ascii_roundtrip(client):
+    imp = client.post("/api/v1/integrations/altium/import",
+                      json={"content": ALTIUM_ASCII_PCB, "name": "altium_asc_rt"})
+    pid = imp.json()["project_id"]
+    exp = client.get(f"/api/v1/integrations/altium/export/{pid}?fmt=ascii")
+    assert exp.status_code == 200, exp.text
+    body = exp.json()
+    assert body["format"] == "ascii"
+    assert body["content"].startswith("PCB FILE")
+    assert body["file"]["path"].endswith(".pcb_ascii")
+
+    imp2 = client.post("/api/v1/integrations/altium/import",
+                       json={"content": body["content"], "name": "altium_asc_rt2"})
+    assert imp2.status_code == 201, imp2.text
+    assert imp2.json()["format"] == "ascii_pcb"
+    assert imp2.json()["stats"]["components"] == 2
+    assert imp2.json()["stats"]["nets"] == 2
+
+
+def test_altium_import_sans_contenu_rejete(client):
+    r = client.post("/api/v1/integrations/altium/import", json={})
+    assert r.status_code == 422
+
+
+def test_altium_export_fmt_invalide(client):
+    imp = client.post("/api/v1/integrations/altium/import",
+                      json={"content": ALTIUM_NETLIST, "name": "altium_fmt"})
+    pid = imp.json()["project_id"]
+    r = client.get(f"/api/v1/integrations/altium/export/{pid}?fmt=svg")
+    assert r.status_code == 422

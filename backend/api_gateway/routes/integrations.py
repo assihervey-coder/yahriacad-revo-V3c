@@ -3,8 +3,9 @@
 Fonctionnel de bout en bout :
   KiCad    : import netlist s-expr / PCB s-expr / schéma JSON / session PCB,
              export .kicad_pcb + netlist, hôte live push/pull WebSocket ;
-  Altium   : import JSON pont, export JSON symétrique, synchronisation
-             (détection changements locaux/distants + conflits) ;
+  Altium   : import multi-format auto-détecté (JSON pont, PCB 5.0 ASCII,
+             netlist Protel, .PcbDoc binaire expérimental), export JSON /
+             netlist / ASCII, synchronisation (conflits locaux/distants) ;
   Sessions : sauvegarde atomique, listing, restauration (graphe + versioning).
 
 Un import crée un VRAI projet (ProjectState) + design révision 0 + commit de
@@ -221,33 +222,66 @@ async def kicad_live_pull(payload: KiCadLiveRequest, request: Request) -> dict[s
 
 # ---------------------------------------------------------------- Altium
 class AltiumImportRequest(BaseModel):
-    payload: dict[str, Any] = Field(..., description="JSON du pont Altium {components, nets, ...}")
+    """Import Altium multi-format : JSON du pont OU texte (PCB ASCII / netlist)
+    OU binaire .PcbDoc encodé base64. Un seul champ requis."""
+    payload: dict[str, Any] | None = Field(
+        default=None, description="JSON du pont Altium {components, nets, ...}")
+    content: str | None = Field(
+        default=None,
+        description="PCB 5.0 ASCII (records |RECORD=|) ou netlist Protel ([..]/(..))")
+    content_base64: str | None = Field(
+        default=None, description="fichier .PcbDoc binaire (OLE) encodé base64")
     name: str = Field(default="", max_length=120)
 
 
 @router.post("/altium/import", status_code=201)
 async def altium_import(payload: AltiumImportRequest, request: Request) -> dict[str, Any]:
-    """Bridge Altium : JSON du pont → DesignGraph → vrai projet."""
+    """Bridge Altium : JSON pont / PCB ASCII / netlist Protel / PcbDoc binaire
+    → DesignGraph → vrai projet (format détecté automatiquement)."""
     tenant = safe_path_segment(get_tenant(request))
     user = safe_path_segment(get_user_id(request))
     from services.pcb_plugin.altium import AltiumBridge
 
+    binary: bytes | None = None
+    if payload.content_base64:
+        import base64
+
+        try:
+            binary = base64.b64decode(payload.content_base64, validate=True)
+        except Exception as exc:
+            raise HTTPException(status_code=422,
+                                detail="content_base64 n'est pas du base64 valide") from exc
+    source_content: str | bytes | None = payload.content or binary
+    if payload.payload is not None and source_content is None:
+        source_content = json.dumps(payload.payload)
+    if source_content is None:
+        raise HTTPException(status_code=422,
+                            detail="fournir 'payload' (JSON), 'content' (texte) "
+                                   "ou 'content_base64' (PcbDoc binaire)")
+    bridge = AltiumBridge()
     try:
-        graph = AltiumBridge().from_dict(payload.payload or {})
-    except Exception as exc:
+        graph, fmt = bridge.import_auto(source_content, payload.name or "altium_import")
+    except ValueError as exc:
         raise HTTPException(status_code=422, detail=f"pont Altium invalide: {exc}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"import Altium impossible: {exc}") from exc
     if not (getattr(graph, "components", None) or getattr(graph, "nets", None)):
         raise HTTPException(status_code=422,
                             detail="design Altium vide (aucun composant ni net)")
     name = payload.name or getattr(graph, "name", "") or "altium_import"
-    result = _create_project_from_graph(graph, name, tenant, user, "altium:json")
+    result = _create_project_from_graph(graph, name, tenant, user, f"altium:{fmt}")
+    result["format"] = fmt
     return result
 
 
 @router.get("/altium/export/{project_id}")
-async def altium_export(project_id: str, request: Request,
-                        save: bool = True) -> dict[str, Any]:
-    """DesignGraph → JSON pont Altium (symétrique, ré-importable)."""
+async def altium_export(project_id: str, request: Request, save: bool = True,
+                        fmt: str = "json") -> dict[str, Any]:
+    """DesignGraph → format Altium : json (pont), netlist (Protel) ou ascii (PCB 5.0)."""
+    fmt = fmt.lower()
+    if fmt not in {"json", "netlist", "ascii"}:
+        raise HTTPException(status_code=422,
+                            detail="fmt doit valoir json, netlist ou ascii")
     tenant, user = get_tenant(request), get_user_id(request)
     state = _project_state(project_id, tenant, user)
     graph, revision = load_project_graph(state.project_id, state.tenant_id, state.user_id)
@@ -255,13 +289,28 @@ async def altium_export(project_id: str, request: Request,
         raise HTTPException(status_code=404, detail=f"aucun design pour {project_id}")
     from services.pcb_plugin.altium import AltiumBridge
 
-    data = AltiumBridge().export_altium(graph)
+    bridge = AltiumBridge()
+    if fmt == "netlist":
+        content_text = bridge.export_netlist(graph)
+        filename = f"rev{revision}_altium.net"
+    elif fmt == "ascii":
+        content_text = bridge.export_ascii(graph)
+        filename = f"rev{revision}_altium.pcb_ascii"
+    else:
+        content_text = ""
+        filename = f"rev{revision}_altium.json"
     response: dict[str, Any] = {"project_id": state.project_id, "revision": revision,
-                                "payload": data}
+                                "format": fmt}
+    if fmt == "json":
+        data = bridge.export_altium(graph)
+        response["payload"] = data
+        save_content = json.dumps(data, indent=2, default=str)
+    else:
+        response["content"] = content_text
+        save_content = content_text
     if save:
         path = _write_export_file(state.tenant_id, state.user_id, state.project_id,
-                                  "altium", f"rev{revision}_altium.json",
-                                  json.dumps(data, indent=2, default=str))
+                                  "altium", filename, save_content)
         response["file"] = {"path": path}
     return response
 

@@ -55,8 +55,12 @@ PCB_AI_DESIGNER_V3 est la troisième génération, unifiée et révolutionnaire,
   `.kicad_pcb`, schéma JSON, session PCB), export **.kicad_pcb + netlist**
   (round-trip vérifié par tests), hôte **live WebSocket** (`push`/`pull` vers
   pcbnew sur `ws://localhost:7999`).
-- **Altium Designer — bridge** — import/export du JSON pont symétrique
-  (round-trip vérifié) + **synchronisation** locale ↔ Altium comparant
+- **Altium Designer — bridge multi-format** — import **auto-détecté** des
+  formats natifs : **PCB 5.0 ASCII** (records `|RECORD=...|`, composants/pads/
+  nets/pistes/vias, unités 1/10000 in → mm), **netlist Protel** (connectivité
+  universelle, import/export), **.PcbDoc binaire** OLE (expérimental, via
+  `olefile`) + JSON pont symétrique (round-trip vérifié). Export
+  `fmt=json|netlist|ascii`, **synchronisation** locale ↔ Altium comparant
   (ref, position, nets) par composant avec détection des conflits
   (`local_wins`/`remote_wins`).
 - **session_restorer** — sauvegarde **atomique** (tmp→rename) des sessions

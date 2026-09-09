@@ -509,22 +509,27 @@ export class ApiClient {
     return data;
   }
 
-  /** Import du pont Altium (JSON) → projet réel. */
-  async importAltium(payload: unknown, name = ""): Promise<IntegrationImportResult> {
+  /** Import Altium multi-format : objet JSON du pont OU texte brut
+   * (PCB 5.0 ASCII, netlist Protel) — le backend détecte le format. */
+  async importAltium(payloadOrText: unknown, name = ""): Promise<IntegrationImportResult> {
+    const body = typeof payloadOrText === "string"
+      ? { content: payloadOrText, name }
+      : { payload: payloadOrText, name };
     const data = await this.request<{ project_id: string; name: string; format: string; stats: Record<string, unknown> }>(
       "/api/v1/integrations/altium/import",
-      { method: "POST", body: JSON.stringify({ payload, name }) },
+      { method: "POST", body: JSON.stringify(body) },
     );
     if (data?.project_id) return { ok: true, ...data, source: "api" };
     return { ok: false, detail: "API injoignable ou pont Altium invalide", source: "api" };
   }
 
-  /** Export Altium (JSON pont symétrique, ré-importable). */
-  async exportAltium(projectId: string): Promise<Record<string, unknown> | null> {
-    const data = await this.request<{ payload: Record<string, unknown> }>(
-      `/api/v1/integrations/altium/export/${encodeURIComponent(projectId)}`,
+  /** Export Altium : json (pont), netlist (Protel) ou ascii (PCB 5.0). */
+  async exportAltium(projectId: string, fmt: "json" | "netlist" | "ascii" = "json"): Promise<Record<string, unknown> | null> {
+    const data = await this.request<Record<string, unknown>>(
+      `/api/v1/integrations/altium/export/${encodeURIComponent(projectId)}?fmt=${fmt}`,
     );
-    return data?.payload ?? null;
+    if (!data) return null;
+    return (data.payload as Record<string, unknown>) ?? data;
   }
 
   /** Synchronisation locale ↔ Altium (détection conflits). */

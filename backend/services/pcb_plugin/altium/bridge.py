@@ -1,10 +1,18 @@
-"""Pont Altium — import/export JSON symétrique (format du pont Altium→JSON).
+"""Pont Altium — formats natifs (PCB ASCII, PcbDoc binaire, netlist Protel) + JSON.
 
-Format attendu : {"components": [...], "nets": [...]} avec, en option,
-"layers", "board_size", "project_id", "name" (même vocabulaire que design_core).
+Canaux d'échange :
+- JSON du pont (`{components, nets}`) : symétrique, rapide, pour les scripts ;
+- **PCB 5.0 ASCII** : records `|RECORD=...|` réels d'Altium Designer (géométrie) ;
+- **.PcbDoc binaire** (OLE, expérimental, dépendance `olefile`) ;
+- **netlist Protel** : connectivité, importable/exportable par quasiment tous
+  les outils EDA (Altium Import Wizard, KiCad, ...).
+
+`import_auto()` détecte le format tout seul ; les exports `export_netlist()` /
+`export_ascii()` produisent des fichiers ré-importables dans Altium.
 """
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 from typing import Any
@@ -12,8 +20,49 @@ from typing import Any
 from shared.utilities import get_logger
 
 from services.pcb_plugin._compat import _build, core_classes, new_graph
+from services.pcb_plugin.altium.formats import (
+    is_ole_document,
+    payload_to_graph_dict,
+)
 
 log = get_logger(__name__)
+
+
+def _pos_xy(pos: Any) -> tuple[float, float]:
+    """Position hétérogène (dict / [x, y] / Point) → (x, y) flottants."""
+    if isinstance(pos, dict):
+        return float(pos.get("x", 0.0) or 0.0), float(pos.get("y", 0.0) or 0.0)
+    if isinstance(pos, (list, tuple)) and len(pos) >= 2:
+        return float(pos[0]), float(pos[1])
+    if hasattr(pos, "x"):
+        return float(pos.x), float(pos.y)
+    return 0.0, 0.0
+
+
+def _normalize_path_dict(path: dict[str, Any]) -> dict[str, Any]:
+    """Normalise un path sérialisé (points/vias hétérogènes) au vocabulaire du pont.
+
+    design_core sérialise points=[[x, y]] et vias=[[[x, y], from, to]] ; le pont
+    exposé en dict homogène {x, y} / {x, y, from_layer, to_layer}.
+    """
+    norm_points: list[dict[str, float]] = []
+    for p in path.get("points") or []:
+        x, y = _pos_xy(p)
+        norm_points.append({"x": x, "y": y})
+    path["points"] = norm_points
+    norm_vias: list[dict[str, Any]] = []
+    for v in path.get("vias") or []:
+        if isinstance(v, dict):
+            x, y = _pos_xy(v.get("pos", v))
+            norm_vias.append({"x": x, "y": y,
+                              "from_layer": int(v.get("from_layer", 0) or 0),
+                              "to_layer": int(v.get("to_layer", 1) or 1)})
+        elif isinstance(v, (list, tuple)) and len(v) >= 3:
+            x, y = _pos_xy(v[0])
+            norm_vias.append({"x": x, "y": y,
+                              "from_layer": int(v[1]), "to_layer": int(v[2])})
+    path["vias"] = norm_vias
+    return path
 
 
 class AltiumBridge:
@@ -65,6 +114,7 @@ class AltiumBridge:
             if isinstance(path_data, dict):
                 from services.pcb_plugin._compat import route_from_dict
                 path = route_from_dict(path_data, net_id)
+                ndict["path"] = path  # remplace le dict par le RoutePath réel
             else:
                 path = path_data
             ndict.setdefault("net_id", net_id)
@@ -72,7 +122,8 @@ class AltiumBridge:
             ndict.setdefault("class_name", "signal")
             ndict.setdefault("pins", [])
             ndict.setdefault("routed", bool(getattr(path, "points", [])))
-            ndict.setdefault("path", path)
+            if "path" not in ndict:
+                ndict["path"] = path
             ndict.setdefault("impedance_target_ohm", None)
             nets[net_id] = _build(Net, ndict)
 
@@ -123,12 +174,8 @@ class AltiumBridge:
             net.setdefault("net_id", net.get("name", ""))
             path = net.get("path")
             if isinstance(path, dict):
-                # déjà sérialisé — normalise les vias si nécessaire
-                vias = path.get("vias") or []
-                if vias and isinstance(vias[0], (list, tuple)):
-                    path["vias"] = [{"x": v[0].x, "y": v[0].y,
-                                     "from_layer": v[1], "to_layer": v[2]}
-                                    for v in vias]
+                # déjà sérialisé — normalise points/vias au vocabulaire du pont
+                net["path"] = _normalize_path_dict(path)
             elif path is not None and hasattr(path, "points"):
                 net["path"] = {
                     "net_id": getattr(path, "net_id", net.get("net_id", "")),
@@ -157,3 +204,103 @@ class AltiumBridge:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         return out
+
+    # -- formats natifs Altium -------------------------------------------------
+    def import_ascii(self, text: str, name: str = "altium_ascii") -> Any:
+        """PCB 5.0 ASCII Altium (records |RECORD=..|) → DesignGraph."""
+        from services.pcb_plugin.altium.ascii_pcb import parse_ascii_pcb
+
+        payload = parse_ascii_pcb(text)
+        graph = self.from_dict(payload_to_graph_dict(payload, name))
+        self.remote_graph = graph
+        log.info("Altium ASCII importé: %d composants, %d nets",
+                 len(graph.components), len(graph.nets))
+        return graph
+
+    def import_netlist(self, text: str, name: str = "altium_netlist") -> Any:
+        """Netlist Protel/Altium ([ blocs composants, ( blocs nets) → DesignGraph."""
+        from services.pcb_plugin.altium.netlist_io import parse_netlist
+
+        payload = parse_netlist(text)
+        graph = self.from_dict(payload_to_graph_dict(payload, name))
+        self.remote_graph = graph
+        log.info("netlist Altium importée: %d composants, %d nets",
+                 len(graph.components), len(graph.nets))
+        return graph
+
+    def import_pcbdoc(self, path: str, name: str = "altium_pcbdoc") -> Any:
+        """.PcbDoc binaire (OLE, expérimental) → DesignGraph."""
+        from services.pcb_plugin.altium.pcbdoc import import_pcbdoc
+
+        payload = import_pcbdoc(path)
+        graph = self.from_dict(payload_to_graph_dict(payload, name))
+        self.remote_graph = graph
+        log.info("PcbDoc binaire importé: %d composants, %d nets",
+                 len(graph.components), len(graph.nets))
+        return graph
+
+    def import_auto(self, content: str | bytes, name: str = "altium_import") -> tuple[Any, str]:
+        """Détection automatique du format Altium → (DesignGraph, format).
+
+        Formats reconnus : JSON du pont, PCB 5.0 ASCII, .PcbDoc binaire (bytes
+        OLE ou base64), netlist Protel. Lève ValueError si rien ne correspond.
+        """
+        raw: bytes | None = None
+        if isinstance(content, bytes):
+            raw = content
+            if is_ole_document(content):
+                from services.pcb_plugin.altium.pcbdoc import parse_pcbdoc_stream
+
+                payload = parse_pcbdoc_stream(content)
+                graph = self.from_dict(payload_to_graph_dict(payload, name))
+                self.remote_graph = graph
+                return graph, "pcbdoc"
+        text = (content if isinstance(content, str)
+                else content.decode("utf-8", errors="replace"))
+        stripped = text.strip()
+        if not stripped:
+            raise ValueError("contenu Altium vide")
+
+        if stripped.startswith("{") or stripped.startswith("["):
+            try:
+                data = json.loads(stripped)
+            except json.JSONDecodeError:
+                data = None
+            if isinstance(data, dict):
+                return self.from_dict(data), "json"
+
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        if any(ln.startswith("|RECORD=") for ln in lines):
+            return self.import_ascii(text, name), "ascii_pcb"
+
+        if any(ln in ("[", "(") for ln in lines) \
+                or any(ln.upper().startswith("*SIGNAL") for ln in lines):
+            return self.import_netlist(text, name), "netlist"
+
+        if raw is not None:
+            try:
+                decoded = base64.b64decode(stripped, validate=True)
+            except Exception:
+                decoded = b""
+            if decoded[:8] and is_ole_document(decoded):
+                from services.pcb_plugin.altium.pcbdoc import parse_pcbdoc_stream
+
+                payload = parse_pcbdoc_stream(decoded)
+                graph = self.from_dict(payload_to_graph_dict(payload, name))
+                self.remote_graph = graph
+                return graph, "pcbdoc"
+        raise ValueError(
+            "format Altium non reconnu (attendu: JSON pont, PCB ASCII, "
+            "netlist Protel ou PcbDoc binaire)")
+
+    def export_netlist(self, graph: Any) -> str:
+        """DesignGraph → netlist Protel texte (ré-importable dans Altium)."""
+        from services.pcb_plugin.altium.netlist_io import write_netlist
+
+        return write_netlist(self.export_altium(graph))
+
+    def export_ascii(self, graph: Any) -> str:
+        """DesignGraph → PCB 5.0 ASCII texte (expérimental côté Altium)."""
+        from services.pcb_plugin.altium.ascii_pcb import write_ascii_pcb
+
+        return write_ascii_pcb(self.export_altium(graph))

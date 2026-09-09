@@ -104,15 +104,20 @@ export default function IntegrationsPage() {
 
   const doAltiumImport = async () => {
     setBusy("altium-import");
-    let payload: unknown;
-    try {
-      payload = JSON.parse(altiumText || JSON.stringify(ALTIUM_SAMPLE));
-    } catch {
-      setBusy("");
-      return say("JSON Altium invalide", "err");
+    const raw = (altiumText || "").trim();
+    let toSend: unknown;
+    if (!raw) {
+      toSend = ALTIUM_SAMPLE;
+    } else {
+      try {
+        toSend = JSON.parse(raw);
+      } catch {
+        // pas du JSON : PCB 5.0 ASCII ou netlist Protel — le backend détecte
+        toSend = raw;
+      }
     }
-    const r = await apiClient.importAltium(payload, "");
-    say(r.ok ? `Altium importé → projet ${r.project_id}` : `Échec import Altium : ${r.detail ?? "?"}`, r.ok ? "ok" : "err");
+    const r = await apiClient.importAltium(toSend, "");
+    say(r.ok ? `Altium importé (${r.format ?? "?"}) → projet ${r.project_id}` : `Échec import Altium : ${r.detail ?? "?"}`, r.ok ? "ok" : "err");
     setBusy("");
   };
 
@@ -212,10 +217,10 @@ export default function IntegrationsPage() {
         </Panel>
 
         {/* ---- Altium ---- */}
-        <Panel title="Altium Designer" subtitle="bridge JSON + synchronisation" right={<Badge tone="violet">actif</Badge>}>
+        <Panel title="Altium Designer" subtitle="formats natifs (ASCII/netlist/binaire) + JSON + sync" right={<Badge tone="violet">actif</Badge>}>
           <textarea
             className="input h-40 w-full resize-none font-mono text-xs"
-            placeholder="JSON du pont Altium {components, nets, board_size…} — vide = exemple"
+            placeholder="JSON du pont {components, nets} · PCB 5.0 ASCII (|RECORD=…) · netlist Protel ([…] (…)…) — vide = exemple"
             value={altiumText}
             onChange={(e) => setAltiumText(e.target.value)}
           />
