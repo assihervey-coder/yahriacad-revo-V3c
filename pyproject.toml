@@ -41,12 +41,12 @@ ai = [
 ]
 sim = ["numba>=0.59", "pyfftw>=0.13"]
 dev = [
-  "pytest>=8.0",
-  "pytest-asyncio>=0.23",
-  "pytest-cov>=4.1",
-  "ruff>=0.3",
-  "mypy>=1.8",
-  "hypothesis>=6.99",
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "pytest-cov==7.1.0",
+  "ruff==0.16.6",
+  "mypy==2.3.1",
+  "hypothesis==6.168.0",
 ]
 training = ["torch>=2.2", "tensorboard>=2.16", "wandb>=0.16"]
 

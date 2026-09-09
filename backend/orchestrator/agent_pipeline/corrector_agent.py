@@ -3,7 +3,9 @@
 Actions :
   - "correct_issues" : corrections ciblées issue par issue, avec chaîne de
     stratégies DRC de pas fin (neck-down vers le minimum de fabrication,
-    re-routage ciblé à clearance renforcée, rollback si dégradation) ;
+    re-routage ciblé à clearance renforcée, saut de couche via via, rollback
+    si dégradation) sur le CLUSTER complet de nets en conflit ; les paires
+    réellement incorrigibles sont mémoïsées pour éviter les tours perdus ;
   - "optimize"       : GARDÉ par le verdict VALID (sinon correction automatique
     d'abord) puis AutonomousOptimizer réel : propositions LLM + RL + world model
     (imagination MPC) validées par le keeper sur l'évaluateur rapide.
@@ -43,6 +45,8 @@ class CorrectorAgent(BaseAgent):
     def __init__(self, orchestrator: Any = None) -> None:
         super().__init__(AgentRole.CORRECTOR, "corrector", orchestrator)
         self._strategy_stats: dict[str, int] = {}
+        # paires déjà tentées sans amélioration → pas de 2e tentative identique
+        self._failed_pairs: set[frozenset[str]] = set()
 
     def supports(self, action: str) -> bool:
         return action in ("correct_issues", "optimize", "correct", "")
@@ -125,6 +129,7 @@ class CorrectorAgent(BaseAgent):
         params = context.get("params") or {}
         max_rounds = max(1, int(params.get("rounds") or 2))
         self._strategy_stats = {}
+        self._failed_pairs = set()
         fixed, attempted = 0, 0
         rounds_log: list[dict[str, Any]] = []
 
@@ -292,36 +297,97 @@ class CorrectorAgent(BaseAgent):
                 return True
         return False
 
-    def _count_trace_clearance(self, graph: Any, net_ids: set[str]) -> int:
-        """Nombre de violations DRC_CLEARANCE impliquant ces nets (vrai DRC)."""
+    def _clearance_violations(self, graph: Any) -> list[Any]:
+        """Violations DRC_CLEARANCE du design (un seul run DRC)."""
         mods = try_import("services.verification", ["DRCEngine"])
         engine_cls = mods.get("DRCEngine")
         if engine_cls is None:
-            return 0
+            return []
         try:
             report = engine_cls().run(graph)
-            count = 0
-            for violation in report.violations:
-                if str(getattr(violation, "code", "")) != "DRC_CLEARANCE":
-                    continue
-                location = getattr(violation, "location", None) or {}
-                pair = ({str(location.get("net_a", "")), str(location.get("net_b", ""))}
-                        & set(net_ids))
-                if pair:
-                    count += 1
-                    continue
-                # repli : noms de nets dans le message ("entre 'X' et 'Y'")
-                m = _NETS_RX.search(str(getattr(violation, "message", "")))
-                if m and ({m.group(1), m.group(2)} & set(net_ids)):
-                    count += 1
-            return count
+            return [v for v in report.violations
+                    if str(getattr(v, "code", "")) == "DRC_CLEARANCE"]
         except Exception:
-            return 0
+            return []
+
+    @staticmethod
+    def _violation_nets(violation: Any) -> tuple[str, str]:
+        """Paire (net_a, net_b) d'une violation clearance (location ou message)."""
+        location = getattr(violation, "location", None) or {}
+        net_a = str(location.get("net_a", "") or "")
+        net_b = str(location.get("net_b", "") or "")
+        if net_a and net_b:
+            return net_a, net_b
+        # repli : noms de nets dans le message ("entre 'X' et 'Y'")
+        m = _NETS_RX.search(str(getattr(violation, "message", "")))
+        if m:
+            return m.group(1), m.group(2)
+        return "", ""
+
+    def _count_trace_clearance(self, graph: Any, net_ids: set[str]) -> int:
+        """Nombre de violations DRC_CLEARANCE impliquant ces nets (vrai DRC)."""
+        wanted = set(net_ids)
+        count = 0
+        for violation in self._clearance_violations(graph):
+            net_a, net_b = self._violation_nets(violation)
+            if {net_a, net_b} & wanted:
+                count += 1
+        return count
+
+    def _clearance_cluster(self, graph: Any, net_ids: list[str],
+                           max_nets: int = 8) -> set[str]:
+        """Cluster transitif de nets partageant des violations de clearance.
+
+        Un bus fine-pitch (DP/DM + voisins) est corrigé d'un coup au lieu de
+        créer des effets ping-pong entre issues adjacentes.
+        """
+        edges: dict[str, set[str]] = {}
+        for violation in self._clearance_violations(graph):
+            net_a, net_b = self._violation_nets(violation)
+            if net_a and net_b:
+                edges.setdefault(net_a, set()).add(net_b)
+                edges.setdefault(net_b, set()).add(net_a)
+        cluster = {str(n) for n in net_ids}
+        frontier = [str(n) for n in net_ids]
+        while frontier and len(cluster) < max_nets:
+            current = frontier.pop(0)
+            for neighbor in sorted(edges.get(current, ())):
+                if neighbor not in cluster:
+                    cluster.add(neighbor)
+                    frontier.append(neighbor)
+                    if len(cluster) >= max_nets:
+                        break
+        return cluster
+
+    @staticmethod
+    def _signal_layers(graph: Any) -> list[int]:
+        """Indexes des couches routables (signal/mixed), repli (0, 1)."""
+        idx = [int(ly.index) for ly in (getattr(graph, "layers", []) or [])
+               if getattr(ly, "ltype", "signal") in ("signal", "mixed")]
+        return idx or [0, 1]
+
+    def _dominant_layer(self, graph: Any, net_id: str) -> int | None:
+        """Couche principale du chemin du net (None si non routé)."""
+        net = (get_field(graph, "nets", default={}) or {}).get(net_id)
+        if net is None:
+            return None
+        path = get_field(net, "path")
+        if path is None:
+            return None
+        try:
+            return int(get_field(path, "layer", default=0) or 0)
+        except (TypeError, ValueError):
+            return None
 
     def _reroute_nets(self, graph: Any, net_ids: list[str],
                       clearance: float, grid_step: float,
-                      widths: dict[str, float]) -> bool:
-        """Re-route les nets donnés avec un maze à clearance renforcée."""
+                      widths: dict[str, float],
+                      layers: tuple[int, ...] | None = None) -> bool:
+        """Re-route les nets donnés avec un maze à clearance renforcée.
+
+        `layers` restreint l'ordre de préférence des couches (saut de couche
+        forcé pour la stratégie 3) ; None = toutes les couches signal/mixed.
+        """
         mods_maze = try_import("services.router.geometrical", ["MazeRouter"])
         mods_route = try_import("services.router.route_optimizer", ["route_net_segments"])
         maze_cls = mods_maze.get("MazeRouter")
@@ -329,7 +395,8 @@ class CorrectorAgent(BaseAgent):
         if maze_cls is None or route_fn is None:
             return False
         nets = get_field(graph, "nets", default={}) or {}
-        layers = tuple(ly.index for ly in graph.layers if ly.ltype in ("signal", "mixed")) or (0, 1)
+        if layers is None:
+            layers = tuple(self._signal_layers(graph))
         maze = maze_cls(board_size=get_field(graph, "board_size", default=(60.0, 40.0)),
                         grid_step=grid_step, clearance=clearance)
         changed = False
@@ -349,14 +416,31 @@ class CorrectorAgent(BaseAgent):
 
     def _fix_trace_clearance(self, graph: Any, net_a: str, net_b: str,
                              context: dict[str, Any]) -> bool:
-        """Chaîne de stratégies DRC pas fin : neck-down → re-routage renforcé.
+        """Chaîne de stratégies DRC pas fin : neck-down → clearance renforcée
+        → saut de couche.
 
-        Chaque stratégie est validée par un comptage DRC réel ; si aucune
-        amélioration → rollback du snapshot (le design ne se dégrade jamais).
+        En pas fin, la correction porte sur le CLUSTER transitif de nets en
+        conflit (pas seulement la paire incriminée). Chaque stratégie est
+        validée par un comptage DRC réel sur la paire d'origine ; si aucune
+        amélioration → rollback du snapshot (le design ne se dégrade jamais)
+        et mémoïsation de la paire pour éviter les tours perdus.
         """
-        net_ids = [str(net_a), str(net_b)]
-        fine = any(self._net_is_fine_pitch(graph, nid) for nid in net_ids)
-        before = self._count_trace_clearance(graph, set(net_ids))
+        core_ids = [str(net_a), str(net_b)]
+        pair = frozenset(core_ids)
+        if pair in self._failed_pairs:
+            return False          # déjà tenté sans succès dans cette passe
+
+        fine = any(self._net_is_fine_pitch(graph, nid) for nid in core_ids)
+
+        # ---- périmètre de travail : cluster fine-pitch transitif (≤ 8 nets)
+        work_ids = core_ids
+        if fine:
+            cluster = self._clearance_cluster(graph, core_ids)
+            if len(cluster) > len(core_ids):
+                work_ids = sorted(cluster)[:8]
+                self.log.debug("cluster fine-pitch élargi : %s", work_ids)
+
+        before = self._count_trace_clearance(graph, set(core_ids))
         if before == 0:
             return False          # déjà résolu (ou DRC indisponible)
 
@@ -369,12 +453,13 @@ class CorrectorAgent(BaseAgent):
         # ---- stratégie 1 : neck-down vers le minimum de fabrication
         widths: dict[str, float] = {}
         nets = get_field(graph, "nets", default={}) or {}
-        for net_id in net_ids:
+        for net_id in work_ids:
             net = nets.get(net_id)
             if net is None or get_field(net, "path") is None:
+                widths.setdefault(net_id, FAB_MIN_TRACE_MM if fine else 0.2)
                 continue
             current = float(get_field(get_field(net, "path"), "width_mm", default=0.2) or 0.2)
-            target = FAB_MIN_TRACE_MM if fine else min(current, 0.2)
+            target = (FAB_MIN_TRACE_MM if fine else min(current, 0.2))
             widths[net_id] = target
             try:
                 path = get_field(net, "path")
@@ -386,9 +471,9 @@ class CorrectorAgent(BaseAgent):
                                     vias=list(get_field(path, "vias", default=[]) or [])))
             except Exception:
                 pass
-        rerouted = self._reroute_nets(graph, net_ids, clearance=0.25,
+        rerouted = self._reroute_nets(graph, work_ids, clearance=0.25,
                                       grid_step=0.25, widths=widths)
-        after = self._count_trace_clearance(graph, set(net_ids))
+        after = self._count_trace_clearance(graph, set(core_ids))
         if rerouted and after < before:
             self._strategy_stats["neckdown_reroute"] = \
                 self._strategy_stats.get("neckdown_reroute", 0) + 1
@@ -398,10 +483,10 @@ class CorrectorAgent(BaseAgent):
 
         # ---- stratégie 2 : re-routage clearance renforcée + grille fine
         self._restore(graph, snapshot)
-        widths2 = {nid: (FAB_MIN_TRACE_MM if fine else 0.2) for nid in net_ids}
-        rerouted2 = self._reroute_nets(graph, net_ids, clearance=0.35,
+        widths2 = {nid: (FAB_MIN_TRACE_MM if fine else 0.2) for nid in work_ids}
+        rerouted2 = self._reroute_nets(graph, work_ids, clearance=0.35,
                                        grid_step=0.2, widths=widths2)
-        after2 = self._count_trace_clearance(graph, set(net_ids))
+        after2 = self._count_trace_clearance(graph, set(core_ids))
         if rerouted2 and after2 < before:
             self._strategy_stats["reroute_wide_clearance"] = \
                 self._strategy_stats.get("reroute_wide_clearance", 0) + 1
@@ -409,8 +494,28 @@ class CorrectorAgent(BaseAgent):
                           net_a, net_b, before, after2)
             return True
 
-        # ---- aucune amélioration : rollback propre
+        # ---- stratégie 3 : saut de couche — sort les nets conflits de la
+        #      couche dominante de net_b (via), conflit même-couche éliminé
         self._restore(graph, snapshot)
+        dominant_b = self._dominant_layer(graph, str(net_b))
+        alt_layers = [ly for ly in self._signal_layers(graph) if ly != dominant_b]
+        if alt_layers:
+            hop_ids = [nid for nid in work_ids if nid != str(net_a)] or [str(net_b)]
+            widths3 = {nid: (FAB_MIN_TRACE_MM if fine else 0.2) for nid in hop_ids}
+            rerouted3 = self._reroute_nets(graph, hop_ids, clearance=0.25,
+                                           grid_step=0.25, widths=widths3,
+                                           layers=tuple(alt_layers))
+            after3 = self._count_trace_clearance(graph, set(core_ids))
+            if rerouted3 and after3 < before:
+                self._strategy_stats["layer_hop"] = \
+                    self._strategy_stats.get("layer_hop", 0) + 1
+                self.log.info("DRC pas fin %s↔%s : saut de couche vers %s, %d→%d",
+                              net_a, net_b, alt_layers, before, after3)
+                return True
+
+        # ---- aucune amélioration : rollback propre + mémo de la paire
+        self._restore(graph, snapshot)
+        self._failed_pairs.add(pair)
         self._strategy_stats["no_improvement"] = \
             self._strategy_stats.get("no_improvement", 0) + 1
         return False
@@ -491,12 +596,19 @@ class CorrectorAgent(BaseAgent):
         x = float(get_field(comp, "x", "x_mm", default=0.0) or 0.0)
         y = float(get_field(comp, "y", "y_mm", default=0.0) or 0.0)
         w, _h = component_bbox(comp)
+        board = get_field(graph, "board_size", "board_size_mm",
+                          default=(100.0, 80.0)) or (100.0, 80.0)
+        # éloigne le composant mais reste DANS la carte (marge 5 mm),
+        # sinon la correction échangerait une violation contre une autre
+        new_x = min(max(x + w + 1.0, 5.0), float(board[0]) - 5.0)
+        new_y = min(max(y + 2.0, 5.0), float(board[1]) - 5.0)
         try:
-            graph.place(refs[-1], x + w + 1.0, y + 2.0,
+            graph.place(refs[-1], new_x, new_y,
                         float(get_field(comp, "rotation", default=0.0) or 0.0))
             return True
         except Exception:
-            set_field(comp, "y", y + 2.0)
+            set_field(comp, "x", new_x)
+            set_field(comp, "y", new_y)
             return True
 
     def _fix_outside(self, graph: Any, issue: str) -> bool:
