@@ -2,14 +2,15 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any
 
 from shared.geometry import Point, Polygon
 
 from services.design_core.design_graph.components import Component
 
-BBoxTuple = Tuple[float, float, float, float]   # (min_x, min_y, max_x, max_y)
+BBoxTuple = tuple[float, float, float, float]   # (min_x, min_y, max_x, max_y)
 
 
 @dataclass
@@ -20,7 +21,7 @@ class Keepout:
     polygon: Polygon
     layer: int = -1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "points": [[p.x, p.y] for p in self.polygon.points],
@@ -28,7 +29,7 @@ class Keepout:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Keepout":
+    def from_dict(cls, d: dict[str, Any]) -> Keepout:
         return cls(
             name=str(d.get("name", "keepout")),
             polygon=Polygon(points=[Point.from_tuple(p) for p in d.get("points", [])],
@@ -50,7 +51,7 @@ def bbox_gap_mm(a: BBoxTuple, b: BBoxTuple) -> float:
     return math.hypot(dx, dy)
 
 
-def corners_of(x: float, y: float, w: float, h: float) -> List[Point]:
+def corners_of(x: float, y: float, w: float, h: float) -> list[Point]:
     """Les 4 coins d'une bbox centrée en (x, y) — pour les tests keepout."""
     return [
         Point(x - w / 2.0, y - h / 2.0),

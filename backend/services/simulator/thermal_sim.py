@@ -9,14 +9,12 @@ from __future__ import annotations
 
 import math
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph
-
 from services.simulator.base import BaseSim, SimResult
 
 log = get_logger("simulator.thermal")
@@ -46,7 +44,7 @@ class ThermalSim(BaseSim):
     # ------------------------------------------------------------------ public
     def run(self, graph: DesignGraph) -> SimResult:
         t0 = time.perf_counter()
-        notes: List[str] = []
+        notes: list[str] = []
         bw, bh = graph.board_size
 
         # grille : cellule 1 mm, bornée pour la mémoire
@@ -58,7 +56,7 @@ class ThermalSim(BaseSim):
 
         # ---- sources : W injectés par cellule (répartis sur l'empreinte)
         power = np.zeros((nx, ny), dtype=np.float64)
-        hot_components: List[Tuple[str, float, float, float]] = []
+        hot_components: list[tuple[str, float, float, float]] = []
         total_power = 0.0
         for comp in graph.components.values():
             if not comp.placed or comp.power_w <= 0.0:
@@ -96,7 +94,8 @@ class ThermalSim(BaseSim):
         temp[0, :] = temp[-1, :] = self.ambient_c
         temp[:, 0] = temp[:, -1] = self.ambient_c
         iterations = 0
-        for iterations in range(1, self.max_iter + 1):
+        for it in range(1, self.max_iter + 1):
+            iterations = it
             new = temp.copy()
             core = (temp[:-2, 1:-1] + temp[2:, 1:-1] +
                     temp[1:-1, :-2] + temp[1:-1, 2:]) / 4.0 + src[1:-1, 1:-1]
@@ -114,7 +113,7 @@ class ThermalSim(BaseSim):
 
         # composant responsable du hotspot (le plus proche du point chaud)
         culprit, culprit_dist = None, math.inf
-        for ref, pw, cx, cy in hot_components:
+        for ref, _pw, cx, cy in hot_components:
             d = math.hypot(cx - hotspot[0], cy - hotspot[1])
             if d < culprit_dist:
                 culprit, culprit_dist = ref, d
@@ -127,7 +126,7 @@ class ThermalSim(BaseSim):
         notes.append(f"convergence Jacobi en {iterations} itérations "
                      f"(grille {nx}×{ny}, cellule {cell:.0f} mm)")
 
-        metrics: Dict[str, Any] = {
+        metrics: dict[str, Any] = {
             "max_temp_c": round(max_t, 2),
             "mean_temp_c": round(mean_t, 2),
             "hotspot": hotspot,

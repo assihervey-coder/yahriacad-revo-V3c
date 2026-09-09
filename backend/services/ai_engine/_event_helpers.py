@@ -10,8 +10,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from shared.utilities import get_logger
 from shared.events import Event, get_event_bus
+from shared.utilities import get_logger
 
 log = get_logger("ai_engine.events")
 

@@ -6,7 +6,7 @@ disque (projets, designs, exports, jobs).
 from __future__ import annotations
 
 import re
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request

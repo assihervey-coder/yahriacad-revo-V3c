@@ -6,15 +6,14 @@ pour un corpus de connaissance (milliers de chunks).
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import math
 import os
 import re
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 log = get_logger("ai_engine.rag.retrieval")
@@ -36,19 +35,19 @@ class RetrievedChunk:
     source: str
     score: float = 0.0
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {"content": self.content, "source": self.source, "score": self.score}
 
 
-def _tokenize(text: str) -> List[str]:
+def _tokenize(text: str) -> list[str]:
     return [t.lower() for t in _TOKEN_RE.findall(text)
             if len(t) > 1 and t.lower() not in _STOPWORDS]
 
 
-def _split_paragraphs(text: str, target_chars: int = 500) -> List[str]:
+def _split_paragraphs(text: str, target_chars: int = 500) -> list[str]:
     """Chunking par paragraphe, fusion des petits, coupure des longs (~500c)."""
     paras = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-    chunks: List[str] = []
+    chunks: list[str] = []
     buf = ""
     for para in paras:
         if len(para) > target_chars * 1.6:
@@ -79,9 +78,9 @@ class Retriever:
     """Index TF-IDF (numpy) sur des chunks de documents markdown/texte/json."""
 
     def __init__(self) -> None:
-        self._chunks: List[RetrievedChunk] = []
-        self._doc_counts: List[Dict[str, int]] = []     # tf par chunk
-        self._df: Dict[str, int] = {}                   # document frequency
+        self._chunks: list[RetrievedChunk] = []
+        self._doc_counts: list[dict[str, int]] = []     # tf par chunk
+        self._df: dict[str, int] = {}                   # document frequency
         self._vocab_size = 0
 
     # -------------------------------------------------------------- indexing
@@ -92,7 +91,7 @@ class Retriever:
             tokens = _tokenize(chunk)
             if not tokens:
                 continue
-            tf: Dict[str, int] = {}
+            tf: dict[str, int] = {}
             for tok in tokens:
                 tf[tok] = tf.get(tok, 0) + 1
             self._chunks.append(RetrievedChunk(content=chunk, source=source))
@@ -115,16 +114,14 @@ class Retriever:
                     continue
                 fpath = os.path.join(root, fname)
                 try:
-                    with open(fpath, "r", encoding="utf-8") as f:
+                    with open(fpath, encoding="utf-8") as f:
                         text = f.read()
                 except (OSError, UnicodeDecodeError) as exc:
                     log.warning("lecture impossible %s: %s", fpath, exc)
                     continue
                 if fname.lower().endswith(".json"):
-                    try:
+                    with contextlib.suppress(ValueError):
                         text = json.dumps(json.loads(text), ensure_ascii=False, indent=1)
-                    except ValueError:
-                        pass
                 total += self.add_text(text, source=os.path.relpath(fpath, path))
         log.info("index_dir(%s): %d chunks indexés", path, total)
         return total
@@ -135,14 +132,14 @@ class Retriever:
         """Nombre de chunks indexés."""
         return len(self._chunks)
 
-    def search(self, query: str, k: int = 5) -> List[RetrievedChunk]:
+    def search(self, query: str, k: int = 5) -> list[RetrievedChunk]:
         """Recherche cosine TF-IDF — retourne les k meilleurs chunks."""
         if not self._chunks:
             return []
         q_tokens = _tokenize(query)
         if not q_tokens:
             return []
-        q_tf: Dict[str, int] = {}
+        q_tf: dict[str, int] = {}
         for tok in q_tokens:
             q_tf[tok] = q_tf.get(tok, 0) + 1
 
@@ -169,7 +166,7 @@ class Retriever:
 
         scores = (d_mat @ q_vec) / (d_norms * q_norm)
         order = np.argsort(scores)[::-1][:max(1, k)]
-        results: List[RetrievedChunk] = []
+        results: list[RetrievedChunk] = []
         for idx in order:
             sc = float(scores[idx])
             if sc <= 0.0:
@@ -196,7 +193,7 @@ class Retriever:
         if not os.path.exists(path):
             return False
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except (OSError, ValueError) as exc:
             log.warning("load index %s échoué: %s", path, exc)

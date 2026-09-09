@@ -8,10 +8,11 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any
+
+from shared.utilities import get_logger
 
 from orchestrator.common import data_root, deserialize_graph, graph_stats, serialize_graph
-from shared.utilities import get_logger
 
 log = get_logger("state.design")
 
@@ -19,7 +20,7 @@ log = get_logger("state.design")
 class DesignStateManager:
     """Sauvegarde / rechargement des DesignGraph par révision."""
 
-    def __init__(self, base_dir: Optional[str] = None) -> None:
+    def __init__(self, base_dir: str | None = None) -> None:
         self.base = Path(base_dir) if base_dir else data_root()
 
     # -- chemins -------------------------------------------------------------
@@ -50,7 +51,7 @@ class DesignStateManager:
         log.debug("design sauvegardé: %s rev=%s", rev_path, rev)
         return rev_path
 
-    def load_design(self, tenant: str, user: str, project: str) -> Optional[Tuple[Any, int]]:
+    def load_design(self, tenant: str, user: str, project: str) -> tuple[Any, int] | None:
         """Charge le graphe courant -> (DesignGraph, rev) ou None."""
         rev = self._current_rev(tenant, user, project)
         if rev is None:
@@ -65,7 +66,7 @@ class DesignStateManager:
         return graph, actual_rev
 
     def load_revision(self, tenant: str, user: str, project: str,
-                      rev: int) -> Optional[Tuple[Any, int]]:
+                      rev: int) -> tuple[Any, int] | None:
         path = self._rev_path(tenant, user, project, rev)
         if not path.is_file():
             return None
@@ -79,12 +80,12 @@ class DesignStateManager:
             log.warning("révision illisible: %s", path, exc_info=True)
             return None
 
-    def history(self, tenant: str, user: str, project: str) -> List[int]:
+    def history(self, tenant: str, user: str, project: str) -> list[int]:
         """Liste triée des révisions persistées."""
         directory = self._design_dir(tenant, user, project)
         if not directory.is_dir():
             return []
-        revs: List[int] = []
+        revs: list[int] = []
         for file in directory.glob("rev_*.json"):
             try:
                 revs.append(int(file.stem.split("_")[1]))
@@ -100,7 +101,7 @@ class DesignStateManager:
         return {"rev": rev, **graph_stats(graph)}
 
     # -- interne ------------------------------------------------------------
-    def _current_rev(self, tenant: str, user: str, project: str) -> Optional[int]:
+    def _current_rev(self, tenant: str, user: str, project: str) -> int | None:
         path = self._current_path(tenant, user, project)
         if not path.is_file():
             return None

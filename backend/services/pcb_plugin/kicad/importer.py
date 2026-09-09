@@ -7,7 +7,7 @@ segments/vias reconstruisent les chemins de routage.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from shared.geometry import Point, RoutePath
 from shared.utilities import get_logger
@@ -31,7 +31,7 @@ _NUM_RE = re.compile(r"(\d+)")
 # Helpers
 # ---------------------------------------------------------------------------
 
-def default_layers() -> List[Any]:
+def default_layers() -> list[Any]:
     """Stackup 2 couches par défaut (F.Cu, B.Cu)."""
     _, _, _, _, Layer, _ = _classes()
     out = []
@@ -43,12 +43,12 @@ def default_layers() -> List[Any]:
     return out
 
 
-def _classes() -> Tuple[Node, ...]:
+def _classes() -> tuple[Node, ...]:
     from services.pcb_plugin._compat import core_classes
     return core_classes()
 
 
-def _natural_key(s: str) -> Tuple:
+def _natural_key(s: str) -> tuple:
     return tuple(int(p) if p.isdigit() else p for p in _NUM_RE.split(s))
 
 
@@ -72,8 +72,8 @@ def import_kicad_netlist(text: str) -> Any:
     root = SExprParser(text).parse()
     top = root[0] if root and isinstance(root[0], list) else root
 
-    components: Dict[str, Node] = {}
-    pin_net: Dict[Tuple[str, str], str] = {}
+    components: dict[str, Node] = {}
+    pin_net: dict[tuple[str, str], str] = {}
 
     for comp in find_all(find(top, "components") or [], "comp"):
         ref = as_str(atom(comp, "ref"), "")
@@ -110,7 +110,7 @@ def import_kicad_netlist(text: str) -> Any:
                 pin_net[(ref, pin)] = net_id
 
     # Nets du graphe : une entrée par net_id détecté
-    nets: Dict[str, Node] = {}
+    nets: dict[str, Node] = {}
     for (ref, pin), net_id in sorted(pin_net.items()):
         entry = nets.setdefault(net_id, {"net_id": net_id, "name": net_id,
                                          "class_name": "power" if _power_like(net_id) else "signal",
@@ -161,10 +161,10 @@ def import_kicad_netlist(text: str) -> Any:
 # PCB
 # ---------------------------------------------------------------------------
 
-def _copper_layers(top: Node) -> List[Tuple[int, str]]:
+def _copper_layers(top: Node) -> list[tuple[int, str]]:
     """Couches cuivre déclarées [(id_kicad, nom)] triées par id (0..31 = cuivre)."""
     layers_sec = find(top, "layers") or []
-    copper: List[Tuple[int, str]] = []
+    copper: list[tuple[int, str]] = []
     for entry in layers_sec:
         if not isinstance(entry, list) or len(entry) < 2:
             continue
@@ -174,7 +174,7 @@ def _copper_layers(top: Node) -> List[Tuple[int, str]]:
     return sorted(copper)
 
 
-def _layer_index_map(top: Node) -> Dict[str, int]:
+def _layer_index_map(top: Node) -> dict[str, int]:
     """nom KiCad → index dense dans le DesignGraph (F.Cu=0 ... B.Cu=n-1)."""
     copper = _copper_layers(top)
     if not copper:
@@ -182,10 +182,10 @@ def _layer_index_map(top: Node) -> Dict[str, int]:
     return {name: i for i, (_kid, name) in enumerate(copper)}
 
 
-def _chain_segments(segs: List[Tuple[Point, Point]], eps: float = 1e-3) -> List[List[Point]]:
+def _chain_segments(segs: list[tuple[Point, Point]], eps: float = 1e-3) -> list[list[Point]]:
     """Chaîne gloutonne de segments → polylignes (simplification assumée)."""
     remaining = [list(s) for s in segs]
-    chains: List[List[Point]] = []
+    chains: list[list[Point]] = []
 
     def close(a: Point, b: Point) -> bool:
         return abs(a.x - b.x) < eps and abs(a.y - b.y) < eps
@@ -237,12 +237,12 @@ def import_kicad_pcb(text: str) -> Node:
                 board_h = max(board_h, as_float(s[2]) if len(s) > 2 else 0.0,
                               as_float(e[2]) if len(e) > 2 else 0.0)
 
-    components: Dict[str, Node] = {}
+    components: dict[str, Node] = {}
     # ref → {pin: net_id} pour reconstruire les pins des nets
-    pad_net: Dict[Tuple[str, str], str] = {}
-    net_names: Dict[int, str] = {}
-    segs_by_net: Dict[int, List[Tuple[Point, Point, float, str]]] = {}
-    vias_by_net: Dict[int, List[Tuple[Point, int, int]]] = {}
+    pad_net: dict[tuple[str, str], str] = {}
+    net_names: dict[int, str] = {}
+    segs_by_net: dict[int, list[tuple[Point, Point, float, str]]] = {}
+    vias_by_net: dict[int, list[tuple[Point, int, int]]] = {}
 
     # --- Modules / footprints
     for mod in find_all(top, "module") + find_all(top, "footprint"):
@@ -271,9 +271,9 @@ def import_kicad_pcb(text: str) -> Node:
             ref = f"X{len(components) + 1}"
             log.warning("module sans référence (%s) → %s", fp_name, ref)
 
-        pads: List[Node] = []
-        xs: List[float] = []
-        ys: List[float] = []
+        pads: list[Node] = []
+        xs: list[float] = []
+        ys: list[float] = []
         for pad in find_all(mod, "pad"):
             pname = as_str(pad[1] if len(pad) > 1 else "", f"p{len(pads) + 1}")
             pat = find(pad, "at") or []
@@ -351,7 +351,7 @@ def import_kicad_pcb(text: str) -> Node:
             vias_by_net.setdefault(num, []).append((pos, f_l, t_l))
 
     # --- Construction des nets
-    nets: Dict[str, Node] = {}
+    nets: dict[str, Node] = {}
     for num, name in sorted(net_names.items()):
         if num <= 0:
             continue
@@ -360,10 +360,10 @@ def import_kicad_pcb(text: str) -> Node:
         if num in segs_by_net:
             segs = segs_by_net[num]
             chains = _chain_segments([(p1, p2) for p1, p2, _w, _l in segs])
-            points: List[Point] = []
+            points: list[Point] = []
             for chain in chains:
                 points.extend(chain)
-            layer_counts: Dict[int, int] = {}
+            layer_counts: dict[int, int] = {}
             for _p1, _p2, _w, lname in segs:
                 idx = li_map[lname]
                 layer_counts[idx] = layer_counts.get(idx, 0) + 1
@@ -385,7 +385,7 @@ def import_kicad_pcb(text: str) -> Node:
 
     # --- Stackup
     copper = _copper_layers(top)
-    layers: List[Any] = []
+    layers: list[Any] = []
     if copper:
         for i, (_kid, lname) in enumerate(copper):
             ltype = "ground" if lname.upper() in {"GND", "AGND"} else \

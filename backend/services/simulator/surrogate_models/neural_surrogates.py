@@ -7,10 +7,8 @@ Standardisation interne (mu/sigma) conservée dans la sauvegarde npz.
 from __future__ import annotations
 
 import os
-from typing import Optional, Tuple
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 log = get_logger("simulator.surrogate")
@@ -41,7 +39,7 @@ class NeuralSurrogate:
     def _standardize(self, X: np.ndarray) -> np.ndarray:
         return (X - self.mu) / np.maximum(self.sigma, 1e-9)
 
-    def _forward(self, Xs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _forward(self, Xs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Retourne (sortie, couche cachée activée)."""
         hidden = np.tanh(Xs @ self.W1.T + self.b1)     # (n, H)
         out = hidden @ self.W2.T + self.b2             # (n, 1)
@@ -55,7 +53,7 @@ class NeuralSurrogate:
 
     # --------------------------------------------------------------------- fit
     def fit(self, X: np.ndarray, y: np.ndarray, epochs: int = 50,
-            lr: float = 1e-3) -> "NeuralSurrogate":
+            lr: float = 1e-3) -> NeuralSurrogate:
         """Entraînement par descente de gradient manuelle (MSE)."""
         X = np.atleast_2d(np.asarray(X, dtype=np.float64))
         y = np.asarray(y, dtype=np.float64).ravel()
@@ -106,7 +104,7 @@ class NeuralSurrogate:
                  trained=np.array([self.trained]))
 
     @classmethod
-    def load(cls, path: str) -> "NeuralSurrogate":
+    def load(cls, path: str) -> NeuralSurrogate:
         """Charge un npz sauvegardé par `save`."""
         data = np.load(path, allow_pickle=False)
         name = str(data["name"][0]) if "name" in data else "surrogate"

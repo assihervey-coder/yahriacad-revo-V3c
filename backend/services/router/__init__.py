@@ -1,4 +1,16 @@
 """router — cerveau décisionnel du routage PCB (topologie, A*, différentiel, SI)."""
+from services.router.differential_pairs import DifferentialPairRouter, find_differential_pairs
+from services.router.engine import RouterEngine, RoutingResult
+from services.router.geometrical import MazeRouter, offset_polyline, segment_segment_distance
+from services.router.high_speed import add_serpentine, length_match, polyline_length
+from services.router.impedance_control import (
+    assign_trace_widths,
+    effective_er,
+    microstrip_width,
+    microstrip_z0,
+    propagation_delay_ns,
+)
+from services.router.route_optimizer import rip_up_and_reroute, route_net_segments
 from services.router.topological import (
     build_net_topology,
     classify_component,
@@ -13,20 +25,8 @@ from services.router.topological import (
     pad_position,
     voltage_of_net,
 )
-from services.router.geometrical import MazeRouter, offset_polyline, segment_segment_distance
-from services.router.impedance_control import (
-    assign_trace_widths,
-    effective_er,
-    microstrip_width,
-    microstrip_z0,
-    propagation_delay_ns,
-)
-from services.router.differential_pairs import DifferentialPairRouter, find_differential_pairs
-from services.router.high_speed import add_serpentine, length_match, polyline_length
-from services.router.via_placer import ViaPlan, estimate_via_cost_pf, plan_vias
 from services.router.via_minimizer import minimize as minimize_vias
-from services.router.route_optimizer import rip_up_and_reroute, route_net_segments
-from services.router.engine import RouterEngine, RoutingResult
+from services.router.via_placer import ViaPlan, estimate_via_cost_pf, plan_vias
 
 __all__ = [
     # topologie (fondation réutilisable partout)

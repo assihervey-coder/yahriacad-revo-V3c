@@ -2,15 +2,15 @@
 from __future__ import annotations
 
 import json
-import os
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Sequence
+from typing import Any
 
 from shared.utilities import get_logger
+
 from services.ai_engine.llm_orchestrator.provider import (
     LLMProvider,
-    MockLLMProvider,
     get_provider,
 )
 from services.ai_engine.llm_orchestrator.tool_use import ToolRegistry, run_tool_loop
@@ -28,8 +28,8 @@ class LLMResponse:
     """Réponse normalisée de l'orchestrateur."""
 
     content: str
-    tool_calls: List[Dict[str, Any]] = field(default_factory=list)
-    usage: Dict[str, int] = field(default_factory=dict)
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
+    usage: dict[str, int] = field(default_factory=dict)
     model: str = "mock"
     raw: str = ""
 
@@ -52,12 +52,12 @@ class LLMOrchestrator:
             "Tu es un expert en conception électronique et PCB. "
             "Réponds en français, de façon précise et actionnable."
         )
-        self.history: List[Dict[str, Any]] = []
-        self.usage: Dict[str, int] = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
+        self.history: list[dict[str, Any]] = []
+        self.usage: dict[str, int] = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
 
     # ------------------------------------------------------------------ chat
-    def chat(self, messages: Sequence[Dict[str, str]],
-             tools: List[Dict[str, Any]] | ToolRegistry | None = None,
+    def chat(self, messages: Sequence[dict[str, str]],
+             tools: list[dict[str, Any]] | ToolRegistry | None = None,
              temperature: float = 0.2,
              system: str | None = None) -> LLMResponse:
         """Chat multi-messages ; si `tools`, exécute la boucle tool-use.
@@ -100,7 +100,7 @@ class LLMOrchestrator:
                          system=system, temperature=temperature).content
 
     # ------------------------------------------------------------- internals
-    def _usage(self, text: str) -> Dict[str, int]:
+    def _usage(self, text: str) -> dict[str, int]:
         n = estimate_tokens(text)
         self.usage["calls"] += 1
         self.usage["prompt_tokens"] += n
@@ -120,15 +120,15 @@ class LLMOrchestrator:
             del self.history[: len(self.history) - self.HISTORY_SIZE]
 
     @staticmethod
-    def _system_from(messages: Sequence[Dict[str, str]]) -> str | None:
+    def _system_from(messages: Sequence[dict[str, str]]) -> str | None:
         for m in messages:
             if m.get("role") == "system":
                 return m.get("content")
         return None
 
     @staticmethod
-    def _render_messages(messages: Sequence[Dict[str, str]]) -> str:
-        parts: List[str] = []
+    def _render_messages(messages: Sequence[dict[str, str]]) -> str:
+        parts: list[str] = []
         for m in messages:
             role = m.get("role", "user")
             if role == "system":
@@ -148,9 +148,9 @@ class LLMOrchestrator:
         return registry
 
     @staticmethod
-    def _extract_tool_calls(raw: str) -> List[Dict[str, Any]]:
+    def _extract_tool_calls(raw: str) -> list[dict[str, Any]]:
         """Extrait les tool_calls JSON inline du contenu texte."""
-        calls: List[Dict[str, Any]] = []
+        calls: list[dict[str, Any]] = []
         txt = raw.strip()
         if txt.startswith("```"):
             txt = txt.strip("`")

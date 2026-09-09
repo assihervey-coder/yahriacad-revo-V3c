@@ -4,14 +4,14 @@ from pathlib import Path
 
 sys.path[:0] = [str(Path(__file__).resolve().parents[2]), str(Path(__file__).resolve().parents[2] / "backend")]
 
-import numpy as np
-import pytest
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
 
-from services.ai_engine.rl_agent.action_space import (
+from services.ai_engine.rl_agent.action_space import (  # noqa: E402
     PlacementAction,
     PlacementActionKind,
 )
-from services.ai_engine.rl_agent.world_model import (
+from services.ai_engine.rl_agent.world_model import (  # noqa: E402
     FEATURE_DIM,
     WorldModel,
     state_from_graph,
@@ -20,7 +20,7 @@ from services.ai_engine.rl_agent.world_model import (
 
 @pytest.fixture
 def graph():
-    from services.design_core import DesignGraph
+    from services.design_core import DesignGraph  # noqa: E402
 
     g = DesignGraph(project_id="t", name="t", board_size=(60.0, 40.0))
     g.add_component(ref="U1", footprint="QFN-16_0.5mm", x=10, y=20)
@@ -77,7 +77,7 @@ def test_incertitude_epistemique_apres_train(graph):
         graph.place("R1", 30 + (i % 5), 10, 0)
         wm.record_transition(s, act, state_from_graph(graph), reward=-0.5)
     wm.train(epochs=30)
-    s1 = wm.dynamics(state_from_graph(graph), _mk_move())
+    wm.dynamics(state_from_graph(graph), _mk_move())
     assert wm.last_uncertainty["alpha"] > 0.0
     assert "max_std" in wm.last_uncertainty
 

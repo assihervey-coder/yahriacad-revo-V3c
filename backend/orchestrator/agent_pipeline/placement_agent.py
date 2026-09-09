@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Dict
+from typing import Any
 
-from orchestrator.agent_pipeline.base import BaseAgent
-from orchestrator.common import get_field, set_field, try_import
 from shared.contracts import AgentRole
 from shared.schemas import AgentResultSchema
+
+from orchestrator.agent_pipeline.base import BaseAgent
+from orchestrator.common import call_probe, get_field, set_field, try_import
 
 
 class PlacementAgent(BaseAgent):
@@ -22,7 +23,7 @@ class PlacementAgent(BaseAgent):
     def supports(self, action: str) -> bool:
         return action in ("place_all", "place", "optimize", "")
 
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         graph = context.get("graph")
         if graph is None:
             return self.failed(context, "aucun DesignGraph dans le contexte (étape select manquante ?)")

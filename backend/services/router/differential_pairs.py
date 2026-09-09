@@ -16,14 +16,13 @@ de détecter les paires mal couplées sans bloquer le flux.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple
 
 from shared.geometry import Point, RoutePath, Segment
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph, Net
-
 from services.router.geometrical import (
     MazeRouter,
     offset_polyline,
@@ -62,14 +61,14 @@ class PairQualityReport:
     coupling_ratio: float = 0.0
     skew_matched: bool = False
     strategy: str = "offset"           # offset | astar_fallback
-    notes: List[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
     @property
     def well_coupled(self) -> bool:
         """Couplage industriel acceptable : ratio ≥ 0.5 et gap maîtrisé."""
         return self.coupling_ratio >= 0.5 and math.isfinite(self.min_gap_mm)
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "name": self.name,
             "net_p": self.net_p,
@@ -89,7 +88,7 @@ class PairQualityReport:
         }
 
 
-def _pair_base(name: str) -> Optional[Tuple[str, str]]:
+def _pair_base(name: str) -> tuple[str, str] | None:
     """(base, polarity) si le nom se termine par un suffixe de paire, None sinon."""
     n = (name or "").strip()
     upper = n.upper()
@@ -106,7 +105,7 @@ def _pair_base(name: str) -> Optional[Tuple[str, str]]:
     return None
 
 
-def find_differential_pairs(graph: DesignGraph) -> List[Tuple[Net, Net]]:
+def find_differential_pairs(graph: DesignGraph) -> list[tuple[Net, Net]]:
     """Détecte les paires (P, N) : classe differential groupée par matched_group,
     sinon appariement par suffixe _P/_N (ou _DP/_DM) des noms de nets.
 
@@ -114,14 +113,14 @@ def find_differential_pairs(graph: DesignGraph) -> List[Tuple[Net, Net]]:
     (convention USB_DP/USB_DM, CAN_P/CAN_N…) — une paire n'est formée que si
     les deux membres existent, ce qui rend les faux positifs quasi impossibles.
     """
-    pairs: List[Tuple[Net, Net]] = []
+    pairs: list[tuple[Net, Net]] = []
     used: set[str] = set()
 
     diff_nets = [n for n in graph.nets.values()
                  if is_differential_net(n) or _pair_base(n.name) is not None]
 
     # 1) par matched_group : 2 nets (ou plus) → on apparie P puis N
-    by_group: Dict[str, List[Net]] = {}
+    by_group: dict[str, list[Net]] = {}
     for net in diff_nets:
         if net.matched_group:
             by_group.setdefault(net.matched_group, []).append(net)
@@ -137,24 +136,24 @@ def find_differential_pairs(graph: DesignGraph) -> List[Tuple[Net, Net]]:
 
     # 2) par suffixe de nom sur les nets différentiels restants
     remaining = [n for n in diff_nets if n.net_id not in used]
-    by_base: Dict[str, Dict[str, Net]] = {}
+    by_base: dict[str, dict[str, Net]] = {}
     for net in remaining:
         base = _pair_base(net.name)
         if base is None:
             continue
         by_base.setdefault(base[0], {})[base[1]] = net
-    for base, pol in sorted(by_base.items()):
+    for _base, pol in sorted(by_base.items()):
         if "P" in pol and "N" in pol:
             pairs.append((pol["P"], pol["N"]))
     return pairs
 
 
 # --------------------------------------------------------------------- géométrie
-def _segments_of(points: Sequence[Point]) -> List[Segment]:
+def _segments_of(points: Sequence[Point]) -> list[Segment]:
     return [Segment(points[i], points[i + 1]) for i in range(len(points) - 1)]
 
 
-def _parallel_overlap(a: Segment, b: Segment) -> Tuple[float, float]:
+def _parallel_overlap(a: Segment, b: Segment) -> tuple[float, float]:
     """(recouvrement le long de l'axe commun, distance perpendiculaire) si les
     deux segments sont parallèles (orthogonaux), sinon (0, inf)."""
     dax, day = a.end.x - a.start.x, a.end.y - a.start.y
@@ -177,7 +176,7 @@ def _parallel_overlap(a: Segment, b: Segment) -> Tuple[float, float]:
 
 
 def _path_gap_stats(points_p: Sequence[Point], points_n: Sequence[Point],
-                    max_gap_mm: float = 3.0) -> Tuple[float, float, float]:
+                    max_gap_mm: float = 3.0) -> tuple[float, float, float]:
     """(gap min, gap moyen, longueur couplée) entre deux polylignes proches.
 
     Un segment compte comme couplé si un segment parallèle du membre opposé
@@ -188,7 +187,7 @@ def _path_gap_stats(points_p: Sequence[Point], points_n: Sequence[Point],
     segs_n = _segments_of(points_n)
     if not segs_p or not segs_n:
         return float("inf"), 0.0, 0.0
-    gaps: List[float] = []
+    gaps: list[float] = []
     coupled = 0.0
     for sa in segs_p:
         best = float("inf")
@@ -238,17 +237,17 @@ class DifferentialPairRouter:
     """Route les deux membres d'une paire en parallèle, égalise le skew
     et produit un rapport de qualité industriel."""
 
-    def __init__(self, maze: Optional[MazeRouter] = None, gap_mm: float = 0.45,
+    def __init__(self, maze: MazeRouter | None = None, gap_mm: float = 0.45,
                  skew_tol_mm: float = DEFAULT_SKEW_TOL_MM) -> None:
         self.maze = maze
         self.gap_mm = float(gap_mm)
         self.skew_tol_mm = float(skew_tol_mm)
-        self.reports: List[PairQualityReport] = []
+        self.reports: list[PairQualityReport] = []
 
     # ------------------------------------------------------------------ public
     def route_pair(self, graph: DesignGraph, net_p: Net, net_n: Net,
                    width_mm: float = 0.2,
-                   layers: Optional[Sequence[int]] = None) -> Optional[PairQualityReport]:
+                   layers: Sequence[int] | None = None) -> PairQualityReport | None:
         """Route la paire complète. Retourne un PairQualityReport, ou None si
         le membre P n'a pas pu être routé.
 
@@ -258,14 +257,14 @@ class DifferentialPairRouter:
         """
         maze = self.maze or MazeRouter(board_size=graph.board_size)
         if layers is None:
-            layers = tuple(l.index for l in graph.layers
-                           if l.ltype in ("signal", "mixed")) or (0, 1)
+            layers = tuple(ly.index for ly in graph.layers
+                           if ly.ltype in ("signal", "mixed")) or (0, 1)
         segments = build_net_topology(graph, net_p)
         if not segments:
             return None
-        points: List[Point] = []
+        points: list[Point] = []
         for a, b in segments:
-            path: Optional[List[Point]] = None
+            path: list[Point] | None = None
             for lyr in layers:
                 path = maze.route_pair(graph, net_p, a, b, lyr, width_mm)
                 if path is not None:
@@ -359,11 +358,11 @@ class DifferentialPairRouter:
         return report
 
     def route_all_pairs(self, graph: DesignGraph,
-                        widths: Optional[Dict[str, float]] = None
-                        ) -> List[PairQualityReport]:
+                        widths: dict[str, float] | None = None
+                        ) -> list[PairQualityReport]:
         """Route toutes les paires détectées. Rapports cumulés dans self.reports."""
         widths = widths or {}
-        reports: List[PairQualityReport] = []
+        reports: list[PairQualityReport] = []
         for p, n in find_differential_pairs(graph):
             if p.routed or n.routed:
                 continue
@@ -376,14 +375,14 @@ class DifferentialPairRouter:
     # ----------------------------------------------------------------- privé
     def _route_independent(self, graph: DesignGraph, net: Net,
                            maze: MazeRouter, width_mm: float,
-                           layers: Sequence[int] = (0, 1)) -> Optional[List[Point]]:
+                           layers: Sequence[int] = (0, 1)) -> list[Point] | None:
         """Repli : routage A* indépendant du membre N sur sa propre topologie."""
         segments = build_net_topology(graph, net)
         if not segments:
             return None
-        pts: List[Point] = []
+        pts: list[Point] = []
         for a, b in segments:
-            path: Optional[List[Point]] = None
+            path: list[Point] | None = None
             for lyr in layers:
                 path = maze.route_pair(graph, net, a, b, lyr, width_mm)
                 if path is not None:
@@ -396,5 +395,5 @@ class DifferentialPairRouter:
         return pts
 
 
-def _nearest(candidates: List[Point], target: Point) -> Point:
+def _nearest(candidates: list[Point], target: Point) -> Point:
     return min(candidates, key=lambda p: p.distance_to(target))

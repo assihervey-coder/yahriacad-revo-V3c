@@ -13,19 +13,18 @@ les pipelines et les exports.
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
+from shared.utilities import get_logger, new_id
 
 from api_gateway.deps import get_tenant, get_user_id, get_versioning, load_project_graph
 from api_gateway.middleware.tenant import safe_path_segment
 from orchestrator.common import data_root
 from orchestrator.state_manager import DesignStateManager, ProjectState
-from shared.utilities import get_logger, new_id
 
 log = get_logger("api.integrations")
 
@@ -42,7 +41,7 @@ def _project_state(project_id: str, tenant: str, user: str) -> ProjectState:
 
 
 def _create_project_from_graph(graph: Any, name: str, tenant: str, user: str,
-                               source: str) -> Dict[str, Any]:
+                               source: str) -> dict[str, Any]:
     """Crée un vrai projet + révision 0 + commit versioning depuis un import."""
     state = ProjectState.create(name=name or f"import_{new_id('p')}",
                                 tenant_id=tenant, user_id=user)
@@ -68,9 +67,9 @@ def _create_project_from_graph(graph: Any, name: str, tenant: str, user: str,
     }
 
 
-def _detect_and_parse(content: str) -> Tuple[Any, str]:
+def _detect_and_parse(content: str) -> tuple[Any, str]:
     """Détecte le format (netlist KiCad / PCB KiCad / schéma JSON / session PCB)."""
-    from services.parser import parse_netlist, parse_pcb, parse_schematic
+    from services.parser import parse_pcb, parse_schematic
     from services.pcb_plugin.kicad import import_kicad_netlist, import_kicad_pcb
 
     text = str(content or "").strip()
@@ -81,7 +80,7 @@ def _detect_and_parse(content: str) -> Tuple[Any, str]:
         try:
             data = json.loads(text)
         except json.JSONDecodeError as exc:
-            raise HTTPException(status_code=422, detail=f"JSON invalide: {exc}")
+            raise HTTPException(status_code=422, detail=f"JSON invalide: {exc}") from exc
         if isinstance(data, dict):
             # session PCB ré-importable (routes/placements) → parse_pcb
             if "routes" in data or "placements" in data or "board_size_mm" in data:
@@ -124,7 +123,7 @@ class KiCadImportRequest(BaseModel):
 
 
 @router.post("/kicad/import", status_code=201)
-async def kicad_import(payload: KiCadImportRequest, request: Request) -> Dict[str, Any]:
+async def kicad_import(payload: KiCadImportRequest, request: Request) -> dict[str, Any]:
     """Import KiCad (netlist, .kicad_pcb, schéma JSON, session PCB) → vrai projet."""
     tenant = safe_path_segment(get_tenant(request))
     user = safe_path_segment(get_user_id(request))
@@ -137,7 +136,7 @@ async def kicad_import(payload: KiCadImportRequest, request: Request) -> Dict[st
 
 @router.get("/kicad/export/{project_id}")
 async def kicad_export(project_id: str, request: Request,
-                       fmt: str = "pcb") -> Dict[str, Any]:
+                       fmt: str = "pcb") -> dict[str, Any]:
     """Exporte le design courant : .kicad_pcb (s-expr) et/ou netlist KiCad."""
     tenant, user = get_tenant(request), get_user_id(request)
     state = _project_state(project_id, tenant, user)
@@ -147,7 +146,7 @@ async def kicad_export(project_id: str, request: Request,
 
     from services.pcb_plugin.kicad import export_kicad_netlist, export_kicad_pcb
 
-    outputs: Dict[str, Any] = {}
+    outputs: dict[str, Any] = {}
     fmt_norm = (fmt or "pcb").lower()
     if fmt_norm in ("pcb", "both", "all"):
         content = export_kicad_pcb(graph)
@@ -172,7 +171,7 @@ class KiCadLiveRequest(BaseModel):
 
 
 @router.post("/kicad/live/push")
-async def kicad_live_push(payload: KiCadLiveRequest, request: Request) -> Dict[str, Any]:
+async def kicad_live_push(payload: KiCadLiveRequest, request: Request) -> dict[str, Any]:
     """Pousse le design courant vers un KiCad à l'écoute (hôte live WebSocket)."""
     tenant, user = get_tenant(request), get_user_id(request)
     if not payload.project_id:
@@ -198,7 +197,7 @@ async def kicad_live_push(payload: KiCadLiveRequest, request: Request) -> Dict[s
 
 
 @router.post("/kicad/live/pull", status_code=201)
-async def kicad_live_pull(payload: KiCadLiveRequest, request: Request) -> Dict[str, Any]:
+async def kicad_live_pull(payload: KiCadLiveRequest, request: Request) -> dict[str, Any]:
     """Récupère le design depuis un KiCad live et l'importe comme projet."""
     tenant, user = get_tenant(request), get_user_id(request)
     from services.pcb_plugin.kicad import KiCadLiveHost
@@ -222,12 +221,12 @@ async def kicad_live_pull(payload: KiCadLiveRequest, request: Request) -> Dict[s
 
 # ---------------------------------------------------------------- Altium
 class AltiumImportRequest(BaseModel):
-    payload: Dict[str, Any] = Field(..., description="JSON du pont Altium {components, nets, ...}")
+    payload: dict[str, Any] = Field(..., description="JSON du pont Altium {components, nets, ...}")
     name: str = Field(default="", max_length=120)
 
 
 @router.post("/altium/import", status_code=201)
-async def altium_import(payload: AltiumImportRequest, request: Request) -> Dict[str, Any]:
+async def altium_import(payload: AltiumImportRequest, request: Request) -> dict[str, Any]:
     """Bridge Altium : JSON du pont → DesignGraph → vrai projet."""
     tenant = safe_path_segment(get_tenant(request))
     user = safe_path_segment(get_user_id(request))
@@ -236,7 +235,7 @@ async def altium_import(payload: AltiumImportRequest, request: Request) -> Dict[
     try:
         graph = AltiumBridge().from_dict(payload.payload or {})
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"pont Altium invalide: {exc}")
+        raise HTTPException(status_code=422, detail=f"pont Altium invalide: {exc}") from exc
     if not (getattr(graph, "components", None) or getattr(graph, "nets", None)):
         raise HTTPException(status_code=422,
                             detail="design Altium vide (aucun composant ni net)")
@@ -247,7 +246,7 @@ async def altium_import(payload: AltiumImportRequest, request: Request) -> Dict[
 
 @router.get("/altium/export/{project_id}")
 async def altium_export(project_id: str, request: Request,
-                        save: bool = True) -> Dict[str, Any]:
+                        save: bool = True) -> dict[str, Any]:
     """DesignGraph → JSON pont Altium (symétrique, ré-importable)."""
     tenant, user = get_tenant(request), get_user_id(request)
     state = _project_state(project_id, tenant, user)
@@ -257,7 +256,7 @@ async def altium_export(project_id: str, request: Request,
     from services.pcb_plugin.altium import AltiumBridge
 
     data = AltiumBridge().export_altium(graph)
-    response: Dict[str, Any] = {"project_id": state.project_id, "revision": revision,
+    response: dict[str, Any] = {"project_id": state.project_id, "revision": revision,
                                 "payload": data}
     if save:
         path = _write_export_file(state.tenant_id, state.user_id, state.project_id,
@@ -268,13 +267,13 @@ async def altium_export(project_id: str, request: Request,
 
 
 class AltiumSyncRequest(BaseModel):
-    remote: Dict[str, Any] = Field(..., description="état distant Altium (JSON pont)")
+    remote: dict[str, Any] = Field(..., description="état distant Altium (JSON pont)")
     resolution: str = Field(default="local_wins", pattern="^(local_wins|remote_wins)$")
 
 
 @router.post("/altium/sync/{project_id}")
 async def altium_sync(project_id: str, payload: AltiumSyncRequest,
-                      request: Request) -> Dict[str, Any]:
+                      request: Request) -> dict[str, Any]:
     """Synchronise le design local avec l'état Altium (conflits détectés)."""
     tenant, user = get_tenant(request), get_user_id(request)
     state = _project_state(project_id, tenant, user)
@@ -287,7 +286,7 @@ async def altium_sync(project_id: str, payload: AltiumSyncRequest,
     try:
         bridge.remote_graph = bridge.from_dict(payload.remote or {})
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"état distant invalide: {exc}")
+        raise HTTPException(status_code=422, detail=f"état distant invalide: {exc}") from exc
     synchronizer = AltiumSynchronizer(bridge, resolution=payload.resolution)
     report = synchronizer.sync(graph)
     data = report.__dict__ if hasattr(report, "__dict__") else {"resolution": "init"}
@@ -297,7 +296,7 @@ async def altium_sync(project_id: str, payload: AltiumSyncRequest,
 
 # ---------------------------------------------------------------- Sessions
 @router.post("/sessions/save/{project_id}")
-async def session_save(project_id: str, request: Request) -> Dict[str, Any]:
+async def session_save(project_id: str, request: Request) -> dict[str, Any]:
     """Sauvegarde atomique de la session (graphe + versioning) du projet."""
     tenant, user = get_tenant(request), get_user_id(request)
     state = _project_state(project_id, tenant, user)
@@ -314,7 +313,7 @@ async def session_save(project_id: str, request: Request) -> Dict[str, Any]:
 
 
 @router.get("/sessions")
-async def session_list(request: Request) -> Dict[str, Any]:
+async def session_list(request: Request) -> dict[str, Any]:
     """Liste les sessions sauvegardées du tenant."""
     tenant = safe_path_segment(get_tenant(request))
     from services.pcb_plugin.session_restorer import SessionRestorer
@@ -325,7 +324,7 @@ async def session_list(request: Request) -> Dict[str, Any]:
 
 @router.get("/sessions/{project_id}/restore")
 async def session_restore(project_id: str, request: Request,
-                          apply: bool = False) -> Dict[str, Any]:
+                          apply: bool = False) -> dict[str, Any]:
     """Restaure la session d'un projet ; `apply=True` crée une révision courante."""
     tenant, user = get_tenant(request), get_user_id(request)
     state = _project_state(project_id, tenant, user)
@@ -337,7 +336,7 @@ async def session_restore(project_id: str, request: Request,
         raise HTTPException(status_code=404,
                             detail=f"aucune session sauvegardée pour {project_id}")
     graph, versioning = restored
-    response: Dict[str, Any] = {
+    response: dict[str, Any] = {
         "project_id": state.project_id,
         "restored": True,
         "stats": {"components": len(graph.components), "nets": len(graph.nets),
@@ -357,7 +356,7 @@ async def session_restore(project_id: str, request: Request,
 
 # ---------------------------------------------------------------- Statut
 @router.get("/status")
-async def integrations_status() -> Dict[str, Any]:
+async def integrations_status() -> dict[str, Any]:
     """Capacités des ponts EDA (pour le dashboard Intégrations)."""
     return {
         "kicad": {

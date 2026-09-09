@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import csv
 import io
-from typing import Any, List
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -28,7 +28,7 @@ class PickPlaceGenerator:
         buf = io.StringIO()
         writer = csv.DictWriter(buf, fieldnames=COLUMNS, lineterminator="\n")
         writer.writeheader()
-        rows: List[dict] = []
+        rows: list[dict] = []
         for ref in sorted(self.graph.components):
             comp = self.graph.components[ref]
             comp_side = str(getattr(comp, "side", "top") or "top").lower()

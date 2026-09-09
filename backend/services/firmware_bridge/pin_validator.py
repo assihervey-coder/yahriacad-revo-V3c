@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
 
 from shared.utilities import get_logger
 
@@ -23,7 +22,7 @@ class PinIssue:
     severity: str = "error"  # error | warning | info
 
 
-def _family(pin_map: Dict[str, Dict[str, dict]]) -> str:
+def _family(pin_map: dict[str, dict[str, dict]]) -> str:
     """Famille déduite du style de nommage des GPIOs."""
     gpios = [info.get("gpio", "") for pins in pin_map.values() for info in pins.values()]
     if any(str(g).startswith("PA") or str(g).startswith("PB") for g in gpios):
@@ -35,11 +34,11 @@ def _family(pin_map: Dict[str, Dict[str, dict]]) -> str:
     return "generic"
 
 
-def validate(pin_map: Dict[str, Dict[str, dict]],
-             available: Optional[int] = None) -> List[PinIssue]:
+def validate(pin_map: dict[str, dict[str, dict]],
+             available: int | None = None) -> list[PinIssue]:
     """Retourne la liste des anomalies (double allocation, power sur GPIO, …)."""
-    issues: List[PinIssue] = []
-    gpio_owner: Dict[str, tuple] = {}
+    issues: list[PinIssue] = []
+    gpio_owner: dict[str, tuple] = {}
     used = 0
 
     for ref, pins in pin_map.items():

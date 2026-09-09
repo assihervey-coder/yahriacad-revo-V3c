@@ -11,7 +11,8 @@ Ce module centralise l'accès runtime pour que le reste d'ai_engine puisse :
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Tuple
+from collections.abc import Callable
+from typing import Any
 
 _DC_ERR = (
     "services.design_core indisponible — l'agent 2-a ne l'a pas encore écrit. "
@@ -19,7 +20,7 @@ _DC_ERR = (
 )
 
 
-def _try_import() -> Tuple[Any, ...]:
+def _try_import() -> tuple[Any, ...]:
     """Retourne les 5 classes design_core, ou lève ImportError explicite."""
     try:
         from services.design_core import (

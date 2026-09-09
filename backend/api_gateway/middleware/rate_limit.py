@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Any, Awaitable, Callable, Dict, Tuple
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -20,7 +21,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: Any = None, rate: float = RATE_PER_MINUTE) -> None:
         super().__init__(app)
         self.rate = float(rate)
-        self._buckets: Dict[str, Tuple[float, float]] = {}
+        self._buckets: dict[str, tuple[float, float]] = {}
         self._lock = threading.Lock()
 
     async def dispatch(self, request: Request,

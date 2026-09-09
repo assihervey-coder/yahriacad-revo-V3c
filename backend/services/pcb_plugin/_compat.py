@@ -10,7 +10,7 @@ from __future__ import annotations
 import dataclasses
 import importlib
 import inspect
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.geometry import Point, RoutePath
 from shared.utilities import get_logger
@@ -18,7 +18,7 @@ from shared.utilities import get_logger
 log = get_logger(__name__)
 
 _CORE_NAMES = ("DesignGraph", "Component", "Net", "Pad", "Layer", "DesignVersioning")
-_cache: Dict[str, Any] = {}
+_cache: dict[str, Any] = {}
 
 
 def _core_module():
@@ -26,10 +26,10 @@ def _core_module():
     return importlib.import_module("services.design_core")
 
 
-def core_classes() -> Tuple[Any, ...]:
+def core_classes() -> tuple[Any, ...]:
     """(DesignGraph, Component, Net, Pad, Layer, DesignVersioning) — None si absent."""
     module = _core_module()
-    out: List[Any] = []
+    out: list[Any] = []
     for name in _CORE_NAMES:
         if name not in _cache:
             _cache[name] = getattr(module, name, None)
@@ -69,10 +69,10 @@ def _point(v: Any) -> Point:
     return Point.from_tuple(v)
 
 
-def route_from_dict(data: Dict[str, Any], net_id: str = "") -> RoutePath:
+def route_from_dict(data: dict[str, Any], net_id: str = "") -> RoutePath:
     """Reconstruit un RoutePath (shared.geometry) depuis un dict sérialisé."""
     points = [_point(p) for p in (data.get("points") or [])]
-    vias: List[Tuple[Point, int, int]] = []
+    vias: list[tuple[Point, int, int]] = []
     for v in data.get("vias") or []:
         if isinstance(v, dict):
             vias.append((_point(v.get("pos", v)), int(v.get("from_layer", 0)), int(v.get("to_layer", 1))))
@@ -87,7 +87,7 @@ def route_from_dict(data: Dict[str, Any], net_id: str = "") -> RoutePath:
     )
 
 
-def graph_to_dict(graph: Any) -> Dict[str, Any]:
+def graph_to_dict(graph: Any) -> dict[str, Any]:
     """Sérialise un DesignGraph (to_dict officiel, fallback dataclass)."""
     to_dict = getattr(graph, "to_dict", None)
     if callable(to_dict):
@@ -97,7 +97,7 @@ def graph_to_dict(graph: Any) -> Dict[str, Any]:
     raise TypeError("graph non sérialisable (ni to_dict ni dataclass)")
 
 
-def _board_size(v: Any) -> Tuple[float, float]:
+def _board_size(v: Any) -> tuple[float, float]:
     if isinstance(v, dict):
         return (float(v.get("w", v.get("width", 0.0))), float(v.get("h", v.get("height", 0.0))))
     if isinstance(v, (list, tuple)) and len(v) >= 2:
@@ -105,7 +105,7 @@ def _board_size(v: Any) -> Tuple[float, float]:
     return (50.0, 40.0)
 
 
-def _iter_components(d: Dict[str, Any]):
+def _iter_components(d: dict[str, Any]):
     """Composants du snapshot : design_core sérialise en LISTE (tolère dict)."""
     comps = d.get("components") or {}
     if isinstance(comps, dict):
@@ -116,7 +116,7 @@ def _iter_components(d: Dict[str, Any]):
             yield str((cdata or {}).get("ref", "")), cdata
 
 
-def _iter_nets(d: Dict[str, Any]):
+def _iter_nets(d: dict[str, Any]):
     """Nets du snapshot : LISTE chez design_core (tolère dict)."""
     nets = d.get("nets") or {}
     if isinstance(nets, dict):
@@ -127,7 +127,7 @@ def _iter_nets(d: Dict[str, Any]):
             yield str((ndata or {}).get("net_id", "")), ndata
 
 
-def graph_from_dict(d: Dict[str, Any]) -> Any:
+def graph_from_dict(d: dict[str, Any]) -> Any:
     """Reconstruit un DesignGraph depuis son dict (API officielle d'abord)."""
     DG, Comp, Net, Pad, Layer, _ = core_classes()
     if DG is None:
@@ -141,7 +141,7 @@ def graph_from_dict(d: Dict[str, Any]) -> Any:
             except Exception:
                 continue
 
-    components: Dict[str, Any] = {}
+    components: dict[str, Any] = {}
     for ref, cdata in _iter_components(d):
         cdict = dict(cdata or {})
         pads = cdict.pop("pads", None)
@@ -151,7 +151,7 @@ def graph_from_dict(d: Dict[str, Any]) -> Any:
         key = getattr(comp, "ref", None) or ref
         components[str(key)] = comp
 
-    nets: Dict[str, Any] = {}
+    nets: dict[str, Any] = {}
     for nid, ndata in _iter_nets(d):
         ndict = dict(ndata or {})
         path = ndict.get("path")
@@ -163,9 +163,9 @@ def graph_from_dict(d: Dict[str, Any]) -> Any:
         key = getattr(net, "net_id", None) or nid
         nets[str(key)] = net
 
-    layers = [_build(Layer, l) if isinstance(l, dict) else l for l in (d.get("layers") or [])]
+    layers = [_build(Layer, ly) if isinstance(ly, dict) else ly for ly in (d.get("layers") or [])]
 
-    kwargs: Dict[str, Any] = {
+    kwargs: dict[str, Any] = {
         "project_id": d.get("project_id", ""),
         "name": d.get("name", ""),
         "board_size": _board_size(d.get("board_size", (50.0, 40.0))),
@@ -179,15 +179,15 @@ def graph_from_dict(d: Dict[str, Any]) -> Any:
     return _build(DG, kwargs)
 
 
-def new_graph(project_id: str, name: str, board_size: Tuple[float, float],
-              components: Optional[Dict[str, Any]] = None,
-              nets: Optional[Dict[str, Any]] = None,
-              layers: Optional[List[Any]] = None) -> Any:
+def new_graph(project_id: str, name: str, board_size: tuple[float, float],
+              components: dict[str, Any] | None = None,
+              nets: dict[str, Any] | None = None,
+              layers: list[Any] | None = None) -> Any:
     """Construit un DesignGraph via son constructeur (champs filtrés)."""
     DG = core_classes()[0]
     if DG is None:
         raise ImportError("services.design_core.DesignGraph indisponible")
-    kwargs: Dict[str, Any] = {
+    kwargs: dict[str, Any] = {
         "project_id": project_id,
         "name": name,
         "board_size": board_size,
@@ -201,7 +201,7 @@ def new_graph(project_id: str, name: str, board_size: Tuple[float, float],
     return _build(DG, kwargs)
 
 
-def versioning_to_dict(versioning: Any) -> Dict[str, Any]:
+def versioning_to_dict(versioning: Any) -> dict[str, Any]:
     """Sérialise un DesignVersioning duck-typed (to_dict/snapshot/export)."""
     if versioning is None:
         return {}
@@ -217,7 +217,7 @@ def versioning_to_dict(versioning: Any) -> Dict[str, Any]:
     return {"repr": repr(versioning)}
 
 
-def versioning_from_dict(data: Optional[Dict[str, Any]]) -> Any:
+def versioning_from_dict(data: dict[str, Any] | None) -> Any:
     """Restaure un DesignVersioning (best-effort, jamais bloquant)."""
     if not data:
         return None

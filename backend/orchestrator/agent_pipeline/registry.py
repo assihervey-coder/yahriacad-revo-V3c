@@ -1,7 +1,9 @@
 """Registre des agents — instancie les 10 agents spécialisés V3."""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
+
+from shared.contracts import AgentRole
 
 from orchestrator.agent_pipeline.base import BaseAgent
 from orchestrator.agent_pipeline.code_generator_agent import CodeGeneratorAgent
@@ -14,7 +16,6 @@ from orchestrator.agent_pipeline.routing_agent import RoutingAgent
 from orchestrator.agent_pipeline.selector_agent import SelectorAgent
 from orchestrator.agent_pipeline.simulation_agent import SimulationAgent
 from orchestrator.agent_pipeline.validator_agent import ValidatorAgent
-from shared.contracts import AgentRole
 
 _AGENT_CLASSES = {
     AgentRole.PLANNER: PlannerAgent,
@@ -31,13 +32,13 @@ _AGENT_CLASSES = {
 
 
 def build_agents(orchestrator: Any = None,
-                 versioning: Any = None) -> Dict[AgentRole, BaseAgent]:
+                 versioning: Any = None) -> dict[AgentRole, BaseAgent]:
     """Instancie les 10 agents (l'orchestrator LLM est optionnel — repli local).
 
     `versioning` est accepté pour compatibilité d'API : le DesignVersioning
     opérationnel circule par le contexte d'exécution (context["versioning"]).
     """
-    agents: Dict[AgentRole, BaseAgent] = {}
+    agents: dict[AgentRole, BaseAgent] = {}
     for role, agent_cls in _AGENT_CLASSES.items():
         try:
             agents[role] = agent_cls(orchestrator=orchestrator)

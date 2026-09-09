@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 import random
-from typing import Optional, Tuple
 
 import numpy as np
-
 from shared.utilities import get_logger
+
 from services.ai_engine.autonomous_optimizer.fast_evaluator import board_extents
 from services.ai_engine.autonomous_optimizer.proposer_llm import Proposal
 from services.ai_engine.rl_agent.action_space import ActionSpace, PlacementActionKind
@@ -23,14 +22,14 @@ class RLOptimizer:
     des connexions (déterministe au tirage près, borne l'exploration).
     """
 
-    def __init__(self, policy: Optional[PolicyNetwork] = None,
+    def __init__(self, policy: PolicyNetwork | None = None,
                  seed: int = 0) -> None:
         self.policy = policy
         self.rng = random.Random(seed)
-        self._action_space: Optional[ActionSpace] = None
-        self._last_refs: Tuple[str, ...] = ()
+        self._action_space: ActionSpace | None = None
+        self._last_refs: tuple[str, ...] = ()
 
-    def _ensure_action_space(self, refs: Tuple[str, ...]) -> ActionSpace:
+    def _ensure_action_space(self, refs: tuple[str, ...]) -> ActionSpace:
         if self._action_space is None or self._last_refs != refs:
             self._action_space = ActionSpace(list(refs)).place(max_grid=40)
             if self.policy is not None and self.policy.n_actions != self._action_space.size():
@@ -91,10 +90,12 @@ class RLOptimizer:
         from services.ai_engine.rl_agent.world_model import WorldModel
         return WorldModel().encoder(state)[:dim]
 
-    def _centroid_biased(self, graph, refs: Tuple[str, ...]) -> Proposal:  # noqa: ANN001
+    def _centroid_biased(self, graph, refs: tuple[str, ...]) -> Proposal:  # noqa: ANN001
         """Mouvement aléatoire biaisé : composant connecté → vers centroïde."""
         from services.ai_engine.autonomous_optimizer.proposer_llm import (
-            _neighbor_centroid, _net_degree)
+            _neighbor_centroid,
+            _net_degree,
+        )
 
         degree = _net_degree(graph)
         candidates = [r for r in refs if degree.get(r, 0) > 0] or list(refs)

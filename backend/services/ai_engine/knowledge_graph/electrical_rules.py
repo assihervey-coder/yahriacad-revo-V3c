@@ -5,15 +5,16 @@ severity) et relations vers les signaux/interfaces concernés.
 """
 from __future__ import annotations
 
-from typing import Dict, Iterator, List
+from collections.abc import Iterator
 
 from shared.utilities import get_logger
+
 from services.ai_engine.knowledge_graph.kg import KnowledgeGraph
 
 log = get_logger("ai_engine.kg.electrical_rules")
 
 # Règles canoniques (source : datasheets + IPC + notes d'application)
-_RULES: List[Dict] = [
+_RULES: list[dict] = [
     {
         "id": "rule:i2c_pullup", "name": "I2C pull-ups",
         "description": "I2C nécessite des pull-ups 4.7 kΩ sur SDA et SCL (3.3V).",
@@ -84,7 +85,7 @@ def build_electrical_rules_kg() -> KnowledgeGraph:
     return kg
 
 
-def iter_rules(kg: KnowledgeGraph, signal: str | None = None) -> Iterator[Dict]:
+def iter_rules(kg: KnowledgeGraph, signal: str | None = None) -> Iterator[dict]:
     """Itère les règles du KG, éventuellement filtrées par signal."""
     for node in kg.nodes.values():
         if node.kind != "rule":
@@ -96,6 +97,6 @@ def iter_rules(kg: KnowledgeGraph, signal: str | None = None) -> Iterator[Dict]:
         yield node.props | {"id": node.id}
 
 
-def rules_for_signal(kg: KnowledgeGraph, signal: str) -> List[Dict]:
+def rules_for_signal(kg: KnowledgeGraph, signal: str) -> list[dict]:
     """Liste des règles applicables à un signal donné."""
     return list(iter_rules(kg, signal=signal))

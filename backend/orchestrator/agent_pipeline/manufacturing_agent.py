@@ -2,7 +2,12 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+from typing import Any
+
+from shared.contracts import AgentRole
+from shared.events import EventTypes
+from shared.schemas import AgentResultSchema
+from shared.utilities import new_id
 
 from orchestrator.agent_pipeline.base import BaseAgent
 from orchestrator.common import (
@@ -12,10 +17,6 @@ from orchestrator.common import (
     persist_export,
     try_import,
 )
-from shared.contracts import AgentRole
-from shared.events import EventTypes
-from shared.schemas import AgentResultSchema
-from shared.utilities import new_id
 
 
 class ManufacturingAgent(BaseAgent):
@@ -30,21 +31,21 @@ class ManufacturingAgent(BaseAgent):
     def supports(self, action: str) -> bool:
         return action in ("analyze_and_package", "manufacture", "export_design", "export", "")
 
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         action = str(context.get("action") or "analyze_and_package")
         if action == "export_design":
             return self._export(context)
         return self._analyze_and_package(context)
 
     # ------------------------------------------------------------------ DFM
-    def _analyze_and_package(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def _analyze_and_package(self, context: dict[str, Any]) -> AgentResultSchema:
         graph = context.get("graph")
         if graph is None:
             return self.failed(context, "aucun DesignGraph dans le contexte")
         params = context.get("params") or {}
         factory = str(params.get("factory") or "jlcpcb")
 
-        analysis: Dict[str, Any] = {}
+        analysis: dict[str, Any] = {}
         mi_mod = try_import("services.manufacturing_intelligence", ["ManufacturingIntelligence"])
         mi_cls = mi_mod.get("ManufacturingIntelligence")
         if mi_cls is not None:
@@ -60,7 +61,7 @@ class ManufacturingAgent(BaseAgent):
         if not analysis:
             analysis = self._local_analysis(graph, factory)
 
-        package_info: Dict[str, Any] = {}
+        package_info: dict[str, Any] = {}
         exp_mod = try_import("services.exporter", ["ManufacturingPackage"])
         pkg_cls = exp_mod.get("ManufacturingPackage")
         if pkg_cls is not None:
@@ -87,7 +88,7 @@ class ManufacturingAgent(BaseAgent):
                               rationale=f"analyse DFM {factory} + package")
 
     # --------------------------------------------------------------- export
-    def _export(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def _export(self, context: dict[str, Any]) -> AgentResultSchema:
         graph = context.get("graph")
         if graph is None:
             return self.failed(context, "aucun DesignGraph dans le contexte")
@@ -95,7 +96,7 @@ class ManufacturingAgent(BaseAgent):
         fmt = str(params.get("fmt") or params.get("format") or "gerber")
         factory = str(params.get("factory") or "jlcpcb")
 
-        export_result: Dict[str, Any] = {}
+        export_result: dict[str, Any] = {}
         exp_mod = try_import("services.exporter", ["ExportFacade"])
         facade_cls = exp_mod.get("ExportFacade")
         if facade_cls is not None:
@@ -137,7 +138,7 @@ class ManufacturingAgent(BaseAgent):
                               rationale=f"export {fmt} ({len(persisted['files'])} fichiers)")
 
     # --------------------------------------------------------------- repli
-    def _local_analysis(self, graph: Any, factory: str) -> Dict[str, Any]:
+    def _local_analysis(self, graph: Any, factory: str) -> dict[str, Any]:
         """Estimation de coût/yield locale si manufacturing_intelligence est absent."""
         comps = get_field(graph, "components", default={}) or {}
         nets = get_field(graph, "nets", default={}) or {}

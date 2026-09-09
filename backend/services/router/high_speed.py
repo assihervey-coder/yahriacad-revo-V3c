@@ -7,7 +7,7 @@ le plus long du chemin le plus court.
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
 from shared.geometry import Point, RoutePath
 from shared.utilities import get_logger
@@ -26,7 +26,7 @@ def polyline_length(points: Sequence[Point]) -> float:
     return sum(points[i].distance_to(points[i + 1]) for i in range(len(points) - 1))
 
 
-def _unit_perp(a: Point, b: Point) -> Tuple[Point, Point, float]:
+def _unit_perp(a: Point, b: Point) -> tuple[Point, Point, float]:
     """Direction unitaire et perpendiculaire (à gauche) du segment a→b."""
     dx, dy = b.x - a.x, b.y - a.y
     d = math.hypot(dx, dy)
@@ -36,7 +36,7 @@ def _unit_perp(a: Point, b: Point) -> Tuple[Point, Point, float]:
 
 
 def zigzag_points(start: Point, end: Point, extra_mm: float,
-                  preferred_amplitude_mm: float = 0.3) -> Optional[List[Point]]:
+                  preferred_amplitude_mm: float = 0.3) -> list[Point] | None:
     """Peigne orthogonal entre start et end ajoutant exactement `extra_mm`.
 
     Construction : n dents carrées ; chaque dent ajoute 4·a de longueur verticale
@@ -54,7 +54,7 @@ def zigzag_points(start: Point, end: Point, extra_mm: float,
         amplitude = MAX_AMPLITUDE_MM      # léger déficit → tolérance 0.5 mm
     tooth = d / n
 
-    local: List[Tuple[float, float]] = [(0.0, 0.0)]
+    local: list[tuple[float, float]] = [(0.0, 0.0)]
     x = y = 0.0
     for i in range(n):
         y = amplitude if i % 2 == 0 else -amplitude
@@ -74,20 +74,20 @@ def zigzag_points(start: Point, end: Point, extra_mm: float,
     ]
 
 
-def add_serpentine(points: List[Point], extra_mm: float) -> Optional[List[Point]]:
+def add_serpentine(points: list[Point], extra_mm: float) -> list[Point] | None:
     """Insère un peigne sur le plus long segment de la polyligne (+extra_mm exact)."""
     if len(points) < 2 or extra_mm <= 0.0:
         return None
     lengths = [(points[i].distance_to(points[i + 1]), i)
                for i in range(len(points) - 1)]
-    for d, i in sorted(lengths, reverse=True):
+    for _d, i in sorted(lengths, reverse=True):
         zig = zigzag_points(points[i], points[i + 1], extra_mm)
         if zig is not None:
             return list(points[:i]) + zig + list(points[i + 2:])
     return None
 
 
-def _resolve_group(graph: DesignGraph, group: Union[str, Sequence[Net]]) -> List[Net]:
+def _resolve_group(graph: DesignGraph, group: str | Sequence[Net]) -> list[Net]:
     """Nets du groupe : soit une liste de Net, soit un nom de matched_group."""
     if isinstance(group, str):
         return [n for n in graph.nets.values()
@@ -95,8 +95,8 @@ def _resolve_group(graph: DesignGraph, group: Union[str, Sequence[Net]]) -> List
     return [n for n in group if n.routed and n.path is not None]
 
 
-def length_match(graph: DesignGraph, group: Union[str, Sequence[Net]],
-                 tol_mm: float = MATCH_TOL_MM) -> Dict[str, float]:
+def length_match(graph: DesignGraph, group: str | Sequence[Net],
+                 tol_mm: float = MATCH_TOL_MM) -> dict[str, float]:
     """Égalise les longueurs des nets du groupe par serpentins.
 
     Cible = max(longueurs du groupe), plafonnée par net.max_length_mm si défini.

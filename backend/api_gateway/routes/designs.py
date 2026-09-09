@@ -2,21 +2,10 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
-
-from api_gateway.deps import get_tenant, get_user_id, get_versioning, load_project_graph
-from orchestrator.common import (
-    deserialize_graph,
-    extract_rev,
-    get_field,
-    graph_stats,
-    revisions_list,
-    serialize_graph,
-)
-from orchestrator.state_manager import DesignStateManager, ProjectState
 from shared.schemas import (
     ComponentSchema,
     DesignSchema,
@@ -26,6 +15,16 @@ from shared.schemas import (
 from shared.schemas.design_schemas import LayerType, PadSchema
 from shared.utilities import get_logger
 
+from api_gateway.deps import get_tenant, get_user_id, get_versioning, load_project_graph
+from orchestrator.common import (
+    deserialize_graph,
+    extract_rev,
+    get_field,
+    graph_stats,
+    revisions_list,
+)
+from orchestrator.state_manager import DesignStateManager, ProjectState
+
 log = get_logger("api.designs")
 
 router = APIRouter(prefix="/api/v1/designs", tags=["designs"])
@@ -33,16 +32,16 @@ router = APIRouter(prefix="/api/v1/designs", tags=["designs"])
 
 class RevisionCreate(BaseModel):
     message: str = Field(default="commit manuel")
-    graph: Optional[Dict[str, Any]] = Field(default=None,
+    graph: dict[str, Any] | None = Field(default=None,
                                             description="graphe sérialisé (sinon design courant)")
 
 
 def graph_to_design_schema(project_id: str, graph: Any, revision: int) -> DesignSchema:
     """Conversion défensive graph → DesignSchema (composants/nets/layers)."""
-    components: List[ComponentSchema] = []
+    components: list[ComponentSchema] = []
     for ref, comp in (get_field(graph, "components", default={}) or {}).items():
         try:
-            pads: List[PadSchema] = []
+            pads: list[PadSchema] = []
             for pad in (get_field(comp, "pads", default=[]) or []):
                 if isinstance(pad, dict):
                     pads.append(PadSchema(
@@ -74,10 +73,10 @@ def graph_to_design_schema(project_id: str, graph: Any, revision: int) -> Design
         except Exception:
             log.debug("conversion composant %s ignorée", ref, exc_info=True)
 
-    nets: List[NetSchema] = []
+    nets: list[NetSchema] = []
     for net_id, net in (get_field(graph, "nets", default={}) or {}).items():
         try:
-            pins: List[tuple] = []
+            pins: list[tuple] = []
             for pin in (get_field(net, "pins", default=[]) or []):
                 if isinstance(pin, dict):
                     pins.append((str(pin.get("ref", "")), str(pin.get("pad", ""))))
@@ -147,7 +146,7 @@ async def get_design(project_id: str, request: Request) -> DesignSchema:
 
 
 @router.get("/{project_id}/stats")
-async def get_design_stats(project_id: str, request: Request) -> Dict[str, Any]:
+async def get_design_stats(project_id: str, request: Request) -> dict[str, Any]:
     """Statistiques compactes du design courant."""
     graph, revision = load_project_graph(project_id, get_tenant(request), get_user_id(request))
     if graph is None:
@@ -157,7 +156,7 @@ async def get_design_stats(project_id: str, request: Request) -> Dict[str, Any]:
 
 @router.post("/{project_id}/revisions")
 async def commit_revision(project_id: str, payload: RevisionCreate,
-                          request: Request) -> Dict[str, Any]:
+                          request: Request) -> dict[str, Any]:
     """Commit manuel : le graphe fourni (ou courant) devient une nouvelle révision."""
     tenant = get_tenant(request)
     user = get_user_id(request)
@@ -177,7 +176,7 @@ async def commit_revision(project_id: str, payload: RevisionCreate,
     if graph is None:
         raise HTTPException(status_code=422, detail="aucun graphe à committer")
 
-    revision_committed: Optional[int] = None
+    revision_committed: int | None = None
     versioning = get_versioning(project_id)
     if versioning is not None:
         try:
@@ -198,14 +197,14 @@ async def commit_revision(project_id: str, payload: RevisionCreate,
 
 
 @router.get("/{project_id}/revisions")
-async def list_revisions(project_id: str, request: Request) -> Dict[str, Any]:
+async def list_revisions(project_id: str, request: Request) -> dict[str, Any]:
     """Liste des révisions (versioning si dispo, sinon état persisté)."""
     tenant = get_tenant(request)
     user = get_user_id(request)
     state = ProjectState.load(project_id, tenant, user) or ProjectState.load(project_id, tenant, "default")
     if state is None:
         raise HTTPException(status_code=404, detail=f"projet inconnu: {project_id}")
-    revisions: List[Dict[str, Any]] = []
+    revisions: list[dict[str, Any]] = []
     versioning = get_versioning(project_id)
     if versioning is not None:
         revisions = revisions_list(versioning)
@@ -217,7 +216,7 @@ async def list_revisions(project_id: str, request: Request) -> Dict[str, Any]:
 
 
 @router.post("/{project_id}/revisions/{rev}/restore")
-async def restore_revision(project_id: str, rev: int, request: Request) -> Dict[str, Any]:
+async def restore_revision(project_id: str, rev: int, request: Request) -> dict[str, Any]:
     """Restaure une révision comme design courant."""
     tenant = get_tenant(request)
     user = get_user_id(request)

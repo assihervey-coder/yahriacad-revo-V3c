@@ -4,17 +4,17 @@ from pathlib import Path
 
 sys.path[:0] = [str(Path(__file__).resolve().parents[2]), str(Path(__file__).resolve().parents[2] / "backend")]
 
-import math
+import math  # noqa: E402
 
-import pytest
+import pytest  # noqa: E402
 
-from services.design_core import DesignGraph
-from services.router.differential_pairs import (
+from services.design_core import DesignGraph  # noqa: E402
+from services.router.differential_pairs import (  # noqa: E402
     DifferentialPairRouter,
     PairQualityReport,
     find_differential_pairs,
 )
-from services.router.geometrical import MazeRouter
+from services.router.geometrical import MazeRouter  # noqa: E402
 
 
 @pytest.fixture

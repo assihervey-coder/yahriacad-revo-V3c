@@ -6,18 +6,18 @@ et escalation (retries épuisés ou confidence < 0.4).
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from shared.utilities import get_logger
 
 log = get_logger("super_agent.policy")
 
-PHASE_ORDER: List[str] = [
+PHASE_ORDER: list[str] = [
     "parse", "select", "place", "route", "verify", "simulate", "optimize", "export", "done",
 ]
 
 # Cible de rollback par phase courante (on remonte à l'agent qui peut réparer)
-ROLLBACK_TARGET: Dict[str, str] = {
+ROLLBACK_TARGET: dict[str, str] = {
     "verify": "route",
     "simulate": "route",
     "route": "place",
@@ -34,7 +34,7 @@ QUALITY_OPTIMIZE_THRESHOLD = 0.85
 class DecisionPolicy:
     """Machine à états déterministe — utilisée par le SuperAgent (fallback LLM)."""
 
-    def next_phase(self, current: str, signals: Optional[Dict[str, Any]] = None) -> str:
+    def next_phase(self, current: str, signals: dict[str, Any] | None = None) -> str:
         """Phase suivante selon l'état courant et les signaux d'exécution."""
         signals = signals or {}
         if current == "done":
@@ -56,13 +56,13 @@ class DecisionPolicy:
         return nxt
 
     # ------------------------------------------------------------- conditions
-    def should_rollback(self, signals: Dict[str, Any]) -> bool:
+    def should_rollback(self, signals: dict[str, Any]) -> bool:
         """Vérification échouée ET budget de retry disponible."""
         failed = not signals.get("verification_passed", True)
         retries_left = int(signals.get("retries_left", 0) or 0)
         return bool(failed and retries_left > 0)
 
-    def should_escalate(self, signals: Dict[str, Any]) -> bool:
+    def should_escalate(self, signals: dict[str, Any]) -> bool:
         """Retries épuisés sur échec, ou confiance globale < 0.4."""
         failed = not signals.get("verification_passed", True)
         retries_left = int(signals.get("retries_left", 0) or 0)
@@ -74,7 +74,7 @@ class DecisionPolicy:
             confidence = 1.0
         return confidence < CONFIDENCE_ESCALATION_THRESHOLD
 
-    def should_optimize(self, signals: Dict[str, Any]) -> bool:
+    def should_optimize(self, signals: dict[str, Any]) -> bool:
         """L'optimisation est utile si la vérification passe et la qualité < seuil."""
         if not signals.get("verification_passed", True):
             return False

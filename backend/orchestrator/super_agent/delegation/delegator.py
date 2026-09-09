@@ -5,14 +5,15 @@ import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
-from typing import Any, Dict, Optional
+from typing import Any
 
-from orchestrator.common import publish_event
 from shared.contracts import AgentRole, Delegation
 from shared.events import EventTypes, make_event
 from shared.schemas import AgentResultSchema
 from shared.schemas.agent_schemas import AgentStatus
 from shared.utilities import get_logger
+
+from orchestrator.common import publish_event
 
 log = get_logger("super_agent.delegator")
 
@@ -25,7 +26,7 @@ class Delegator:
 
     # ------------------------------------------------------------ synchrone
     def dispatch(self, delegation: Delegation,
-                 agents: Dict[AgentRole, Any]) -> AgentResultSchema:
+                 agents: dict[AgentRole, Any]) -> AgentResultSchema:
         """Trouve l'agent, vérifie la capabilité, exécute avec timeout."""
         agent = agents.get(delegation.role)
         if agent is None:
@@ -74,7 +75,7 @@ class Delegator:
 
     # -------------------------------------------------------------- asynchrone
     async def dispatch_async(self, delegation: Delegation,
-                             agents: Dict[AgentRole, Any]) -> AgentResultSchema:
+                             agents: dict[AgentRole, Any]) -> AgentResultSchema:
         """Version asyncio (attendue par les intégrations API/WebSocket)."""
         return await asyncio.wait_for(
             asyncio.to_thread(self.dispatch, delegation, agents),
@@ -89,8 +90,8 @@ class Delegator:
                                  status=AgentStatus.FAILED,
                                  output={}, confidence=0.0, rationale=reason)
 
-    def _publish(self, event_type: str, payload: Dict[str, Any],
-                 context: Dict[str, Any], correlation_id: str) -> None:
+    def _publish(self, event_type: str, payload: dict[str, Any],
+                 context: dict[str, Any], correlation_id: str) -> None:
         publish_event(make_event(
             event_type, payload,
             project_id=str(context.get("project_id") or ""),

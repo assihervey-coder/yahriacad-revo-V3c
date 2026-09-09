@@ -9,7 +9,7 @@ import json
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -18,7 +18,7 @@ log = get_logger("parser.component_lib")
 _REPO_ROOT = Path(__file__).resolve().parents[3]   # .../pcb_ai_designer_v3
 
 # ------------------------------------------------------------- bibliothèque seed
-_SEED: List[Dict[str, Any]] = [
+_SEED: list[dict[str, Any]] = [
     {"mpn": "ESP32-WROOM-32E", "category": "mcu_module", "footprint": "ESP32-WROOM-32E",
      "package": "Module-18x25.5mm", "pins": 38, "power_w": 0.5, "price_usd": 2.90,
      "voltage": "3.3V", "description": "Module WiFi/BLE ESP32 dual-core, 4MB flash"},
@@ -90,11 +90,11 @@ class LibEntry:
     voltage: str = ""
     description: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "LibEntry":
+    def from_dict(cls, d: dict[str, Any]) -> LibEntry:
         return cls(
             mpn=str(d.get("mpn", "")), category=str(d.get("category", "")),
             footprint=str(d.get("footprint", "")), package=str(d.get("package", "")),
@@ -115,7 +115,7 @@ class ComponentLibMatcher:
         path = Path(lib_dir)
         self.lib_dir = path if path.is_absolute() else (_REPO_ROOT / path)
         self.index_path = self.lib_dir / "index.json"
-        self._entries: List[LibEntry] = []
+        self._entries: list[LibEntry] = []
         if not self.index_path.exists():
             if auto_seed:
                 self._seed()
@@ -142,11 +142,11 @@ class ComponentLibMatcher:
             self._entries = [LibEntry.from_dict(e) for e in data.get("components", [])]
 
     # ----------------------------------------------------------------- lecture
-    def all(self) -> List[LibEntry]:
+    def all(self) -> list[LibEntry]:
         """Toutes les entrées indexées."""
         return list(self._entries)
 
-    def resolve(self, mpn: str) -> Optional[LibEntry]:
+    def resolve(self, mpn: str) -> LibEntry | None:
         """Résolution exacte (insensible casse/tirets) d'un MPN."""
         target = _normalize(mpn)
         for entry in self._entries:
@@ -154,11 +154,11 @@ class ComponentLibMatcher:
                 return entry
         return None
 
-    def match(self, query: str, limit: int = 5) -> List[LibEntry]:
+    def match(self, query: str, limit: int = 5) -> list[LibEntry]:
         """Matching flou par sous-chaîne et recouvrement de tokens, score décroissant."""
         q = query.lower().strip()
         q_tokens = set(re.findall(r"[a-z0-9]+", q))
-        scored: List[tuple] = []
+        scored: list[tuple] = []
         for entry in self._entries:
             haystacks = {
                 "mpn": entry.mpn.lower(),

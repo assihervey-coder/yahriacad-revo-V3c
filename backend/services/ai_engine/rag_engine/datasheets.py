@@ -6,7 +6,6 @@ couvrant datasheets / standards / notes d'application, commun aux trois loaders.
 from __future__ import annotations
 
 import os
-from typing import List
 
 from shared.utilities import get_logger
 
@@ -38,7 +37,7 @@ class DatasheetLoader:
 # ---------------------------------------------------------------------------
 # Mini-corpus de référence (contenu technique réel et vérifiable)
 # ---------------------------------------------------------------------------
-_CORPUS: List[tuple[str, str, str]] = [
+_CORPUS: list[tuple[str, str, str]] = [
     ("standards", "ipc_2221_clearance.md", """# IPC-2221 — Clearances (Table 6-1, B4)
 
 ## Tension vs clearance (extérieur, sans revêtement)
@@ -170,13 +169,13 @@ le panneau."""),
 ]
 
 
-def ensure_sample_corpus(base_dir: str | None = None) -> List[str]:
+def ensure_sample_corpus(base_dir: str | None = None) -> list[str]:
     """Crée le mini-corpus de référence (~6-8 fichiers .md) si absent.
 
     Retourne la liste des chemins écrits (ou déjà présents).
     """
     root = base_dir or DATA_DIR
-    written: List[str] = []
+    written: list[str] = []
     for sub, fname, content in _CORPUS:
         d = os.path.join(root, sub)
         os.makedirs(d, exist_ok=True)

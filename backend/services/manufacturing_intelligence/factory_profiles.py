@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Dict, List
 
 from shared.utilities import get_logger
 
@@ -26,7 +25,7 @@ class FactoryProfile:
 
 
 # Valeurs réalistes (specs publiques 2024, prototypes 2-4 couches)
-DEFAULTS: Dict[str, FactoryProfile] = {
+DEFAULTS: dict[str, FactoryProfile] = {
     "jlcpcb": FactoryProfile(
         name="jlcpcb",
         min_trace_mm=0.127,      # 5 mil
@@ -63,11 +62,11 @@ def get_profile(name: str) -> FactoryProfile:
         f"usine inconnue: {name!r} — disponibles: {', '.join(sorted(DEFAULTS))}")
 
 
-def list_profiles() -> List[str]:
+def list_profiles() -> list[str]:
     """Noms des profils disponibles."""
     return sorted(DEFAULTS)
 
 
-def profile_dict(profile: FactoryProfile) -> Dict[str, object]:
+def profile_dict(profile: FactoryProfile) -> dict[str, object]:
     """Sérialisation du profil (dict plat)."""
     return asdict(profile)

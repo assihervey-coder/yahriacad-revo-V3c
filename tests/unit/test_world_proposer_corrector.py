@@ -4,14 +4,13 @@ from pathlib import Path
 
 sys.path[:0] = [str(Path(__file__).resolve().parents[2]), str(Path(__file__).resolve().parents[2] / "backend")]
 
-import pytest
-
-from shared.geometry import Point, RoutePath
+import pytest  # noqa: E402
+from shared.geometry import Point, RoutePath  # noqa: E402
 
 
 @pytest.fixture
 def usb_graph():
-    from services.design_core import DesignGraph
+    from services.design_core import DesignGraph  # noqa: E402
 
     g = DesignGraph(project_id="t", name="t", board_size=(60.0, 40.0))
     g.add_component(ref="U1", footprint="QFN-16_0.5mm", x=10, y=20)
@@ -31,7 +30,7 @@ def usb_graph():
 
 # ------------------------------------------------------------- WorldModelProposer
 def test_world_proposer_propose_worldclass(usb_graph):
-    from services.ai_engine.autonomous_optimizer import WorldModelProposer
+    from services.ai_engine.autonomous_optimizer import WorldModelProposer  # noqa: E402
 
     proposer = WorldModelProposer(pool_size=20, top_k=3)
     props = proposer.propose(usb_graph, None, k=3)
@@ -44,9 +43,8 @@ def test_world_proposer_propose_worldclass(usb_graph):
 
 
 def test_world_proposer_graphe_vide():
-    from services.ai_engine.autonomous_optimizer import WorldModelProposer
-
-    from services.design_core import DesignGraph
+    from services.ai_engine.autonomous_optimizer import WorldModelProposer  # noqa: E402
+    from services.design_core import DesignGraph  # noqa: E402
 
     g = DesignGraph(project_id="t", name="t", board_size=(60.0, 40.0))
     proposer = WorldModelProposer()
@@ -55,7 +53,7 @@ def test_world_proposer_graphe_vide():
 
 # --------------------------------------------------------------------- corrector
 def test_build_optimizer_reel():
-    from orchestrator.agent_pipeline.corrector_agent import CorrectorAgent
+    from orchestrator.agent_pipeline.corrector_agent import CorrectorAgent  # noqa: E402
 
     agent = CorrectorAgent()
     optimizer, name = agent._build_optimizer()
@@ -64,7 +62,7 @@ def test_build_optimizer_reel():
 
 
 def test_valid_gate_corrige_avant_optimiser(usb_graph):
-    from orchestrator.agent_pipeline.corrector_agent import CorrectorAgent
+    from orchestrator.agent_pipeline.corrector_agent import CorrectorAgent  # noqa: E402
 
     agent = CorrectorAgent()
     ctx = {
@@ -80,7 +78,7 @@ def test_valid_gate_corrige_avant_optimiser(usb_graph):
 
 
 def test_fine_pitch_correction_reduit_violations(usb_graph):
-    from orchestrator.agent_pipeline.corrector_agent import CorrectorAgent
+    from orchestrator.agent_pipeline.corrector_agent import CorrectorAgent  # noqa: E402
 
     nets = usb_graph.nets
     nets["USB_DP"].path = RoutePath(net_id="USB_DP", points=[
@@ -103,7 +101,7 @@ def test_fine_pitch_correction_reduit_violations(usb_graph):
 
 
 def test_net_fine_pitch_detection(usb_graph):
-    from orchestrator.agent_pipeline.corrector_agent import CorrectorAgent
+    from orchestrator.agent_pipeline.corrector_agent import CorrectorAgent  # noqa: E402
 
     agent = CorrectorAgent()
     assert agent._net_is_fine_pitch(usb_graph, "USB_DP") is True

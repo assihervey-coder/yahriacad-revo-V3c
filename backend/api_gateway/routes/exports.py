@@ -1,25 +1,33 @@
 """Route exports — ExportFacade + téléchargement (zip)."""
 from __future__ import annotations
 
+import contextlib
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from shared.utilities import get_logger
 
 from api_gateway.deps import get_tenant, get_user_id, load_project_graph
-from orchestrator.common import data_root, new_id, persist_export, serialize_graph, try_import, call_probe, flex_call
-from orchestrator.state_manager import ProjectState
-from shared.utilities import get_logger
+from orchestrator.common import (
+    call_probe,
+    data_root,
+    flex_call,
+    new_id,
+    persist_export,
+    serialize_graph,
+    try_import,
+)
 
 log = get_logger("api.exports")
 
 router = APIRouter(prefix="/api/v1/exports", tags=["exports"])
 
 # registre mémoire des exports par projet : project_id → [export_id, ...]
-_REGISTRY: Dict[str, List[str]] = {}
+_REGISTRY: dict[str, list[str]] = {}
 
 
 class ExportRequest(BaseModel):
@@ -28,10 +36,10 @@ class ExportRequest(BaseModel):
 
 
 def create_export(project_id: str, tenant: str, graph: Any,
-                  fmt: str = "gerber", factory: str = "jlcpcb") -> Dict[str, Any]:
+                  fmt: str = "gerber", factory: str = "jlcpcb") -> dict[str, Any]:
     """Exécute ExportFacade (ou repli JSON) et persiste les fichiers + zip."""
     export_id = new_id("exp")
-    result: Dict[str, Any] = {}
+    result: dict[str, Any] = {}
     facade_cls = try_import("services.exporter", ["ExportFacade"]).get("ExportFacade")
     if facade_cls is not None:
         try:
@@ -60,7 +68,7 @@ def _export_dir(tenant: str, project_id: str, export_id: str) -> Path:
 
 
 @router.post("/{project_id}")
-async def post_export(project_id: str, payload: ExportRequest, request: Request) -> Dict[str, Any]:
+async def post_export(project_id: str, payload: ExportRequest, request: Request) -> dict[str, Any]:
     """Exporte le design courant (gerber, json, ipc2581...) vers le factory."""
     tenant = get_tenant(request)
     graph, _rev = load_project_graph(project_id, tenant, get_user_id(request))
@@ -70,7 +78,7 @@ async def post_export(project_id: str, payload: ExportRequest, request: Request)
 
 
 @router.get("/{project_id}")
-async def list_exports(project_id: str, request: Request) -> Dict[str, Any]:
+async def list_exports(project_id: str, request: Request) -> dict[str, Any]:
     """Liste les exports du projet (mémoire + disque)."""
     tenant = get_tenant(request)
     known = list(_REGISTRY.get(project_id, []))
@@ -82,12 +90,10 @@ async def list_exports(project_id: str, request: Request) -> Dict[str, Any]:
     entries = []
     for export_id in known:
         manifest = _export_dir(tenant, project_id, export_id) / "manifest.json"
-        info: Dict[str, Any] = {"export_id": export_id}
+        info: dict[str, Any] = {"export_id": export_id}
         if manifest.is_file():
-            try:
+            with contextlib.suppress(Exception):
                 info.update(json.loads(manifest.read_text(encoding="utf-8")))
-            except Exception:
-                pass
         entries.append(info)
     return {"project_id": project_id, "count": len(entries), "exports": entries}
 

@@ -9,12 +9,11 @@ Endpoint : /ws/{project_id}
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-
-from orchestrator.common import get_main_loop
 from shared.events import get_event_bus
 from shared.utilities import get_logger
 
@@ -30,16 +29,14 @@ async def live_feed(websocket: WebSocket, project_id: str) -> None:
     """Flux live des événements d'un projet (abonnement topic '*')."""
     await websocket.accept()
     bus = get_event_bus()
-    queue: "asyncio.Queue[Any]" = asyncio.Queue(maxsize=500)
+    queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=500)
 
     def handler(event: Any) -> None:
         # filtre : events du projet (ou globaux) uniquement
         if event.project_id and event.project_id != project_id:
             return
-        try:
+        with contextlib.suppress(asyncio.QueueFull):
             queue.put_nowait(event)
-        except asyncio.QueueFull:
-            pass
 
     bus.subscribe("*", handler)
     log.info("ws connecté — projet %s", project_id)
@@ -80,8 +77,6 @@ async def live_feed(websocket: WebSocket, project_id: str) -> None:
         for task in (recv_task, evt_task):
             if task is not None and not task.done():
                 task.cancel()
-        try:
+        with contextlib.suppress(Exception):
             await websocket.close()
-        except Exception:
-            pass
         log.info("ws déconnecté — projet %s", project_id)

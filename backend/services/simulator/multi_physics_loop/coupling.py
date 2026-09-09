@@ -8,12 +8,12 @@ l'apprentissage continu du surrogate (enregistrement + auto-train).
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from shared.utilities import get_logger, new_id
 
 from services.design_core import DesignGraph
-
 from services.simulator.base import BaseSim, SimResult
 from services.simulator.surrogate_models.beta_path import run_sim_smart
 
@@ -24,15 +24,15 @@ class MultiPhysicsCoupling:
     """Exécute un ensemble de sims et détermine les feedbacks inter-domaines."""
 
     def run(self, graph: DesignGraph, sims: Sequence[BaseSim],
-            surrogate_manager: Optional[Any] = None) -> Dict[str, Any]:
+            surrogate_manager: Any | None = None) -> dict[str, Any]:
         """Retourne {"results": {kind: SimResult}, "feedbacks": [...], "passed": bool}.
 
         `surrogate_manager` (optionnel) active la voie β : surrogate entraîné
         → inférence rapide à la place du solveur complet.
         """
         t0 = time.perf_counter()
-        results: Dict[str, SimResult] = {}
-        beta_kinds: List[str] = []
+        results: dict[str, SimResult] = {}
+        beta_kinds: list[str] = []
         for sim in sims:
             try:
                 result, beta_used = run_sim_smart(sim, graph,
@@ -60,9 +60,9 @@ class MultiPhysicsCoupling:
 
     # ----------------------------------------------------------------- private
     def _feedbacks(self, graph: DesignGraph,
-                   results: Dict[str, SimResult]) -> List[Dict[str, Any]]:
+                   results: dict[str, SimResult]) -> list[dict[str, Any]]:
         """Traduit les échecs en actions correctives concrètes pour les moteurs."""
-        feedbacks: List[Dict[str, Any]] = []
+        feedbacks: list[dict[str, Any]] = []
 
         thermal = results.get("thermal")
         if thermal is not None and not thermal.passed:
@@ -106,7 +106,7 @@ class MultiPhysicsCoupling:
         return feedbacks
 
     @staticmethod
-    def _hotspot_components(graph: DesignGraph, hotspot, radius_mm: float = 8.0) -> List[str]:
+    def _hotspot_components(graph: DesignGraph, hotspot, radius_mm: float = 8.0) -> list[str]:
         """Composants dissipateurs proches du hotspot (cibles d'un replacement)."""
         import math
         if not hotspot:

@@ -1,8 +1,6 @@
 """Keeper — décide si une solution candidate remplace l'incumbent."""
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 from shared.utilities import get_logger
 
 log = get_logger("ai_engine.opt.keeper")
@@ -17,8 +15,8 @@ class Keeper:
 
     def __init__(self, tolerance: float = 1e-6) -> None:
         self.tolerance = float(tolerance)
-        self.history: List[float] = []
-        self.best_score: Optional[float] = None
+        self.history: list[float] = []
+        self.best_score: float | None = None
         self._no_improve = 0
 
     def keep(self, candidate_score: float, incumbent_score: float,
@@ -52,7 +50,7 @@ class Keeper:
             return True
         return no_improve >= patience
 
-    def summary(self) -> Dict[str, float]:
+    def summary(self) -> dict[str, float]:
         """Statistiques d'historique (observabilité)."""
         if not self.history:
             return {"n": 0.0}

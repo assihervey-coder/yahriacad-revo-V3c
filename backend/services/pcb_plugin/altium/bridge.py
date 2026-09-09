@@ -7,12 +7,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from shared.geometry import RoutePath
 from shared.utilities import get_logger
 
-from services.pcb_plugin._compat import _build, core_classes, graph_from_dict, new_graph
+from services.pcb_plugin._compat import _build, core_classes, new_graph
 
 log = get_logger(__name__)
 
@@ -21,7 +20,7 @@ class AltiumBridge:
     """Importe/exporte des designs Altium via le format JSON du pont."""
 
     def __init__(self) -> None:
-        self.remote_graph: Optional[Any] = None  # dernier état connu côté Altium
+        self.remote_graph: Any | None = None  # dernier état connu côté Altium
 
     # -- import ---------------------------------------------------------------
     def import_altium(self, json_path: str) -> Any:
@@ -33,16 +32,16 @@ class AltiumBridge:
                  json_path, len(graph.components), len(graph.nets))
         return graph
 
-    def from_dict(self, data: Dict[str, Any]) -> Any:
+    def from_dict(self, data: dict[str, Any]) -> Any:
         """Construit un DesignGraph depuis le dict du pont (champs optionnels remplis)."""
         _, Comp, Net, Pad, Layer, _ = core_classes()
-        components: Dict[str, Any] = {}
+        components: dict[str, Any] = {}
         for cdata in data.get("components") or []:
             cdict = dict(cdata)
             ref = str(cdict.get("ref") or cdict.get("designator") or "")
             if not ref:
                 continue
-            pads: List[Any] = []
+            pads: list[Any] = []
             for p in cdict.get("pads") or []:
                 p = dict(p)
                 p.setdefault("net_id", "")
@@ -56,7 +55,7 @@ class AltiumBridge:
                 cdict.setdefault(key, default)
             components[ref] = _build(Comp, cdict)
 
-        nets: Dict[str, Any] = {}
+        nets: dict[str, Any] = {}
         for ndata in data.get("nets") or []:
             ndict = dict(ndata)
             net_id = str(ndict.get("net_id") or ndict.get("name") or "")
@@ -77,8 +76,8 @@ class AltiumBridge:
             ndict.setdefault("impedance_target_ohm", None)
             nets[net_id] = _build(Net, ndict)
 
-        layers = [_build(Layer, l) if isinstance(l, dict) else l
-                  for l in (data.get("layers") or [])]
+        layers = [_build(Layer, ly) if isinstance(ly, dict) else ly
+                  for ly in (data.get("layers") or [])]
         board_size = data.get("board_size") or (50.0, 40.0)
         if isinstance(board_size, dict):
             board_size = (float(board_size.get("w", 50.0)), float(board_size.get("h", 40.0)))
@@ -92,7 +91,7 @@ class AltiumBridge:
         )
 
     # -- export ---------------------------------------------------------------
-    def export_altium(self, graph: Any) -> Dict[str, Any]:
+    def export_altium(self, graph: Any) -> dict[str, Any]:
         """DesignGraph → dict JSON symétrique (importable par import_altium)."""
         from services.pcb_plugin._compat import graph_to_dict
         data = graph_to_dict(graph)

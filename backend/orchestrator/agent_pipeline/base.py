@@ -11,7 +11,13 @@ Contrat d'exécution (imposé par le workflow engine) :
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+from shared.contracts import AgentRole
+from shared.events import make_event
+from shared.schemas import AgentResultSchema
+from shared.schemas.agent_schemas import AgentStatus
+from shared.utilities import get_logger
 
 from orchestrator.common import (
     call_probe,
@@ -19,11 +25,6 @@ from orchestrator.common import (
     extract_rev,
     publish_event,
 )
-from shared.contracts import AgentRole
-from shared.events import EventTypes, make_event
-from shared.schemas import AgentResultSchema
-from shared.schemas.agent_schemas import AgentStatus
-from shared.utilities import get_logger
 
 
 class BaseAgent(ABC):
@@ -39,19 +40,19 @@ class BaseAgent(ABC):
         self.log = get_logger(f"agent.{self.name}")
 
     # ------------------------------------------------------------------ API
-    def plan(self, objective: str, context: Dict[str, Any]) -> List[str]:
+    def plan(self, objective: str, context: dict[str, Any]) -> list[str]:
         """Étapes internes que l'agent prévoit pour l'objectif donné."""
         return [objective]
 
     @abstractmethod
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         """Exécute l'action de l'agent sur le graphe du contexte."""
 
-    def verify(self, result: AgentResultSchema, context: Dict[str, Any]) -> bool:
+    def verify(self, result: AgentResultSchema, context: dict[str, Any]) -> bool:
         """Auto-contrôle : le résultat est-il acceptable ?"""
         return result.status == AgentStatus.SUCCEEDED
 
-    def rollback(self, context: Dict[str, Any], to_rev: Optional[int]) -> bool:
+    def rollback(self, context: dict[str, Any], to_rev: int | None) -> bool:
         """Restaure le graphe d'une révision précédente (via DesignVersioning)."""
         versioning = context.get("versioning")
         if versioning is None or to_rev is None:
@@ -70,8 +71,8 @@ class BaseAgent(ABC):
         return True
 
     # -------------------------------------------------------------- helpers
-    def emit(self, event_type: str, payload: Dict[str, Any],
-             context: Optional[Dict[str, Any]] = None,
+    def emit(self, event_type: str, payload: dict[str, Any],
+             context: dict[str, Any] | None = None,
              correlation_id: str = "") -> None:
         """Publie un event sur le bus (thread-safe)."""
         context = context or {}
@@ -84,13 +85,13 @@ class BaseAgent(ABC):
         )
         publish_event(event)
 
-    def make_result(self, context: Dict[str, Any],
+    def make_result(self, context: dict[str, Any],
                     status: AgentStatus,
-                    output: Dict[str, Any],
+                    output: dict[str, Any],
                     confidence: float,
                     rationale: str = "",
-                    revision_created: Optional[int] = None,
-                    rollback_to: Optional[int] = None) -> AgentResultSchema:
+                    revision_created: int | None = None,
+                    rollback_to: int | None = None) -> AgentResultSchema:
         """Construit un AgentResultSchema normalisé (confidence bornée 0..1)."""
         return AgentResultSchema(
             task_id=str(context.get("task_id") or ""),
@@ -103,15 +104,15 @@ class BaseAgent(ABC):
             rollback_to=rollback_to,
         )
 
-    def succeeded(self, context: Dict[str, Any], output: Dict[str, Any],
+    def succeeded(self, context: dict[str, Any], output: dict[str, Any],
                   confidence: float, rationale: str = "") -> AgentResultSchema:
         return self.make_result(context, AgentStatus.SUCCEEDED, output, confidence, rationale)
 
-    def failed(self, context: Dict[str, Any], rationale: str,
-               output: Optional[Dict[str, Any]] = None) -> AgentResultSchema:
+    def failed(self, context: dict[str, Any], rationale: str,
+               output: dict[str, Any] | None = None) -> AgentResultSchema:
         return self.make_result(context, AgentStatus.FAILED, output or {}, 0.0, rationale)
 
-    def commit(self, context: Dict[str, Any], message: str) -> Optional[int]:
+    def commit(self, context: dict[str, Any], message: str) -> int | None:
         """Commit une révision du graphe courant via DesignVersioning."""
         graph = context.get("graph")
         versioning = context.get("versioning")
@@ -127,7 +128,7 @@ class BaseAgent(ABC):
             self.log.warning("commit impossible: %s", exc)
             return None
 
-    def record_decision(self, context: Dict[str, Any], subject: str, detail: Any,
+    def record_decision(self, context: dict[str, Any], subject: str, detail: Any,
                         confidence: float = 0.8) -> None:
         """Trace une décision dans le SharedMentalModel (tolérant aux signatures)."""
         ensure_smm(context)
@@ -138,7 +139,7 @@ class BaseAgent(ABC):
             (str(detail),),
         )
 
-    def record_tradeoff(self, context: Dict[str, Any], topic: str,
+    def record_tradeoff(self, context: dict[str, Any], topic: str,
                         chosen: Any, rejected: Any, reason: str = "") -> None:
         """Trace un arbitrage dans le SharedMentalModel."""
         call_probe(

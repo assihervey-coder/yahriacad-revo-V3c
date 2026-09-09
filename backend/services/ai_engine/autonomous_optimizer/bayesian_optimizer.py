@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 log = get_logger("ai_engine.opt.bayesian")
@@ -24,14 +23,14 @@ class BayesianOptimizer:
         self.n_init = max(1, n_init)
         self.ridge_lambda = ridge_lambda
         self.rng = random.Random(seed)
-        self._X: List[np.ndarray] = []
-        self._y: List[float] = []
-        self._params: List[Dict[str, Any]] = []
-        self._w: Optional[np.ndarray] = None
+        self._X: list[np.ndarray] = []
+        self._y: list[float] = []
+        self._params: list[dict[str, Any]] = []
+        self._w: np.ndarray | None = None
         self._b: float = 0.0
 
     # -------------------------------------------------------------- observe
-    def observe(self, params: Dict[str, Any], score: float) -> None:
+    def observe(self, params: dict[str, Any], score: float) -> None:
         """Enregistre un point (params → features, score)."""
         self._params.append(dict(params))
         self._X.append(self._featurize(params))
@@ -40,15 +39,13 @@ class BayesianOptimizer:
         log.debug("BO observe: n=%d score=%.4f", len(self._y), score)
 
     @staticmethod
-    def _featurize(params: Dict[str, Any]) -> np.ndarray:
+    def _featurize(params: dict[str, Any]) -> np.ndarray:
         """Features numériques stables depuis un dict de params."""
         keys = sorted(params.keys())
-        vals: List[float] = []
+        vals: list[float] = []
         for k in keys:
             v = params[k]
-            if isinstance(v, bool):
-                vals.append(float(v))
-            elif isinstance(v, (int, float)):
+            if isinstance(v, (bool, int, float)):
                 vals.append(float(v))
             else:
                 vals.append(float(hash(str(v)) % 1000) / 1000.0)
@@ -76,8 +73,8 @@ class BayesianOptimizer:
         return float(features @ self._w + self._b)
 
     # --------------------------------------------------------------- suggest
-    def suggest(self, history: Optional[List[Dict[str, Any]]] = None
-                ) -> Dict[str, Any]:
+    def suggest(self, history: list[dict[str, Any]] | None = None
+                ) -> dict[str, Any]:
         """Suggère les params suivants : perturbation autour du meilleur.
 
         `history` (optionnel) : [{params, score}] — enrichit l'observe.
@@ -107,7 +104,7 @@ class BayesianOptimizer:
         return suggestion
 
     # ----------------------------------------------------------------- info
-    def best_observed(self) -> Tuple[Optional[Dict[str, Any]], float]:
+    def best_observed(self) -> tuple[dict[str, Any] | None, float]:
         """Meilleur point observé."""
         if not self._y:
             return None, float("-inf")

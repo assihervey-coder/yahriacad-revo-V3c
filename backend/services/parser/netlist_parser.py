@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from collections.abc import Iterator
+from typing import Any
 
 from shared.utilities import get_logger, new_id
 
@@ -21,7 +22,7 @@ from services.design_core.design_graph.graph import DesignGraph
 
 log = get_logger("parser.netlist")
 
-SExprNode = Union[str, List["SExprNode"]]  # type: ignore[misc]
+SExprNode = str | list["SExprNode"]  # type: ignore[misc]
 
 
 # ------------------------------------------------------------ s-expression ----
@@ -40,7 +41,7 @@ def _tokenize(text: str) -> Iterator[str]:
             i += 1
         elif c == '"':
             j = i + 1
-            buf: List[str] = []
+            buf: list[str] = []
             while j < n and text[j] != '"':
                 if text[j] == "\\" and j + 1 < n:
                     buf.append(text[j + 1])
@@ -58,9 +59,9 @@ def _tokenize(text: str) -> Iterator[str]:
             i = j
 
 
-def _parse_sexpr(text: str) -> List[Any]:
+def _parse_sexpr(text: str) -> list[Any]:
     """Parse une s-expression en arbre de listes Python (~lisp)."""
-    stack: List[List[Any]] = [[]]
+    stack: list[list[Any]] = [[]]
     for token in _tokenize(text):
         if token == "(":
             stack.append([])
@@ -78,7 +79,7 @@ def _is_named(node: Any, tag: str) -> bool:
     return isinstance(node, list) and bool(node) and node[0] == tag
 
 
-def _find_all(node: Any, tag: str, found: Optional[List[Any]] = None) -> List[Any]:
+def _find_all(node: Any, tag: str, found: list[Any] | None = None) -> list[Any]:
     """Tous les sous-arbres nommés `tag` (récursif)."""
     if found is None:
         found = []
@@ -90,7 +91,7 @@ def _find_all(node: Any, tag: str, found: Optional[List[Any]] = None) -> List[An
     return found
 
 
-def _find_first(node: Any, tag: str) -> Optional[Any]:
+def _find_first(node: Any, tag: str) -> Any | None:
     """Premier sous-arbre nommé `tag` (récursif)."""
     if isinstance(node, list):
         for child in node:
@@ -102,7 +103,7 @@ def _find_first(node: Any, tag: str) -> Optional[Any]:
     return None
 
 
-def _value(node: Any, key: str) -> Optional[str]:
+def _value(node: Any, key: str) -> str | None:
     """Valeur texte d'un sous-nœud (key "valeur") directement sous `node`."""
     if not isinstance(node, list):
         return None
@@ -112,7 +113,7 @@ def _value(node: Any, key: str) -> Optional[str]:
     return None
 
 
-def _bbox_from_kicad_footprint(fp: str) -> Tuple[float, float]:
+def _bbox_from_kicad_footprint(fp: str) -> tuple[float, float]:
     """Bbox (w, h) déduite d'une empreinte KiCad type 'Resistor_SMD:R_0603_1608Metric'."""
     return default_bbox_for_footprint(fp)
 
@@ -152,7 +153,6 @@ def _parse_sexpr_netlist(text: str) -> DesignGraph:
                 continue
             if ref not in graph.components:
                 graph.add_component(ref=ref)     # composant implicite (netlist minimal)
-                seen_refs.add(ref)
             graph.connect(ref, pin, net_id)
 
     if not graph.components and not graph.nets:
@@ -161,9 +161,9 @@ def _parse_sexpr_netlist(text: str) -> DesignGraph:
 
 
 # ------------------------------------------------------------------- JSON -----
-def _pins_of(net: Dict[str, Any]) -> List[Tuple[str, str]]:
+def _pins_of(net: dict[str, Any]) -> list[tuple[str, str]]:
     """Extrait les pins d'un net JSON sous toutes les formes tolérées."""
-    pins: List[Tuple[str, str]] = []
+    pins: list[tuple[str, str]] = []
     raw = net.get("pins", net.get("nodes", net.get("connections", [])))
     for entry in raw or []:
         if isinstance(entry, dict):
@@ -173,7 +173,7 @@ def _pins_of(net: Dict[str, Any]) -> List[Tuple[str, str]]:
     return [(ref, pad) for ref, pad in pins if ref]
 
 
-def _parse_json_netlist(data: Dict[str, Any]) -> DesignGraph:
+def _parse_json_netlist(data: dict[str, Any]) -> DesignGraph:
     """Parse le format JSON {"components": [...], "nets": [...]}."""
     graph = DesignGraph(
         project_id=str(data.get("project_id") or new_id("import")),

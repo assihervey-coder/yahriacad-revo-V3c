@@ -6,19 +6,19 @@ GET  /api/v1/chat/commands/{cid}/status → état du job lié
 from __future__ import annotations
 
 import re
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from shared.events import make_event
+from shared.schemas import ChatCommandRequest, ChatCommandResponse
+from shared.utilities import get_logger, new_id
 
 from api_gateway.deps import get_tenant, get_user_id
 from orchestrator.common import get_field, publish_event, try_import
 from orchestrator.state_manager import ProjectState
+from orchestrator.workflow_engine.jobs import get_job_store
 from orchestrator.workflow_engine.pipelines import PIPELINES
 from orchestrator.workflow_engine.tasks import TaskSpec, get_task_queue
-from orchestrator.workflow_engine.jobs import get_job_store
-from shared.events import make_event
-from shared.schemas import ChatCommandRequest, ChatCommandResponse
-from shared.utilities import get_logger, new_id
 
 log = get_logger("api.chat")
 
@@ -54,7 +54,7 @@ def _intent_and_plan(message: str) -> tuple[str, str]:
 
 
 def submit_chat_command(message: str, project_id: str = "", tenant: str = "default",
-                        session_id: str = "", user_id: str = "default") -> Dict[str, Any]:
+                        session_id: str = "", user_id: str = "default") -> dict[str, Any]:
     """Crée le projet si besoin, publie chat.command et soumet la tâche full_design.
 
     Retourne immédiatement {accepted, intent, plan_summary, job_id, ...} —
@@ -121,7 +121,7 @@ async def post_command(payload: ChatCommandRequest, request: Request) -> ChatCom
             user_id=get_user_id(request),
         )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return ChatCommandResponse(
         accepted=bool(result["accepted"]),
         intent=result["intent"],
@@ -133,7 +133,7 @@ async def post_command(payload: ChatCommandRequest, request: Request) -> ChatCom
 
 
 @router.get("/commands/{correlation_id}/status")
-async def get_command_status(correlation_id: str, request: Request) -> Dict[str, Any]:
+async def get_command_status(correlation_id: str, request: Request) -> dict[str, Any]:
     """État d'une commande : tâche, job, étapes, derniers événements."""
     # la commande est tracée par correlation_id → tâche
     task = None
@@ -144,7 +144,7 @@ async def get_command_status(correlation_id: str, request: Request) -> Dict[str,
     if task is None:
         raise HTTPException(status_code=404, detail=f"correlation_id inconnu: {correlation_id}")
     job = get_job_store().find_by_task(task.task_id)
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "correlation_id": correlation_id,
         "task_id": task.task_id,
         "status": task.status,

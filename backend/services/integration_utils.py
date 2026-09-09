@@ -5,7 +5,6 @@ Placé hors des packages métier pour éviter toute collision avec design_core.
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
 
 from shared.events import Event, get_event_bus
 from shared.utilities import get_logger
@@ -43,5 +42,5 @@ def make_and_publish(event_type: str, payload: dict, *, project_id: str = "",
     return publish_event_now(evt)
 
 
-def event_or_none() -> Optional[Event]:  # pragma: no cover — utilitaire de type
+def event_or_none() -> Event | None:  # pragma: no cover — utilitaire de type
     return None

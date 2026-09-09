@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -17,9 +18,9 @@ class Node:
 
     id: str
     kind: str                       # "component" | "rule" | "factory" | ...
-    props: Dict[str, Any] = field(default_factory=dict)
+    props: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"id": self.id, "kind": self.kind, "props": self.props}
 
 
@@ -30,9 +31,9 @@ class Edge:
     src: str
     dst: str
     relation: str                   # "pinout" | "compatible_footprint" | ...
-    props: Dict[str, Any] = field(default_factory=dict)
+    props: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"src": self.src, "dst": self.dst,
                 "relation": self.relation, "props": self.props}
 
@@ -41,13 +42,13 @@ class KnowledgeGraph:
     """Graphe de connaissance léger (dict/list), persistable en JSON."""
 
     def __init__(self) -> None:
-        self.nodes: Dict[str, Node] = {}
-        self.edges: List[Edge] = []
-        self._edge_index: Dict[str, List[int]] = {}
+        self.nodes: dict[str, Node] = {}
+        self.edges: list[Edge] = []
+        self._edge_index: dict[str, list[int]] = {}
 
     # ---------------------------------------------------------------- build
     def add_node(self, node_id: str, kind: str,
-                 props: Optional[Dict[str, Any]] = None) -> Node:
+                 props: dict[str, Any] | None = None) -> Node:
         """Ajoute (ou met à jour) un nœud."""
         if node_id in self.nodes:
             self.nodes[node_id].props.update(props or {})
@@ -57,7 +58,7 @@ class KnowledgeGraph:
         return node
 
     def add_edge(self, src: str, dst: str, relation: str,
-                 props: Optional[Dict[str, Any]] = None) -> Edge:
+                 props: dict[str, Any] | None = None) -> Edge:
         """Ajoute une arête (anti-doublon simple sur (src,dst,relation))."""
         if not self.has_edge(src, dst, relation):
             edge = Edge(src=src, dst=dst, relation=relation, props=props or {})
@@ -72,8 +73,8 @@ class KnowledgeGraph:
                    for e in self.edges)
 
     # --------------------------------------------------------------- query
-    def query(self, kind: Optional[str] = None,
-              relation: Optional[str] = None) -> List[Dict[str, Any]]:
+    def query(self, kind: str | None = None,
+              relation: str | None = None) -> list[dict[str, Any]]:
         """Requête : nœuds par kind et/ou arêtes par relation.
 
         Si `relation` seul → retourne les arêtes correspondantes ;
@@ -91,9 +92,9 @@ class KnowledgeGraph:
             return [n.to_dict() for n in self.nodes.values() if n.kind == kind]
         return [n.to_dict() for n in self.nodes.values()]
 
-    def neighbors(self, node_id: str, relation: Optional[str] = None) -> List[str]:
+    def neighbors(self, node_id: str, relation: str | None = None) -> list[str]:
         """Voisins d'un nœud (les deux sens), filtrés par relation."""
-        out: List[str] = []
+        out: list[str] = []
         for e in self.edges:
             if relation is not None and e.relation != relation:
                 continue
@@ -104,14 +105,14 @@ class KnowledgeGraph:
         return out
 
     # ---------------------------------------------------------- persistence
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Sérialisation complète."""
         return {
             "nodes": [n.to_dict() for n in self.nodes.values()],
             "edges": [e.to_dict() for e in self.edges],
         }
 
-    def from_dict(self, data: Dict[str, Any]) -> "KnowledgeGraph":
+    def from_dict(self, data: dict[str, Any]) -> KnowledgeGraph:
         """Charge un graphe depuis un dict (in-place)."""
         self.nodes, self.edges, self._edge_index = {}, [], {}
         for nd in data.get("nodes", []):
@@ -129,7 +130,7 @@ class KnowledgeGraph:
     def load(self, path: str) -> bool:
         """Chargement JSON — True si succès."""
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             self.from_dict(data)
             return True

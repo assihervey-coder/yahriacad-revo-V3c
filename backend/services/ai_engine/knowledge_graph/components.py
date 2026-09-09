@@ -10,9 +10,11 @@ Les clés manquantes sont tolérées ; les nœuds sont id = "comp:<MPN>".
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List
+from collections.abc import Iterable
+from typing import Any
 
 from shared.utilities import get_logger
+
 from services.ai_engine.knowledge_graph.kg import KnowledgeGraph
 
 log = get_logger("ai_engine.kg.components")
@@ -20,7 +22,7 @@ log = get_logger("ai_engine.kg.components")
 COMP_PREFIX = "comp:"
 
 
-def build_component_kg(matcher_results: Iterable[Dict[str, Any]]) -> KnowledgeGraph:
+def build_component_kg(matcher_results: Iterable[dict[str, Any]]) -> KnowledgeGraph:
     """Construit le KG des composants avec relations pinout / footprint / substitut."""
     kg = KnowledgeGraph()
     results = list(matcher_results)
@@ -61,9 +63,9 @@ def build_component_kg(matcher_results: Iterable[Dict[str, Any]]) -> KnowledgeGr
     return kg
 
 
-def components_with_interface(kg: KnowledgeGraph, interface: str) -> List[str]:
+def components_with_interface(kg: KnowledgeGraph, interface: str) -> list[str]:
     """Retourne les MPN du KG exposant une interface donnée."""
-    out: List[str] = []
+    out: list[str] = []
     for node in kg.nodes.values():
         if node.kind == "component" and interface.lower() in [
                 str(i).lower() for i in node.props.get("interfaces", [])]:

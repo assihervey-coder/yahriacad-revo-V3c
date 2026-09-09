@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import math
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph
-
 from services.simulator.base import BaseSim, SimResult
+
+log = get_logger("simulator.mechanical")
 
 E_FR4 = 2.2e10           # Pa (module de Young FR4 in-plane)
 RHO_FR4 = 1950.0         # kg/m³ (FR4 + cuivre)
@@ -42,7 +42,7 @@ class MechanicalSim(BaseSim):
 
     def run(self, graph: DesignGraph) -> SimResult:
         t0 = time.perf_counter()
-        notes: List[str] = []
+        notes: list[str] = []
         bw, bh = graph.board_size
         h = self.thickness_mm * 1e-3
         length = max(bw, bh) * 1e-3                      # plus grande dimension (m)
@@ -71,7 +71,7 @@ class MechanicalSim(BaseSim):
                 f"densité locale {stress_index:.0%} > {MAX_COVERAGE:.0%} en {worst_cell} "
                 f"— répartir les composants (risque de bombement / reflow)")
 
-        metrics: Dict[str, Any] = {
+        metrics: dict[str, Any] = {
             "first_mode_hz": round(first_mode_hz, 1),
             "limit_hz": self.min_mode_hz,
             "support_factor": round(support_factor, 3),
@@ -85,7 +85,7 @@ class MechanicalSim(BaseSim):
         return SimResult(sim_kind=self.sim_kind, metrics=metrics, passed=passed,
                          runtime_s=time.perf_counter() - t0, notes=notes)
 
-    def _stress_index(self, graph: DesignGraph, bw: float, bh: float) -> Tuple[float, Tuple[int, int]]:
+    def _stress_index(self, graph: DesignGraph, bw: float, bh: float) -> tuple[float, tuple[int, int]]:
         """Couverture maximale des composants par cellule 5 mm (0..1)."""
         nx = max(1, int(math.ceil(bw / CELL_MM)))
         ny = max(1, int(math.ceil(bh / CELL_MM)))

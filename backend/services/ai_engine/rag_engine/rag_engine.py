@@ -5,9 +5,10 @@ import json
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from shared.utilities import get_logger, new_id
+
 from services.ai_engine.llm_orchestrator.orchestrator import LLMOrchestrator
 from services.ai_engine.rag_engine.retrieval import RetrievedChunk, Retriever
 
@@ -21,20 +22,20 @@ class RAGAnswer:
     """Réponse RAG : texte, sources utilisées, confiance estimée."""
 
     text: str
-    sources: List[Dict[str, Any]] = field(default_factory=list)
+    sources: list[dict[str, Any]] = field(default_factory=list)
     confidence: float = 0.0
 
 
 class RAGEngine:
     """Moteur RAG : retriever TF-IDF + synthèse LLM (sinon mode extractif)."""
 
-    def __init__(self, retriever: Optional[Retriever] = None,
-                 orchestrator: Optional[LLMOrchestrator] = None,
+    def __init__(self, retriever: Retriever | None = None,
+                 orchestrator: LLMOrchestrator | None = None,
                  unanswered_path: str = _UNANSWERED_FILE) -> None:
         self.retriever = retriever or Retriever()
         self.orchestrator = orchestrator
         self.unanswered_path = unanswered_path
-        self._history: List[Dict[str, Any]] = []
+        self._history: list[dict[str, Any]] = []
 
     # -------------------------------------------------------------- ingest
     def ingest_dir(self, path: str) -> int:
@@ -85,14 +86,14 @@ class RAGEngine:
 
     # ------------------------------------------------------------ internals
     @staticmethod
-    def _extractive(chunks: List[RetrievedChunk]) -> str:
+    def _extractive(chunks: list[RetrievedChunk]) -> str:
         """Mode extractif (mock) : meilleurs passages concaténés + sources."""
         parts = ["Passages les plus pertinents du corpus :"]
         for i, c in enumerate(chunks, 1):
             parts.append(f"[{i}] ({c.source}) {c.content.strip()}")
         return "\n\n".join(parts)
 
-    def _synthesize(self, question: str, chunks: List[RetrievedChunk]) -> str:
+    def _synthesize(self, question: str, chunks: list[RetrievedChunk]) -> str:
         assert self.orchestrator is not None
         context = "\n\n".join(
             f"--- Source: {c.source} ---\n{c.content}" for c in chunks)

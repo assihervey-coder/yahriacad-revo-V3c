@@ -2,10 +2,8 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 log = get_logger("ai_engine.rl.value")

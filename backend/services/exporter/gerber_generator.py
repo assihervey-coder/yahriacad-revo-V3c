@@ -7,7 +7,7 @@ Format 4.6 (%FSLAX46Y46*%), unités mm. Coordonnées converties en entiers
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.geometry import Point
 from shared.utilities import get_logger
@@ -48,7 +48,7 @@ class _ApertureTable:
     """
 
     def __init__(self) -> None:
-        self._specs: Dict[tuple, int] = {}
+        self._specs: dict[tuple, int] = {}
         self._next = 10
 
     def get(self, spec: tuple) -> int:
@@ -57,9 +57,9 @@ class _ApertureTable:
             self._next += 1
         return self._specs[spec]
 
-    def definitions(self) -> List[str]:
+    def definitions(self) -> list[str]:
         """Lignes %AM...*% (macros) puis %ADD...*% (apertures)."""
-        out: List[str] = []
+        out: list[str] = []
         for spec in self._specs:
             if spec[0] == "MR":
                 out.append(self._macro_line(spec))
@@ -96,14 +96,14 @@ class _ApertureTable:
 class GerberGenerator:
     """Génère l'ensemble des fichiers Gerber/Excellon d'un DesignGraph."""
 
-    def __init__(self, graph: Any, name: Optional[str] = None) -> None:
+    def __init__(self, graph: Any, name: str | None = None) -> None:
         self.graph = graph
         self.name = _sanitize(name or getattr(graph, "name", "") or "pcb")
 
     # -- API -------------------------------------------------------------------
-    def generate(self) -> Dict[str, str]:
+    def generate(self) -> dict[str, str]:
         """dict[nom_fichier, contenu] — couches cuivre + silk + contour + drills."""
-        files: Dict[str, str] = {}
+        files: dict[str, str] = {}
         for index, lname in self._copper_layers():
             tag = lname.replace(".", "_")
             files[f"{self.name}-{tag}.gbr"] = self._copper(index, lname)
@@ -114,7 +114,7 @@ class GerberGenerator:
         return files
 
     # -- helpers -----------------------------------------------------------------
-    def _board_size(self) -> Tuple[float, float]:
+    def _board_size(self) -> tuple[float, float]:
         bs = getattr(self.graph, "board_size", (50.0, 40.0))
         if isinstance(bs, dict):
             return (float(bs.get("w", 50.0)), float(bs.get("h", 40.0)))
@@ -122,14 +122,14 @@ class GerberGenerator:
             return (float(bs[0]), float(bs[1]))
         return (50.0, 40.0)
 
-    def _copper_layers(self) -> List[Tuple[int, str]]:
+    def _copper_layers(self) -> list[tuple[int, str]]:
         """Toutes les couches cuivre du stackup design_core (index dense)."""
-        out: List[Tuple[int, str]] = []
+        out: list[tuple[int, str]] = []
         for i, layer in enumerate(list(getattr(self.graph, "layers", []) or [])):
             out.append((i, str(getattr(layer, "name", f"L{i}"))))
         return out or [(0, "F.Cu"), (1, "B.Cu")]
 
-    def _header(self, comment: str, apertures: _ApertureTable) -> List[str]:
+    def _header(self, comment: str, apertures: _ApertureTable) -> list[str]:
         lines = [f"G04 {comment} — PCB_AI_DESIGNER_V3*",
                  "%FSLAX46Y46*%", "%MOMM*%", "%LPD*%", "G01*", "G75*"]
         lines.extend(apertures.definitions())
@@ -159,8 +159,8 @@ class GerberGenerator:
     # -- couches -------------------------------------------------------------------
     def _copper(self, index: int, layer_name: str) -> str:
         aps = _ApertureTable()
-        body: List[str] = []
-        current: Optional[int] = None
+        body: list[str] = []
+        current: int | None = None
 
         def select(code: int) -> None:
             nonlocal current
@@ -182,7 +182,7 @@ class GerberGenerator:
                 body.append(f"X{_coord(p.x)}Y{_coord(p.y)}D01*")
 
         # 2) vias touchant cette couche
-        via_code: Optional[int] = None
+        via_code: int | None = None
         for net_id in sorted(self.graph.nets):
             path = getattr(self.graph.nets[net_id], "path", None)
             for via in (getattr(path, "vias", []) or []) if path is not None else []:
@@ -210,7 +210,7 @@ class GerberGenerator:
 
     def _silkscreen(self) -> str:
         aps = _ApertureTable()
-        body: List[str] = []
+        body: list[str] = []
         select_code = aps.get(("C", SILK_WIDTH_MM))
         body.append(f"D{select_code}*")
         for ref in sorted(self.graph.components):
@@ -243,7 +243,7 @@ class GerberGenerator:
         return "\n".join(lines) + "\n"
 
     def _drill(self) -> str:
-        hits: List[Tuple[float, float]] = []
+        hits: list[tuple[float, float]] = []
         for net in self.graph.nets.values():
             path = getattr(net, "path", None)
             for via in (getattr(path, "vias", []) or []) if path is not None else []:

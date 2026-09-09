@@ -6,20 +6,20 @@ pour les nets non-alimentation (PA0.. pour STM32, GPIO0.. pour ESP32).
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
 log = get_logger(__name__)
 
-PinMap = Dict[str, Dict[str, Dict[str, Any]]]  # ref → pin → {net, gpio, functions}
+PinMap = dict[str, dict[str, dict[str, Any]]]  # ref → pin → {net, gpio, functions}
 
 _POWER_RE = re.compile(
     r"^(GND|AGND|PGND|DGND|VCC|VDD|VSS|AVDD|AVCC|DVDD|VBAT|VBUS|VIN|VOUT|"
     r"3V3|5V|1V8|2V5|12V|24V|V\+|V-|NRST|RESET)$", re.IGNORECASE)
 
 
-def is_power_net(net_name: Optional[str]) -> bool:
+def is_power_net(net_name: str | None) -> bool:
     """True si le net est un net d'alimentation/reset (exclu de l'allocation GPIO)."""
     up = (net_name or "").strip().lstrip("/").upper()
     if not up:
@@ -46,7 +46,7 @@ def _detect_family(comp: Any) -> str:
     return "generic"
 
 
-def _gpio_sequence(family: str) -> List[str]:
+def _gpio_sequence(family: str) -> list[str]:
     """Séquence de GPIOs disponibles par famille."""
     if family == "esp32":
         # 20, 24, 28-31 réservés flash ; 34-39 input-only (gardés en secours)
@@ -60,7 +60,7 @@ def _gpio_sequence(family: str) -> List[str]:
     return [f"GPIO{i}" for i in range(32)]
 
 
-def _functions_for(net_name: str) -> List[str]:
+def _functions_for(net_name: str) -> list[str]:
     """Indices de fonction déduits du nom du net."""
     low = (net_name or "").lower()
     funcs = ["GPIO"]
@@ -80,7 +80,7 @@ def _functions_for(net_name: str) -> List[str]:
 class PinExporter:
     """Construit le PinMap (ref → pin → net/gpio/fonctions) d'un DesignGraph."""
 
-    def export(self, graph: Any, mcu_ref: Optional[str] = None) -> PinMap:
+    def export(self, graph: Any, mcu_ref: str | None = None) -> PinMap:
         """Exporte le mapping des pins du MCU détecté (ou de mcu_ref)."""
         candidates = [
             (ref, comp) for ref, comp in graph.components.items()
@@ -104,7 +104,7 @@ class PinExporter:
                         mcu_ref, total_pads, len(sequence), family)
 
         # nets déjà alloués (partagés entre plusieurs pads du MCU)
-        allocated: Dict[str, str] = {}
+        allocated: dict[str, str] = {}
         pin_map: PinMap = {mcu_ref: {}}
         gpio_iter = iter(sequence)
         for pad in sorted(getattr(mcu, "pads", []) or [],
@@ -132,6 +132,6 @@ class PinExporter:
         return pin_map
 
 
-def export(graph: Any, mcu_ref: Optional[str] = None) -> PinMap:
+def export(graph: Any, mcu_ref: str | None = None) -> PinMap:
     """Raccourci module-level : PinExporter().export(graph, mcu_ref)."""
     return PinExporter().export(graph, mcu_ref)

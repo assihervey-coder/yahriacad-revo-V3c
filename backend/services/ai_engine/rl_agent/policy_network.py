@@ -2,10 +2,8 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 log = get_logger("ai_engine.rl.policy")
@@ -34,7 +32,7 @@ class PolicyNetwork:
         self.W: np.ndarray = rng.standard_normal((feature_dim, n_actions)) * \
             (1.0 / np.sqrt(feature_dim))
         self.b: np.ndarray = np.zeros(n_actions, dtype=np.float64)
-        self._torch: Optional[object] = None
+        self._torch: object | None = None
         self._torch_ok = self._try_torch(hidden)
 
     def _try_torch(self, hidden: int | None) -> bool:
@@ -98,7 +96,7 @@ class PolicyNetwork:
             f = f[None, :]
 
         losses: list[float] = []
-        for fi, ai, di in zip(f, a, adv):
+        for fi, ai, di in zip(f, a, adv, strict=False):
             p = self.probs(fi)
             onehot = np.zeros(self.n_actions)
             onehot[ai] = 1.0

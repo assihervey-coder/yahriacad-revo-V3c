@@ -9,11 +9,13 @@ corrector}). Boucle asyncio startable / stoppable ; actions minimales réelles :
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import signal
-from typing import Any, Dict, Optional
+from typing import Any
 
-from shared.utilities import get_logger, new_id
 from shared.events import Event, EventTypes, get_event_bus, make_event
+from shared.utilities import get_logger, new_id
+
 from services.ai_engine.llm_orchestrator.intent_parser import IntentParser
 from services.ai_engine.rag_engine.rag_engine import RAGEngine
 from services.ai_engine.self_verifier.verifier import SelfVerifier
@@ -27,9 +29,9 @@ class AIEngineWorker:
     """Worker asyncio du AI Engine — traite les tâches assignées par rôle."""
 
     def __init__(self,
-                 rag: Optional[RAGEngine] = None,
-                 parser: Optional[IntentParser] = None,
-                 verifier: Optional[SelfVerifier] = None,
+                 rag: RAGEngine | None = None,
+                 parser: IntentParser | None = None,
+                 verifier: SelfVerifier | None = None,
                  versioning=None) -> None:  # noqa: ANN001
         self.rag = rag
         self.parser = parser or IntentParser()
@@ -70,7 +72,7 @@ class AIEngineWorker:
         ))
 
     # -------------------------------------------------------------- actions
-    def _do_research(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _do_research(self, payload: dict[str, Any]) -> dict[str, Any]:
         """researcher : réponse RAG à la question du payload."""
         question = str(payload.get("question")
                        or payload.get("text")
@@ -85,7 +87,7 @@ class AIEngineWorker:
         return {"ok": True, "question": question, "answer": ans.text,
                 "sources": ans.sources, "confidence": ans.confidence}
 
-    def _do_select(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _do_select(self, payload: dict[str, Any]) -> dict[str, Any]:
         """selector : parse l'intention et retourne les hints composants."""
         text = str(payload.get("text")
                    or payload.get("objective")
@@ -99,7 +101,7 @@ class AIEngineWorker:
                 "target_factory": parsed.target_factory,
                 "confidence": parsed.confidence}
 
-    def _do_correct(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _do_correct(self, payload: dict[str, Any]) -> dict[str, Any]:
         """corrector : vérifie le graphe (dict) et propose des correctifs."""
         graph = payload.get("graph")
         if graph is None:
@@ -140,10 +142,8 @@ async def main_forever() -> None:
     worker = AIEngineWorker()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
-        try:
+        with contextlib.suppress(NotImplementedError):  # Windows
             loop.add_signal_handler(sig, worker.stop)
-        except NotImplementedError:  # Windows
-            pass
     await worker.start()
 
 

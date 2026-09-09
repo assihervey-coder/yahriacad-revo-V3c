@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any
 
 from shared.utilities import get_logger
+
 from services.design_core.design_graph.graph import DesignGraph
 
 log = get_logger(__name__)
@@ -24,10 +25,10 @@ WEIGHTS = {
 @dataclass
 class QualityScore:
     total: float = 0.0
-    breakdown: Dict[str, float] = field(default_factory=dict)
+    breakdown: dict[str, float] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"total": round(self.total, 1),
                 "breakdown": {k: round(v, 1) for k, v in self.breakdown.items()},
                 "notes": self.notes}
@@ -40,9 +41,9 @@ class QualityScorer:
     sim_results (dict sim_kind -> SimResult.to_dict()).
     """
 
-    def score(self, graph: DesignGraph, reports: Optional[Dict[str, Any]] = None) -> QualityScore:
+    def score(self, graph: DesignGraph, reports: dict[str, Any] | None = None) -> QualityScore:
         reports = reports or {}
-        breakdown: Dict[str, float] = {}
+        breakdown: dict[str, float] = {}
         notes: list[str] = []
 
         # ERC / DRC / DFM : score des rapports (0..1 → 0..100)

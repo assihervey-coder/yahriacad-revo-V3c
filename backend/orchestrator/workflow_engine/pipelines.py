@@ -9,7 +9,6 @@ PIPELINES :
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 from shared.contracts import AgentRole
 from shared.utilities import get_logger
@@ -37,7 +36,7 @@ class Pipeline:
     """Pipeline nommé = liste ordonnée d'étapes."""
 
     name: str
-    steps: List[Step] = field(default_factory=list)
+    steps: list[Step] = field(default_factory=list)
     description: str = ""
 
     def to_dict(self) -> dict:
@@ -49,7 +48,7 @@ def _s(name: str, role: AgentRole, action: str, retry: int = 1) -> Step:
     return Step(name=name, agent_role=role, action=action, retry=retry)
 
 
-PIPELINES: Dict[str, Pipeline] = {
+PIPELINES: dict[str, Pipeline] = {
     "full_design": Pipeline(
         name="full_design",
         description="Chaîne complète intention → paquet de fabrication",

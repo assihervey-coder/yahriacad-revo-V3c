@@ -7,11 +7,11 @@ révisions via le KiCadLiveHost + design_versioning.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
-from services.pcb_plugin._compat import graph_from_dict, graph_to_dict
+from services.pcb_plugin._compat import graph_from_dict
 
 log = get_logger(__name__)
 
@@ -21,12 +21,12 @@ class SyncConflict:
     """Conflit sur un ref présent des deux côtés avec des états divergents."""
 
     ref: str
-    fields: List[str] = field(default_factory=list)
-    local: Dict[str, Any] = field(default_factory=dict)
-    remote: Dict[str, Any] = field(default_factory=dict)
+    fields: list[str] = field(default_factory=list)
+    local: dict[str, Any] = field(default_factory=dict)
+    remote: dict[str, Any] = field(default_factory=dict)
 
 
-def _comp_state(comp: Any) -> Dict[str, Any]:
+def _comp_state(comp: Any) -> dict[str, Any]:
     """Signature comparable d'un composant (position + rotation + side)."""
     return {
         "x": round(float(getattr(comp, "x", 0.0)), 6),
@@ -36,7 +36,7 @@ def _comp_state(comp: Any) -> Dict[str, Any]:
     }
 
 
-def _graph_state(graph_like: Any) -> Dict[str, Dict[str, Any]]:
+def _graph_state(graph_like: Any) -> dict[str, dict[str, Any]]:
     """Mapping ref → état, depuis un DesignGraph ou un snapshot dict."""
     if graph_like is None:
         return {}
@@ -56,7 +56,7 @@ class SessionSynchronizer:
     def __init__(self, host: Any, versioning: Any = None) -> None:
         self.host = host
         self.versioning = versioning
-        self.refs: Dict[str, Dict[str, Any]] = {}   # mapping des refs (dernier état sync)
+        self.refs: dict[str, dict[str, Any]] = {}   # mapping des refs (dernier état sync)
         self.last_pushed_rev: int = 0
         self.last_pulled_rev: int = 0
 
@@ -86,11 +86,11 @@ class SessionSynchronizer:
 
     # -- API -----------------------------------------------------------------
     def detect_conflicts(self, local_rev: Any,
-                         remote_snapshot: Any) -> List[SyncConflict]:
+                         remote_snapshot: Any) -> list[SyncConflict]:
         """Détecte les refs modifiés en local ET en remote depuis la dernière sync."""
         local_state = _graph_state(local_rev)
         remote_state = _graph_state(remote_snapshot)
-        conflicts: List[SyncConflict] = []
+        conflicts: list[SyncConflict] = []
         for ref in sorted(set(local_state) & set(remote_state)):
             base = self.refs.get(ref)
             if base is None:
@@ -114,7 +114,7 @@ class SessionSynchronizer:
             self._commit(rev, "sync: push vers KiCad")
         return ok
 
-    async def pull_if_newer(self) -> Optional[Any]:
+    async def pull_if_newer(self) -> Any | None:
         """Récupère le design distant s'il est plus récent que le dernier pull."""
         remote = await self.host.pull_design()
         if remote is None:
@@ -128,7 +128,7 @@ class SessionSynchronizer:
         self._commit(remote, "sync: pull depuis KiCad")
         return remote
 
-    async def sync_bidirectional(self, local_graph: Any) -> Dict[str, Any]:
+    async def sync_bidirectional(self, local_graph: Any) -> dict[str, Any]:
         """Push + pull en une passe, avec rapport de conflits."""
         remote = await self.host.pull_design() if self.host.connected else None
         conflicts = self.detect_conflicts(local_graph, remote)

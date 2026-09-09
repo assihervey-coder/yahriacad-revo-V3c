@@ -11,7 +11,11 @@ Boucle par étape :
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+from shared.events import EventTypes, make_event
+from shared.schemas.agent_schemas import AgentStatus
+from shared.utilities import get_logger
 
 from orchestrator.common import (
     deserialize_graph,
@@ -30,11 +34,8 @@ from orchestrator.state_manager import (
     get_agent_state_store,
 )
 from orchestrator.workflow_engine.jobs import Job, JobStore, get_job_store
-from orchestrator.workflow_engine.pipelines import PIPELINES, Pipeline, Step, get_pipeline
+from orchestrator.workflow_engine.pipelines import Step, get_pipeline
 from orchestrator.workflow_engine.tasks import TaskQueue, TaskSpec, get_task_queue
-from shared.events import EventTypes, make_event
-from shared.schemas.agent_schemas import AgentStatus
-from shared.utilities import get_logger, new_id
 
 log = get_logger("workflow.engine")
 
@@ -46,10 +47,10 @@ SELF_VERIFIED_STEPS = {"place", "route", "optimize", "verify_2"}
 class WorkflowEngine:
     """Moteur d'orchestration des 10 agents sur les pipelines prédéfinis."""
 
-    def __init__(self, agents: Optional[Dict[Any, Any]] = None,
-                 job_store: Optional[JobStore] = None,
-                 task_queue: Optional[TaskQueue] = None,
-                 checkpoints_dir: Optional[str] = None) -> None:
+    def __init__(self, agents: dict[Any, Any] | None = None,
+                 job_store: JobStore | None = None,
+                 task_queue: TaskQueue | None = None,
+                 checkpoints_dir: str | None = None) -> None:
         if agents is None:
             from orchestrator.agent_pipeline import build_agents  # import lazy (cycle)
 
@@ -65,7 +66,7 @@ class WorkflowEngine:
 
     # ------------------------------------------------------------ propriétés
     @property
-    def agents(self) -> Dict[Any, Any]:
+    def agents(self) -> dict[Any, Any]:
         return self._agents
 
     # ------------------------------------------------------------ exécution
@@ -84,7 +85,7 @@ class WorkflowEngine:
                       job.job_id, task.pipeline_name, task.task_id)
 
         context = self._prepare_context(task, job)
-        completed: List[str] = []
+        completed: list[str] = []
         try:
             pipeline = get_pipeline(task.pipeline_name)
         except ValueError as exc:
@@ -96,7 +97,7 @@ class WorkflowEngine:
 
         job.state["pipeline"] = pipeline.name
         job.state["steps"] = [s.name for s in pipeline.steps]
-        failed_step: Optional[str] = None
+        failed_step: str | None = None
         for step in pipeline.steps:
             outcome = self._run_step(task, job, step, context)
             if outcome["ok"]:
@@ -128,7 +129,7 @@ class WorkflowEngine:
         return job
 
     # ------------------------------------------------------------ étape
-    def _run_step(self, task: TaskSpec, job: Job, step: Step, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _run_step(self, task: TaskSpec, job: Job, step: Step, context: dict[str, Any]) -> dict[str, Any]:
         agent = self._agents.get(step.agent_role)
         if agent is None:
             self._publish(EventTypes.ESCALATION_REQUESTED, {
@@ -214,7 +215,7 @@ class WorkflowEngine:
         return {"ok": False, "escalated": True, "error": last_error}
 
     # ------------------------------------------------------------ vérification
-    def _self_verify(self, context: Dict[str, Any], job: Job, step: Step) -> bool:
+    def _self_verify(self, context: dict[str, Any], job: Job, step: Step) -> bool:
         """Self-verifier du cerveau IA (services.ai_engine.SelfVerifier)."""
         graph = context.get("graph")
         if graph is None:
@@ -241,7 +242,7 @@ class WorkflowEngine:
 
     # ------------------------------------------------------------ rollback
     def _rollback(self, task: TaskSpec, job: Job, step: Step,
-                  context: Dict[str, Any], reason: str) -> None:
+                  context: dict[str, Any], reason: str) -> None:
         """Rollback vers la dernière révision valide (state_manager + versioning)."""
         current_rev = context.get("revision")
         if current_rev is not None:
@@ -273,7 +274,7 @@ class WorkflowEngine:
             "reason": reason[:200]})
 
     # ------------------------------------------------------------ checkpoint
-    def _checkpoint(self, job: Job, step: Step, context: Dict[str, Any]) -> None:
+    def _checkpoint(self, job: Job, step: Step, context: dict[str, Any]) -> None:
         """Snapshot (graph + SMM) après une étape réussie."""
         smm = context.get("smm")
         snapshot = ""
@@ -295,7 +296,7 @@ class WorkflowEngine:
         self.jobs.log_event(job, "checkpoint", {"step": step.name, "checkpoint_id": checkpoint_id})
 
     # ------------------------------------------------------------ post-étape
-    def _after_step(self, task: TaskSpec, context: Dict[str, Any], result: Any) -> None:
+    def _after_step(self, task: TaskSpec, context: dict[str, Any], result: Any) -> None:
         """SMM (si un graphe vient d'apparaître) + persistance du design courant."""
         if context.get("graph") is not None:
             ensure_smm(context)
@@ -316,9 +317,9 @@ class WorkflowEngine:
                 self.log.debug("persistance design impossible", exc_info=True)
 
     # ------------------------------------------------------------ contexte
-    def _prepare_context(self, task: TaskSpec, job: Job) -> Dict[str, Any]:
+    def _prepare_context(self, task: TaskSpec, job: Job) -> dict[str, Any]:
         params = dict(task.params or {})
-        context: Dict[str, Any] = {
+        context: dict[str, Any] = {
             "task_id": task.task_id,
             "task": {"task_id": task.task_id, "pipeline": task.pipeline_name,
                      "correlation_id": task.correlation_id},
@@ -363,7 +364,7 @@ class WorkflowEngine:
         self.jobs.update(job)
         return context
 
-    def _try_parse_intents(self, context: Dict[str, Any]) -> None:
+    def _try_parse_intents(self, context: dict[str, Any]) -> None:
         mods = try_import("services.ai_engine", ["IntentParser"])
         parser_cls = mods.get("IntentParser")
         if parser_cls is None:
@@ -383,7 +384,7 @@ class WorkflowEngine:
             self.log.debug("parse d'intention anticipé impossible: %s", exc)
 
     # ------------------------------------------------------------ events
-    def _publish(self, event_type: str, payload: Dict[str, Any], task: TaskSpec) -> None:
+    def _publish(self, event_type: str, payload: dict[str, Any], task: TaskSpec) -> None:
         publish_event(make_event(
             event_type, payload,
             project_id=task.project_id,

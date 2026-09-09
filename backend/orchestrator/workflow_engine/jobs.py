@@ -9,10 +9,11 @@ import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+from shared.utilities import get_logger, new_id
 
 from orchestrator.common import data_root
-from shared.utilities import get_logger, new_id
 
 log = get_logger("workflow.jobs")
 
@@ -25,12 +26,12 @@ class Job:
     task_id: str = ""
     current_step: str = ""
     status: str = "queued"           # queued|running|completed|failed|escalated
-    state: Dict[str, Any] = field(default_factory=dict)
-    events_log: List[Dict[str, Any]] = field(default_factory=list)
+    state: dict[str, Any] = field(default_factory=dict)
+    events_log: list[dict[str, Any]] = field(default_factory=list)
     created_ts: float = field(default_factory=time.time)
     updated_ts: float = field(default_factory=time.time)
 
-    def to_dict(self, include_events: bool = True) -> Dict[str, Any]:
+    def to_dict(self, include_events: bool = True) -> dict[str, Any]:
         payload = {
             "job_id": self.job_id,
             "task_id": self.task_id,
@@ -48,11 +49,11 @@ class Job:
 class JobStore:
     """Registre mémoire + persistance JSON par job."""
 
-    def __init__(self, base_dir: Optional[str] = None) -> None:
+    def __init__(self, base_dir: str | None = None) -> None:
         self.base = Path(base_dir) if base_dir else data_root()
-        self._jobs: Dict[str, Job] = {}
-        self._by_task: Dict[str, str] = {}
-        self._by_correlation: Dict[str, List[str]] = {}
+        self._jobs: dict[str, Job] = {}
+        self._by_task: dict[str, str] = {}
+        self._by_correlation: dict[str, list[str]] = {}
 
     # -- cycle de vie ---------------------------------------------------------
     def create(self, task: Any) -> Job:
@@ -73,14 +74,14 @@ class JobStore:
         self.update(job)
         return job
 
-    def get(self, job_id: str) -> Optional[Job]:
+    def get(self, job_id: str) -> Job | None:
         return self._jobs.get(job_id)
 
-    def find_by_task(self, task_id: str) -> Optional[Job]:
+    def find_by_task(self, task_id: str) -> Job | None:
         job_id = self._by_task.get(task_id)
         return self._jobs.get(job_id) if job_id else None
 
-    def find_by_correlation(self, correlation_id: str) -> List[Job]:
+    def find_by_correlation(self, correlation_id: str) -> list[Job]:
         return [self._jobs[jid] for jid in self._by_correlation.get(correlation_id, [])
                 if jid in self._jobs]
 
@@ -90,7 +91,7 @@ class JobStore:
         self._persist(job)
         return job
 
-    def log_event(self, job: Job, event_type: str, payload: Dict[str, Any]) -> None:
+    def log_event(self, job: Job, event_type: str, payload: dict[str, Any]) -> None:
         """Ajoute un événement au journal du job (et persiste)."""
         entry = {"ts": round(time.time(), 3), "type": event_type, **payload}
         job.events_log.append(entry)
@@ -113,7 +114,7 @@ class JobStore:
             log.debug("persistance job %s impossible", job.job_id, exc_info=True)
 
 
-_STORE: Optional[JobStore] = None
+_STORE: JobStore | None = None
 
 
 def get_job_store() -> JobStore:

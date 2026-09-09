@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import asyncio
+import builtins
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+from shared.utilities import get_logger, new_id
 
 from orchestrator.common import get_main_loop
-from shared.utilities import get_logger, new_id
 
 log = get_logger("workflow.tasks")
 
@@ -18,16 +20,16 @@ class TaskSpec:
 
     task_id: str = field(default_factory=lambda: new_id("task"))
     pipeline_name: str = "full_design"
-    params: Dict[str, Any] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
     project_id: str = ""
     tenant_id: str = "default"
     status: str = "pending"          # pending|running|completed|failed|escalated
     created_ts: float = field(default_factory=time.time)
-    result: Optional[Dict[str, Any]] = None
+    result: dict[str, Any] | None = None
     correlation_id: str = ""
     priority: int = 5                # 1 (haute) → 9 (basse)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "task_id": self.task_id,
             "pipeline_name": self.pipeline_name,
@@ -51,9 +53,9 @@ class TaskQueue:
     """
 
     def __init__(self) -> None:
-        self._queue: "asyncio.Queue[TaskSpec]" = asyncio.Queue()
-        self._tasks: Dict[str, TaskSpec] = {}
-        self._order: List[str] = []
+        self._queue: asyncio.Queue[TaskSpec] = asyncio.Queue()
+        self._tasks: dict[str, TaskSpec] = {}
+        self._order: list[str] = []
 
     # -- opérations ---------------------------------------------------------
     def submit(self, task: TaskSpec) -> TaskSpec:
@@ -76,11 +78,11 @@ class TaskQueue:
         task = await self._queue.get()
         return task
 
-    def get(self, task_id: str) -> Optional[TaskSpec]:
+    def get(self, task_id: str) -> TaskSpec | None:
         return self._tasks.get(task_id)
 
     def update_status(self, task_id: str, status: str,
-                      result: Optional[Dict[str, Any]] = None) -> Optional[TaskSpec]:
+                      result: dict[str, Any] | None = None) -> TaskSpec | None:
         task = self._tasks.get(task_id)
         if task is None:
             return None
@@ -89,7 +91,7 @@ class TaskQueue:
             task.result = result
         return task
 
-    def list(self) -> List[TaskSpec]:
+    def list(self) -> builtins.list[TaskSpec]:
         """Toutes les tâches connues, par ordre de soumission."""
         return [self._tasks[tid] for tid in self._order if tid in self._tasks]
 
@@ -97,14 +99,14 @@ class TaskQueue:
         return self._queue.qsize()
 
 
-def _running_loop() -> Optional[asyncio.AbstractEventLoop]:
+def _running_loop() -> asyncio.AbstractEventLoop | None:
     try:
         return asyncio.get_running_loop()
     except RuntimeError:
         return None
 
 
-_QUEUE: Optional[TaskQueue] = None
+_QUEUE: TaskQueue | None = None
 
 
 def get_task_queue() -> TaskQueue:

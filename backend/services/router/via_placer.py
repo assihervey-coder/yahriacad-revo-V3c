@@ -5,8 +5,8 @@ C = 1.41·εr·T·D1/(D2−D1) [pF] (T, D1, D2 en pouces) ≈ 0.3–0.5 pF en pr
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple, Union
 
 from shared.geometry import Point, RoutePath
 from shared.utilities import get_logger
@@ -17,7 +17,7 @@ VIA_DRILL_MM = 0.3      # foret par défaut de la plateforme
 VIA_PAD_MM = 0.6        # plot annulaire extérieur
 VIA_CLEARANCE_DIA_MM = 1.0  # diamètre d'antipad (clearance plan)
 
-PathLike = Union[RoutePath, Tuple[Sequence[Point], int]]
+PathLike = RoutePath | tuple[Sequence[Point], int]
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ class ViaPlan:
     from_layer: int
     to_layer: int
 
-    def as_tuple(self) -> Tuple[Point, int, int]:
+    def as_tuple(self) -> tuple[Point, int, int]:
         return (self.pos, self.from_layer, self.to_layer)
 
 
@@ -48,7 +48,7 @@ def estimate_via_cost_mm(via_penalty_mm: float = 3.0) -> float:
     return via_penalty_mm
 
 
-def _endpoint(path: PathLike, last: bool) -> Optional[Tuple[Point, int]]:
+def _endpoint(path: PathLike, last: bool) -> tuple[Point, int] | None:
     """(point extrême, couche) d'un chemin, None si vide."""
     if isinstance(path, RoutePath):
         if not path.points:
@@ -63,7 +63,7 @@ def _endpoint(path: PathLike, last: bool) -> Optional[Tuple[Point, int]]:
 
 
 def plan_vias(path_a: PathLike, path_b: PathLike,
-              layers: Optional[Sequence[int]] = None) -> List[Tuple[Point, int, int]]:
+              layers: Sequence[int] | None = None) -> list[tuple[Point, int, int]]:
     """Vias nécessaires aux jonctions entre deux chemins consécutifs.
 
     Si les couches diffèrent au point de jonction partagé, un via (Point,
@@ -86,9 +86,9 @@ def plan_vias(path_a: PathLike, path_b: PathLike,
     return [(pa, la, lb)]
 
 
-def plan_vias_for_chunks(chunks: Sequence[Tuple[Sequence[Point], int]]) -> List[Tuple[Point, int, int]]:
+def plan_vias_for_chunks(chunks: Sequence[tuple[Sequence[Point], int]]) -> list[tuple[Point, int, int]]:
     """Vias le long d'une suite de tronçons (points, couche) partageant leurs extrémités."""
-    vias: List[Tuple[Point, int, int]] = []
+    vias: list[tuple[Point, int, int]] = []
     for i in range(len(chunks) - 1):
         vias.extend(plan_vias(chunks[i], chunks[i + 1]))
     return vias

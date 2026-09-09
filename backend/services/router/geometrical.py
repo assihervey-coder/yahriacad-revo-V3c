@@ -10,17 +10,14 @@ import heapq
 import itertools
 import math
 import time
-from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from dataclasses import dataclass
 
 import numpy as np
-
 from shared.geometry import Point, RoutePath, Segment
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph, Net
-
-from services.router.topological import keepout_rects, net_pad_positions, pad_position
+from services.router.topological import keepout_rects, net_pad_positions
 
 log = get_logger("router.geometrical")
 
@@ -66,9 +63,7 @@ def _segments_intersect(a: Segment, b: Segment) -> bool:
         return True
     if abs(o3) < 1e-12 and _on_segment(b.start, a.start, b.end):
         return True
-    if abs(o4) < 1e-12 and _on_segment(b.start, a.end, b.end):
-        return True
-    return False
+    return bool(abs(o4) < 1e-12 and _on_segment(b.start, a.end, b.end))
 
 
 @dataclass
@@ -81,7 +76,7 @@ class _Grid:
     nx: int
     ny: int
 
-    def index_of(self, p: Point) -> Tuple[int, int]:
+    def index_of(self, p: Point) -> tuple[int, int]:
         ix = int(round((p.x - self.x0) / self.step))
         iy = int(round((p.y - self.y0) / self.step))
         return max(0, min(self.nx - 1, ix)), max(0, min(self.ny - 1, iy))
@@ -104,7 +99,7 @@ class MazeRouter:
 
     def __init__(
         self,
-        board_size: Tuple[float, float] = (100.0, 80.0),
+        board_size: tuple[float, float] = (100.0, 80.0),
         grid_step: float = 0.25,
         clearance: float = 0.2,
         margin: float = 5.0,
@@ -151,7 +146,7 @@ class MazeRouter:
 
     # ----------------------------------------------------------------- obstacles
     def _build_blocked(self, graph: DesignGraph, net: Net, grid: _Grid,
-                       layer: int, width_mm: float) -> Tuple[np.ndarray, np.ndarray]:
+                       layer: int, width_mm: float) -> tuple[np.ndarray, np.ndarray]:
         """Retourne (blocked, hard) : blocked = tous obstacles ; hard = cuivre
         ennemi (traces) — inviolable même pour le force-unblock départ/arrivée."""
         nx, ny, step = grid.nx, grid.ny, grid.step
@@ -268,7 +263,7 @@ class MazeRouter:
 
     # -------------------------------------------------------------------- A*
     def route_pair(self, graph: DesignGraph, net: Net, a: Point, b: Point,
-                   layer: int, width_mm: float = 0.2) -> Optional[List[Point]]:
+                   layer: int, width_mm: float = 0.2) -> list[Point] | None:
         """Chemin A* orthogonal de `a` vers `b` sur `layer` (None si inaccessible).
 
         La grille est bornée au bbox des deux points + `margin` ; les cellules de
@@ -352,7 +347,7 @@ class MazeRouter:
             return None
 
         # reconstruction
-        cells: List[Tuple[int, int]] = []
+        cells: list[tuple[int, int]] = []
         cx_, cy_ = gx, gy
         guard = 0
         while (cx_, cy_) != (sx, sy):
@@ -375,12 +370,12 @@ class MazeRouter:
         return path
 
     @property
-    def stats(self) -> Dict[str, int]:
+    def stats(self) -> dict[str, int]:
         """Compteurs d'exécution (appels, succès, cellules explorées)."""
         return dict(self._stats)
 
 
-def _simplify_collinear(points: List[Point], eps: float = 1e-9) -> List[Point]:
+def _simplify_collinear(points: list[Point], eps: float = 1e-9) -> list[Point]:
     """Supprime les points intermédiaires alignés (réduit le poids des RoutePath)."""
     if len(points) <= 2:
         return list(points)
@@ -395,7 +390,7 @@ def _simplify_collinear(points: List[Point], eps: float = 1e-9) -> List[Point]:
     return out
 
 
-def offset_polyline(points: List[Point], offset: float) -> List[Point]:
+def offset_polyline(points: list[Point], offset: float) -> list[Point]:
     """Décale un polygone ouvert de `offset` mm perpendiculairement (jointures mitrées).
 
     Utilisé pour le second membre d'une paire différentielle : le chemin garde
@@ -403,7 +398,7 @@ def offset_polyline(points: List[Point], offset: float) -> List[Point]:
     """
     if len(points) < 2 or offset == 0.0:
         return list(points)
-    normals: List[Tuple[float, float]] = []
+    normals: list[tuple[float, float]] = []
     for i in range(len(points) - 1):
         dx = points[i + 1].x - points[i].x
         dy = points[i + 1].y - points[i].y
@@ -412,7 +407,7 @@ def offset_polyline(points: List[Point], offset: float) -> List[Point]:
             normals.append((0.0, 0.0))
         else:
             normals.append((-dy / ln, dx / ln))
-    out: List[Point] = []
+    out: list[Point] = []
     for i, p in enumerate(points):
         if i == 0:
             nx_, ny_ = normals[0]

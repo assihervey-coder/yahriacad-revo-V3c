@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import math
 import time
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -49,7 +49,7 @@ _LIMIT_ATTRS = {
 }
 
 
-def headline_value(kind: str, metrics: dict) -> Optional[float]:
+def headline_value(kind: str, metrics: dict) -> float | None:
     """Valeur scalaire cible du surrogate dans un SimResult du solveur complet."""
     key = VALUE_KEYS.get(kind)
     if not key or not isinstance(metrics, dict):
@@ -81,7 +81,7 @@ def _beta_passed(kind: str, value: float, sim: BaseSim) -> bool:
 def _beta_result(kind: str, value: float, latency_ms: float,
                  sim: BaseSim) -> SimResult:
     """SimResult β — métrique phare prédite, solveur complet contourné."""
-    notes: List[str] = [
+    notes: list[str] = [
         "β substitut neuronal — inférence rapide, solveur complet contourné",
         "métriques détaillées indisponibles en mode β (métrique phare seule)",
     ]
@@ -116,7 +116,7 @@ def _record_and_autotrain(manager: SurrogateManager, kind: str,
 
 
 def run_sim_smart(sim: BaseSim, graph: Any,
-                  manager: Optional[SurrogateManager] = None) -> Tuple[SimResult, bool]:
+                  manager: SurrogateManager | None = None) -> tuple[SimResult, bool]:
     """Exécute `sim` avec priorité à la voie β si un surrogate est entraîné.
 
     Retourne (SimResult, beta_used). Sans manager, équivalent strict à

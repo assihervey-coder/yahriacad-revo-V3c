@@ -5,12 +5,13 @@ Contenu : graphe sérialisé (design_core.to_dict) + état du versioning.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.utilities import get_logger, new_id
 
@@ -61,16 +62,14 @@ class SessionRestorer:
                 os.fsync(handle.fileno())
             os.replace(tmp_path, target)  # atomique sur le même filesystem
         except Exception:
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
             raise
         log.info("session sauvegardée: %s", target)
         return target
 
     @staticmethod
-    def _versioning_meta(versioning: Any, session_dir: Path) -> Dict[str, Any]:
+    def _versioning_meta(versioning: Any, session_dir: Path) -> dict[str, Any]:
         """Persiste le versioning (persist natif) ou le sérialise en dict."""
         if versioning is None:
             return {}
@@ -84,7 +83,7 @@ class SessionRestorer:
         return {"kind": "dict", "data": versioning_to_dict(versioning)}
 
     @staticmethod
-    def _versioning_from_meta(meta: Dict[str, Any], session_dir: Path) -> Any:
+    def _versioning_from_meta(meta: dict[str, Any], session_dir: Path) -> Any:
         """Restaure le versioning : DesignVersioning.load natif puis fallback dict."""
         if not isinstance(meta, dict) or not meta:
             return None
@@ -101,7 +100,7 @@ class SessionRestorer:
 
     # -- lecture ---------------------------------------------------------------
     def restore_session(self, tenant_id: str, user_id: str,
-                        project_id: str) -> Optional[Tuple[Any, Any]]:
+                        project_id: str) -> tuple[Any, Any] | None:
         """Charge (DesignGraph, DesignVersioning) ou None si absente/corrompue."""
         path = self._session_file(tenant_id, user_id, project_id)
         if not path.exists():
@@ -118,9 +117,9 @@ class SessionRestorer:
             log.error("session corrompue (%s): %s", path, exc)
             return None
 
-    def list_sessions(self, tenant_id: str) -> List[Dict[str, Any]]:
+    def list_sessions(self, tenant_id: str) -> list[dict[str, Any]]:
         """Liste les sessions d'un tenant [{user_id, project_id, saved_at, path}]."""
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         tenant_dir = self.base_dir / tenant_id
         if not tenant_dir.is_dir():
             return out

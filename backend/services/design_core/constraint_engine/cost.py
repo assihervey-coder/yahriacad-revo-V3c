@@ -1,8 +1,6 @@
 """Contraintes de coût : budget composants (BOM) maximum."""
 from __future__ import annotations
 
-from typing import List
-
 from services.design_core.constraint_engine.engine import BaseConstraint, Violation
 from services.design_core.design_graph.graph import DesignGraph
 
@@ -17,7 +15,7 @@ class MaxCostUSD(BaseConstraint):
         )
         self.max_usd = max_usd
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
+    def check(self, graph: DesignGraph) -> list[Violation]:
         cost = graph.cost_usd()
         if cost > self.max_usd:
             top = sorted(graph.components.values(), key=lambda c: -c.price_usd)[:3]

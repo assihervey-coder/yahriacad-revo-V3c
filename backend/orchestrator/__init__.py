@@ -7,8 +7,8 @@ Sous-packages :
   - agent_pipeline  : les 10 agents spécialisés + registre
   - state_manager   : état projets / designs / agents, checkpoints, rollback
 """
+from orchestrator.agent_pipeline import BaseAgent, build_agents
 from orchestrator.super_agent import SuperAgent
 from orchestrator.workflow_engine.engine import WorkflowEngine
-from orchestrator.agent_pipeline import BaseAgent, build_agents
 
 __all__ = ["SuperAgent", "WorkflowEngine", "BaseAgent", "build_agents"]

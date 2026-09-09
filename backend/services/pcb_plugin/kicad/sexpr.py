@@ -1,9 +1,10 @@
 """Mini parseur s-expression pour KiCad — tokenizer maison, zéro dépendance."""
 from __future__ import annotations
 
-from typing import Any, Iterator, List, Optional, Tuple, Union
+from collections.abc import Iterator
+from typing import Any
 
-Node = Union[str, int, float, List["Node"]]
+Node = str | int | float | list["Node"]
 
 _WS = " \t\r\n"
 _DELIMS = _WS + '()"'
@@ -25,7 +26,7 @@ def _atom(raw: str) -> Node:
         return raw
 
 
-def _tokenize(text: str) -> Iterator[Tuple[str, Any]]:
+def _tokenize(text: str) -> Iterator[tuple[str, Any]]:
     """Génère ('(' | ')') ou ('atom', valeur) — gère les chaînes quotées avec échappements."""
     i, n = 0, len(text)
     while i < n:
@@ -40,7 +41,7 @@ def _tokenize(text: str) -> Iterator[Tuple[str, Any]]:
             i += 1
         elif c == '"':
             i += 1
-            buf: List[str] = []
+            buf: list[str] = []
             while i < n and text[i] != '"':
                 if text[i] == "\\" and i + 1 < n:
                     buf.append(text[i + 1])
@@ -66,13 +67,13 @@ class SExprParser:
     def __init__(self, text: str) -> None:
         self.text = text
 
-    def parse(self) -> List[Node]:
+    def parse(self) -> list[Node]:
         """Retourne la liste racine (ex: [('kicad_pcb', 'version', ...)])."""
-        root: List[Node] = []
-        stack: List[List[Node]] = [root]
+        root: list[Node] = []
+        stack: list[list[Node]] = [root]
         for kind, val in _tokenize(self.text):
             if kind == "(":
-                new: List[Node] = []
+                new: list[Node] = []
                 stack[-1].append(new)
                 stack.append(new)
             elif kind == ")":
@@ -86,12 +87,12 @@ class SExprParser:
         return root
 
 
-def parse(text: str) -> List[Node]:
+def parse(text: str) -> list[Node]:
     """Raccourci : SExprParser(text).parse()."""
     return SExprParser(text).parse()
 
 
-def find(node: Any, key: str) -> Optional[List[Any]]:
+def find(node: Any, key: str) -> list[Any] | None:
     """Premier sous-nœud liste dont la tête vaut `key`."""
     if not isinstance(node, list):
         return None
@@ -101,9 +102,9 @@ def find(node: Any, key: str) -> Optional[List[Any]]:
     return None
 
 
-def find_all(node: Any, key: str) -> List[List[Any]]:
+def find_all(node: Any, key: str) -> list[list[Any]]:
     """Tous les sous-nœuds listes dont la tête vaut `key`."""
-    out: List[List[Any]] = []
+    out: list[list[Any]] = []
     if isinstance(node, list):
         for child in node:
             if isinstance(child, list) and child and child[0] == key:

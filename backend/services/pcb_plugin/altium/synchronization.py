@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -19,23 +19,23 @@ log = get_logger(__name__)
 class SyncReport:
     """Résultat d'une passe de synchronisation Altium."""
 
-    changed_components: List[str] = field(default_factory=list)
-    conflicts: List[str] = field(default_factory=list)
+    changed_components: list[str] = field(default_factory=list)
+    conflicts: list[str] = field(default_factory=list)
     resolution: str = "none"
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
 
-def _nets_signature(comp: Any) -> List[Tuple[str, str]]:
+def _nets_signature(comp: Any) -> list[tuple[str, str]]:
     """Signature des nets d'un composant : [(pad_name, net_id)] triée."""
-    out: List[Tuple[str, str]] = []
+    out: list[tuple[str, str]] = []
     for pad in list(getattr(comp, "pads", []) or []):
         out.append((str(getattr(pad, "name", "")), str(getattr(pad, "net_id", "") or "")))
     return sorted(out)
 
 
-def _state(graph: Any) -> Dict[str, Dict[str, Any]]:
+def _state(graph: Any) -> dict[str, dict[str, Any]]:
     """ref → signature comparable (position, rotation, side, nets)."""
-    out: Dict[str, Dict[str, Any]] = {}
+    out: dict[str, dict[str, Any]] = {}
     for ref, comp in graph.components.items():
         out[ref] = {
             "position": (round(float(comp.x), 6), round(float(comp.y), 6)),
@@ -51,7 +51,7 @@ class AltiumSynchronizer:
     def __init__(self, bridge: Any, resolution: str = "local_wins") -> None:
         self.bridge = bridge
         self.resolution = resolution  # local_wins | remote_wins
-        self._snapshot: Dict[str, Dict[str, Any]] = {}
+        self._snapshot: dict[str, dict[str, Any]] = {}
 
     def sync(self, graph: Any, remote: Any = None,
              resolution: str = "") -> SyncReport:

@@ -10,9 +10,11 @@ Actions :
 """
 from __future__ import annotations
 
-import math
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
+from shared.contracts import AgentRole
+from shared.schemas import AgentResultSchema
 
 from orchestrator.agent_pipeline.base import BaseAgent
 from orchestrator.agent_pipeline.validator_checks import local_checks
@@ -23,8 +25,6 @@ from orchestrator.common import (
     set_field,
     try_import,
 )
-from shared.contracts import AgentRole
-from shared.schemas import AgentResultSchema
 
 _REF_RX = r"\b([URCJDL][0-9]{1,3})\b"
 _NETS_RX = re.compile(r"entre\s+'([^']+)'\s+et\s+'([^']+)'")
@@ -42,19 +42,19 @@ class CorrectorAgent(BaseAgent):
 
     def __init__(self, orchestrator: Any = None) -> None:
         super().__init__(AgentRole.CORRECTOR, "corrector", orchestrator)
-        self._strategy_stats: Dict[str, int] = {}
+        self._strategy_stats: dict[str, int] = {}
 
     def supports(self, action: str) -> bool:
         return action in ("correct_issues", "optimize", "correct", "")
 
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         action = str(context.get("action") or (context.get("params") or {}).get("action") or "correct_issues")
         if action == "optimize":
             return self._optimize(context)
         return self._correct(context)
 
     # ---------------------------------------------------------------- optimize
-    def _optimize(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def _optimize(self, context: dict[str, Any]) -> AgentResultSchema:
         graph = context.get("graph")
         if graph is None:
             return self.failed(context, "aucun DesignGraph dans le contexte")
@@ -72,7 +72,7 @@ class CorrectorAgent(BaseAgent):
         engine_used = "fallback_noop"
         score = 0.0
         iterations = 0
-        proposals_detail: List[Dict[str, Any]] = []
+        proposals_detail: list[dict[str, Any]] = []
 
         optimizer, engine_name = self._build_optimizer()
         if optimizer is not None:
@@ -99,7 +99,7 @@ class CorrectorAgent(BaseAgent):
             iterations = 0
 
         rev = self.commit(context, f"optimisation ({objective}, {engine_used})")
-        output: Dict[str, Any] = {
+        output: dict[str, Any] = {
             "objective": objective,
             "engine": engine_used,
             "score": round(score, 4),
@@ -117,7 +117,7 @@ class CorrectorAgent(BaseAgent):
                               rationale=f"optimisation {objective} via {engine_used}")
 
     # ----------------------------------------------------------------- correct
-    def _correct(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def _correct(self, context: dict[str, Any]) -> AgentResultSchema:
         graph = context.get("graph")
         if graph is None:
             return self.failed(context, "aucun DesignGraph dans le contexte")
@@ -126,7 +126,7 @@ class CorrectorAgent(BaseAgent):
         max_rounds = max(1, int(params.get("rounds") or 2))
         self._strategy_stats = {}
         fixed, attempted = 0, 0
-        rounds_log: List[Dict[str, Any]] = []
+        rounds_log: list[dict[str, Any]] = []
 
         for round_no in range(1, max_rounds + 1):
             issues = self._collect_issues(context)
@@ -161,7 +161,7 @@ class CorrectorAgent(BaseAgent):
 
         confidence = (fixed / attempted) if attempted else 0.8
         rev = self.commit(context, f"corrections ({fixed}/{attempted})")
-        output: Dict[str, Any] = {
+        output: dict[str, Any] = {
             "issues": attempted,
             "fixed": fixed,
             "remaining": len(local["issues"]),
@@ -178,7 +178,7 @@ class CorrectorAgent(BaseAgent):
 
     # -------------------------------------------------------------- internals
     @staticmethod
-    def _is_valid(context: Dict[str, Any]) -> bool:
+    def _is_valid(context: dict[str, Any]) -> bool:
         """Verdict VALID présent dans le contexte ? (self_verifier + local)."""
         verification = context.get("verification") or {}
         if not isinstance(verification, dict):
@@ -188,7 +188,7 @@ class CorrectorAgent(BaseAgent):
             passed = verification.get("self", {}).get("passed", True)
         return bool(passed)
 
-    def _build_optimizer(self) -> Tuple[Optional[Any], str]:
+    def _build_optimizer(self) -> tuple[Any | None, str]:
         """Construit un AutonomousOptimizer réel (LLM + RL + world model)."""
         mods = try_import("services.ai_engine.autonomous_optimizer", [
             "AutonomousOptimizer", "FastEvaluator", "ProposerLLM",
@@ -204,7 +204,7 @@ class CorrectorAgent(BaseAgent):
                 return None, "fallback_noop"
         try:
             evaluator = cls_eval() if cls_eval is not None else None
-            proposers: List[Any] = []
+            proposers: list[Any] = []
             proposer_llm = mods.get("ProposerLLM")
             if proposer_llm is not None:
                 try:
@@ -234,8 +234,8 @@ class CorrectorAgent(BaseAgent):
             self.log.debug("construction optimizer échouée: %s", exc)
             return None, "fallback_noop"
 
-    def _collect_issues(self, context: Dict[str, Any]) -> List[str]:
-        issues: List[str] = []
+    def _collect_issues(self, context: dict[str, Any]) -> list[str]:
+        issues: list[str] = []
         verification = context.get("verification") or {}
         if isinstance(verification, dict):
             for key in ("self", "physical", "local"):
@@ -245,10 +245,10 @@ class CorrectorAgent(BaseAgent):
                     if text and text not in issues:
                         issues.append(text)
         if not issues:
-            issues.extend((context.get("last_self_issues") or []))
+            issues.extend(context.get("last_self_issues") or [])
         return issues
 
-    def _fix_issue(self, graph: Any, issue: str, context: Dict[str, Any]) -> bool:
+    def _fix_issue(self, graph: Any, issue: str, context: dict[str, Any]) -> bool:
         lowered = issue.lower()
         try:
             if "overlap" in lowered or "recouvr" in lowered:
@@ -318,9 +318,9 @@ class CorrectorAgent(BaseAgent):
         except Exception:
             return 0
 
-    def _reroute_nets(self, graph: Any, net_ids: List[str],
+    def _reroute_nets(self, graph: Any, net_ids: list[str],
                       clearance: float, grid_step: float,
-                      widths: Dict[str, float]) -> bool:
+                      widths: dict[str, float]) -> bool:
         """Re-route les nets donnés avec un maze à clearance renforcée."""
         mods_maze = try_import("services.router.geometrical", ["MazeRouter"])
         mods_route = try_import("services.router.route_optimizer", ["route_net_segments"])
@@ -329,7 +329,7 @@ class CorrectorAgent(BaseAgent):
         if maze_cls is None or route_fn is None:
             return False
         nets = get_field(graph, "nets", default={}) or {}
-        layers = tuple(l.index for l in graph.layers if l.ltype in ("signal", "mixed")) or (0, 1)
+        layers = tuple(ly.index for ly in graph.layers if ly.ltype in ("signal", "mixed")) or (0, 1)
         maze = maze_cls(board_size=get_field(graph, "board_size", default=(60.0, 40.0)),
                         grid_step=grid_step, clearance=clearance)
         changed = False
@@ -348,7 +348,7 @@ class CorrectorAgent(BaseAgent):
         return changed
 
     def _fix_trace_clearance(self, graph: Any, net_a: str, net_b: str,
-                             context: Dict[str, Any]) -> bool:
+                             context: dict[str, Any]) -> bool:
         """Chaîne de stratégies DRC pas fin : neck-down → re-routage renforcé.
 
         Chaque stratégie est validée par un comptage DRC réel ; si aucune
@@ -367,7 +367,7 @@ class CorrectorAgent(BaseAgent):
             snapshot = None
 
         # ---- stratégie 1 : neck-down vers le minimum de fabrication
-        widths: Dict[str, float] = {}
+        widths: dict[str, float] = {}
         nets = get_field(graph, "nets", default={}) or {}
         for net_id in net_ids:
             net = nets.get(net_id)
@@ -416,7 +416,7 @@ class CorrectorAgent(BaseAgent):
         return False
 
     @staticmethod
-    def _restore(graph: Any, snapshot: Optional[Dict[str, Any]]) -> None:
+    def _restore(graph: Any, snapshot: dict[str, Any] | None) -> None:
         """Restaure le graphe en place depuis un snapshot to_dict()."""
         if not snapshot:
             return
@@ -450,7 +450,7 @@ class CorrectorAgent(BaseAgent):
             set_field(comp_b, "y", new_y)
             return True
 
-    def _fix_unrouted(self, graph: Any, issue: str, context: Dict[str, Any]) -> bool:
+    def _fix_unrouted(self, graph: Any, issue: str, context: dict[str, Any]) -> bool:
         # tentative RouterEngine (routage ciblé = re-passe complète)
         mods = try_import("services.router", ["RouterEngine"])
         cls = mods.get("RouterEngine")
@@ -519,7 +519,7 @@ class CorrectorAgent(BaseAgent):
             return True
 
 
-def _quality_of(context: Dict[str, Any]) -> float:
+def _quality_of(context: dict[str, Any]) -> float:
     verification = context.get("verification") or {}
     quality = verification.get("quality") or {}
     total = quality.get("total")

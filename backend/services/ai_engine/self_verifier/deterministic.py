@@ -5,15 +5,14 @@ Travaille par duck-typing sur l'interface DesignGraph du contrat (agent 2-a).
 """
 from __future__ import annotations
 
-import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
 log = get_logger("ai_engine.verify.deterministic")
 
 
-def _board_extents(graph) -> Optional[Tuple[float, float]]:  # noqa: ANN001
+def _board_extents(graph) -> tuple[float, float] | None:  # noqa: ANN001
     """Dimensions de carte (w,h) si détectables, sinon None."""
     bs = getattr(graph, "board_size", None)
     if isinstance(bs, (tuple, list)) and len(bs) >= 2:
@@ -42,15 +41,15 @@ def _board_extents(graph) -> Optional[Tuple[float, float]]:  # noqa: ANN001
     return None
 
 
-def _rotated_bbox(comp) -> Tuple[float, float]:  # noqa: ANN001
+def _rotated_bbox(comp) -> tuple[float, float]:  # noqa: ANN001
     """(w,h) effectifs selon la rotation (swap à 90/270)."""
     w, h = comp.bbox
     rot = float(getattr(comp, "rotation", 0.0) or 0.0) % 180
     return (h, w) if rot == 90.0 else (w, h)
 
 
-def _bbox_overlap(a: Tuple[float, float, float, float],
-                  b: Tuple[float, float, float, float]) -> bool:
+def _bbox_overlap(a: tuple[float, float, float, float],
+                  b: tuple[float, float, float, float]) -> bool:
     """Overlap AABB : (x, y, w, h) avec (x,y) = coin bas-gauche."""
     ax, ay, aw, ah = a
     bx, by, bw, bh = b
@@ -58,9 +57,9 @@ def _bbox_overlap(a: Tuple[float, float, float, float],
                 ay + ah <= by or by + bh <= ay)
 
 
-def check_deterministic(graph) -> List[Dict[str, Any]]:  # noqa: ANN001
+def check_deterministic(graph) -> list[dict[str, Any]]:  # noqa: ANN001
     """Checks purs (pas de simulation) : board, overlap, keepout, connectivité."""
-    issues: List[Dict[str, Any]] = []
+    issues: list[dict[str, Any]] = []
     components = dict(getattr(graph, "components", {}) or {})
     nets = dict(getattr(graph, "nets", {}) or {})
     board = _board_extents(graph)
@@ -102,7 +101,7 @@ def check_deterministic(graph) -> List[Dict[str, Any]]:  # noqa: ANN001
                 })
 
     # 3) nets non connectés : pins sans net + nets avec < 2 pins
-    pin_to_net: Dict[Tuple[str, str], str] = {}
+    pin_to_net: dict[tuple[str, str], str] = {}
     for net_id, net in nets.items():
         pins = list(getattr(net, "pins", []) or [])
         if len(pins) < 2 and net_id not in ("GND", "3V3", "5V"):

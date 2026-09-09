@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Tuple
+from datetime import UTC, datetime
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -33,27 +33,27 @@ class SurrogateDataset:
         return os.path.join(self.root, f"{self.kind}.jsonl")
 
     # ----------------------------------------------------------------- écriture
-    def append(self, features: Dict[str, float], value: float,
-               meta: Dict[str, Any] | None = None) -> None:
+    def append(self, features: dict[str, float], value: float,
+               meta: dict[str, Any] | None = None) -> None:
         """Ajoute un échantillon (crée le dossier si besoin)."""
         os.makedirs(self.root, exist_ok=True)
         row = {
             "features": {k: float(v) for k, v in features.items()},
             "value": float(value),
             "meta": meta or {},
-            "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "ts": datetime.now(UTC).isoformat(timespec="seconds"),
         }
         with open(self.path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     # ------------------------------------------------------------------ lecture
-    def load(self) -> Tuple[List[Dict[str, float]], List[float]]:
+    def load(self) -> tuple[list[dict[str, float]], list[float]]:
         """(features[], values[]) — lignes corrompues ignorées avec warning."""
-        features: List[Dict[str, float]] = []
-        values: List[float] = []
+        features: list[dict[str, float]] = []
+        values: list[float] = []
         if not os.path.exists(self.path):
             return features, values
-        with open(self.path, "r", encoding="utf-8") as fh:
+        with open(self.path, encoding="utf-8") as fh:
             for line in fh:
                 line = line.strip()
                 if not line:

@@ -1,19 +1,19 @@
 """Route composants — recherche dans la librairie (ComponentLibMatcher)."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from shared.utilities import get_logger
 
 from orchestrator.common import call_probe, get_field, try_import
-from shared.utilities import get_logger
 
 log = get_logger("api.components")
 
 router = APIRouter(prefix="/api/v1/components", tags=["components"])
 
 # Mini-catalogue de repli (dev / services.parser absent)
-_FALLBACK_CATALOG: List[Dict[str, Any]] = [
+_FALLBACK_CATALOG: list[dict[str, Any]] = [
     {"mpn": "ESP32-WROOM-32E", "value": "ESP32", "footprint": "ESP32-WROOM-32E",
      "description": "MCU WiFi+BT dual-core 240 MHz", "manufacturer": "Espressif", "price_usd": 3.1,
      "pads": 38},
@@ -34,7 +34,7 @@ _FALLBACK_CATALOG: List[Dict[str, Any]] = [
 ]
 
 
-def _normalize(entry: Any) -> Dict[str, Any]:
+def _normalize(entry: Any) -> dict[str, Any]:
     if isinstance(entry, dict):
         return {
             "mpn": str(entry.get("mpn") or entry.get("part_number") or ""),
@@ -64,7 +64,7 @@ def _matcher() -> Any:
         return cls()
 
 
-def _search(query: str) -> List[Dict[str, Any]]:
+def _search(query: str) -> list[dict[str, Any]]:
     matcher = _matcher()
     if matcher is None:
         lowered = query.lower()
@@ -81,7 +81,7 @@ def _search(query: str) -> List[Dict[str, Any]]:
     return [r for r in results if r.get("mpn")]
 
 
-def json_text(entry: Dict[str, Any]) -> str:
+def json_text(entry: dict[str, Any]) -> str:
     import json
 
     return json.dumps(entry, default=str).lower()
@@ -89,14 +89,14 @@ def json_text(entry: Dict[str, Any]) -> str:
 
 @router.get("/search")
 async def search_components(request: Request, q: str = Query(..., min_length=1),
-                            limit: int = 20) -> Dict[str, Any]:
+                            limit: int = 20) -> dict[str, Any]:
     """Recherche de composants par mots-clés / MPN / description."""
     results = _search(q)[: max(1, min(limit, 100))]
     return {"query": q, "count": len(results), "results": results}
 
 
 @router.get("/{mpn}")
-async def get_component(mpn: str, request: Request) -> Dict[str, Any]:
+async def get_component(mpn: str, request: Request) -> dict[str, Any]:
     """Fiche d'un composant par MPN exact (ou meilleur match)."""
     results = _search(mpn)
     for entry in results:

@@ -7,13 +7,12 @@ configurées du constraint_engine, ou des ParametricConstraint génériques.
 from __future__ import annotations
 
 import re
-from typing import List, Optional
 
 from shared.utilities import get_logger
 
+from services.design_core.constraint_engine.cost import MaxCostUSD
 from services.design_core.constraint_engine.electrical import ImpedanceTarget, MinTraceWidth
 from services.design_core.constraint_engine.engine import BaseConstraint, Violation
-from services.design_core.constraint_engine.cost import MaxCostUSD
 from services.design_core.constraint_engine.thermal import ThermalHotspot
 from services.design_core.design_graph.graph import DesignGraph
 
@@ -34,8 +33,8 @@ class ParametricConstraint(BaseConstraint):
         self.spec = dict(spec)
         self.phrase = phrase
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
-        violations: List[Violation] = []
+    def check(self, graph: DesignGraph) -> list[Violation]:
+        violations: list[Violation] = []
         # nombre de couches demandé
         n_layers = self.spec.get("n_layers")
         if n_layers is not None and len(graph.layers) != int(n_layers):
@@ -45,11 +44,11 @@ class ParametricConstraint(BaseConstraint):
             ))
         # plan de masse exigé
         if self.spec.get("require_ground_plane") and not any(
-            l.ltype == "ground" for l in graph.layers
+            ly.ltype == "ground" for ly in graph.layers
         ):
             violations.append(self.violation(
                 "aucune couche de plan de masse (ltype='ground') dans le stackup",
-                location={"layers": [l.name for l in graph.layers]},
+                location={"layers": [ly.name for ly in graph.layers]},
             ))
         return violations
 
@@ -59,7 +58,7 @@ class ParametricConstraint(BaseConstraint):
 
 _NUM = r"(\d+(?:[.,]\d+)?)"
 
-_PATTERNS: List[tuple] = [
+_PATTERNS: list[tuple] = [
     # (regex, builder(phrase, match) -> contrainte | None)
     (re.compile(rf"(\d+)\s*couches|\b{_NUM}\s*layers?\b", re.I),
      lambda phrase, m: ParametricConstraint(
@@ -82,7 +81,7 @@ _PATTERNS: List[tuple] = [
 ]
 
 
-def _min_trace(value: Optional[str], phrase: str) -> MinTraceWidth:
+def _min_trace(value: str | None, phrase: str) -> MinTraceWidth:
     c = MinTraceWidth(min_width_mm=float((value or "0.2").replace(",", ".")))
     c.description = f"largeur de piste minimale extraite de : {phrase!r}"
     return c
@@ -97,9 +96,9 @@ def _fabricator(name: str, phrase: str) -> MinTraceWidth:
     return c
 
 
-def extract(text: str) -> List[BaseConstraint]:
+def extract(text: str) -> list[BaseConstraint]:
     """Détecte les contraintes citées dans `text` et retourne les instances configurées."""
-    constraints: List[BaseConstraint] = []
+    constraints: list[BaseConstraint] = []
     if not text or not text.strip():
         return constraints
     for pattern, builder in _PATTERNS:

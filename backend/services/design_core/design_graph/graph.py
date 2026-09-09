@@ -8,21 +8,17 @@ from __future__ import annotations
 
 import copy
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence, Tuple
-
-from shared.geometry import Point, RoutePath
+from typing import Any
 
 from services.design_core.design_graph.components import (
-    FOOTPRINT_BBOX,
-    DEFAULT_BBOX,
     Component,
     Pad,
     default_bbox_for_footprint,
     implicit_pad_layout,
 )
 from services.design_core.design_graph.geometry import (
-    BBoxTuple,
     Keepout,
     bbox_area,
     component_bbox_mm,
@@ -41,11 +37,11 @@ class DesignGraph:
 
     project_id: str = ""
     name: str = "untitled"
-    board_size: Tuple[float, float] = (100.0, 80.0)      # mm (w, h)
-    layers: List[Layer] = field(default_factory=make_default_stackup)
-    components: Dict[str, Component] = field(default_factory=dict)
-    nets: Dict[str, Net] = field(default_factory=dict)
-    keepouts: List[Keepout] = field(default_factory=list)
+    board_size: tuple[float, float] = (100.0, 80.0)      # mm (w, h)
+    layers: list[Layer] = field(default_factory=make_default_stackup)
+    components: dict[str, Component] = field(default_factory=dict)
+    nets: dict[str, Net] = field(default_factory=dict)
+    keepouts: list[Keepout] = field(default_factory=list)
 
     # ------------------------------------------------------------------ composants
     def add_component(
@@ -58,10 +54,10 @@ class DesignGraph:
         y: float = 0.0,
         rotation: float = 0.0,
         side: str = "top",
-        bbox: Optional[Tuple[float, float]] = None,
+        bbox: tuple[float, float] | None = None,
         power_w: float = 0.0,
         price_usd: float = 0.0,
-        pads: Optional[List[Pad]] = None,
+        pads: list[Pad] | None = None,
         placed: bool = False,
     ) -> Component:
         """Ajoute (ou remplace) un composant ; bbox déduite du footprint si absente."""
@@ -83,7 +79,7 @@ class DesignGraph:
         except KeyError:
             raise KeyError(f"composant '{ref}' absent du design graph") from None
 
-    def place(self, ref: str, x: float, y: float, rotation: Optional[float] = None) -> Component:
+    def place(self, ref: str, x: float, y: float, rotation: float | None = None) -> Component:
         """Positionne un composant (placé=True) ; les pads suivent (offsets relatifs)."""
         comp = self.get(ref)
         comp.x, comp.y = float(x), float(y)
@@ -92,20 +88,20 @@ class DesignGraph:
         comp.placed = True
         return comp
 
-    def placed_components(self) -> List[Component]:
+    def placed_components(self) -> list[Component]:
         """Composants effectivement placés."""
         return [c for c in self.components.values() if c.placed]
 
     # ---------------------------------------------------------------------- nets
     def add_net(
         self,
-        net_id: Optional[str] = None,
+        net_id: str | None = None,
         name: str = "",
         class_name: str = "default",
-        pins: Optional[List[Tuple[str, str]]] = None,
-        impedance_target_ohm: Optional[float] = None,
-        max_length_mm: Optional[float] = None,
-        matched_group: Optional[str] = None,
+        pins: list[tuple[str, str]] | None = None,
+        impedance_target_ohm: float | None = None,
+        max_length_mm: float | None = None,
+        matched_group: str | None = None,
     ) -> Net:
         """Ajoute un net ; ID auto "N1", "N2"... si net_id est None."""
         if net_id is None:
@@ -150,7 +146,7 @@ class DesignGraph:
             net.pins.append((ref, pad))
         return net
 
-    def net_of(self, ref: str, pad: str) -> Optional[Net]:
+    def net_of(self, ref: str, pad: str) -> Net | None:
         """Net auquel est rattaché le pad (ref, pad), None si non connecté."""
         comp = self.components.get(ref)
         if comp is None:
@@ -160,7 +156,7 @@ class DesignGraph:
             return None
         return self.nets.get(pin.net_id)
 
-    def unrouted_nets(self) -> List[Net]:
+    def unrouted_nets(self) -> list[Net]:
         """Nets non routés (au moins 2 pins, sans path valide)."""
         return [
             n for n in self.nets.values()
@@ -174,7 +170,7 @@ class DesignGraph:
         self.keepouts.append(keepout)
         return keepout
 
-    def violates_keepouts(self, x: float, y: float, w: float, h: float) -> List[Keepout]:
+    def violates_keepouts(self, x: float, y: float, w: float, h: float) -> list[Keepout]:
         """Keepouts violés par une bbox centrée en (x, y) — test 'contains' sur les coins."""
         corners = corners_of(x, y, w, h)
         return [k for k in self.keepouts if any(k.polygon.contains(c) for c in corners)]
@@ -194,7 +190,7 @@ class DesignGraph:
         used = sum(bbox_area(component_bbox_mm(c)) for c in self.placed_components())
         return used / board_area
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Indicateurs synthétiques du design (dashboard, LLM, versioning)."""
         return {
             "components": len(self.components),
@@ -207,20 +203,20 @@ class DesignGraph:
         }
 
     # ------------------------------------------------------------- sérialisation
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Snapshot complet JSON-compatible (source des révisions)."""
         return {
             "project_id": self.project_id,
             "name": self.name,
             "board_size": [self.board_size[0], self.board_size[1]],
-            "layers": [l.to_dict() for l in self.layers],
+            "layers": [ly.to_dict() for ly in self.layers],
             "components": [c.to_dict() for c in self.components.values()],
             "nets": [n.to_dict() for n in self.nets.values()],
             "keepouts": [k.to_dict() for k in self.keepouts],
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "DesignGraph":
+    def from_dict(cls, d: dict[str, Any]) -> DesignGraph:
         """Reconstruit un DesignGraph depuis un snapshot (clés manquantes = défauts)."""
         board = d.get("board_size", d.get("board_size_mm")) or [100.0, 80.0]
         graph = cls(
@@ -228,7 +224,7 @@ class DesignGraph:
             name=str(d.get("name", "untitled") or "untitled"),
             board_size=(float(board[0]), float(board[1])),
         )
-        graph.layers = [Layer.from_dict(l) for l in d.get("layers", [])] or make_default_stackup()
+        graph.layers = [Layer.from_dict(ly) for ly in d.get("layers", [])] or make_default_stackup()
         for c in d.get("components", []):
             comp = Component.from_dict(c)
             graph.components[comp.ref] = comp
@@ -239,7 +235,7 @@ class DesignGraph:
             graph.keepouts.append(Keepout.from_dict(k))
         return graph
 
-    def copy(self) -> "DesignGraph":
+    def copy(self) -> DesignGraph:
         """Copie profonde (le design core reste la seule source de vérité mutable)."""
         return copy.deepcopy(self)
 
@@ -247,7 +243,12 @@ class DesignGraph:
     def to_schema(self) -> Any:
         """Convertit vers le DesignSchema pydantic de shared/schemas (API/snapshot filaire)."""
         from shared.schemas.design_schemas import (  # import local (pydantic optionnel ici)
-            ComponentSchema, LayerSchema, LayerType, NetSchema, PadSchema, DesignSchema,
+            ComponentSchema,
+            DesignSchema,
+            LayerSchema,
+            LayerType,
+            NetSchema,
+            PadSchema,
         )
 
         def _layer_type(ltype: str) -> Any:
@@ -261,9 +262,9 @@ class DesignGraph:
             name=self.name,
             board_size_mm=self.board_size,
             layers=[
-                LayerSchema(index=l.index, name=l.name, type=_layer_type(l.ltype),
-                            thickness_um=l.thickness_um, er=l.er)
-                for l in self.layers
+                LayerSchema(index=ly.index, name=ly.name, type=_layer_type(ly.ltype),
+                            thickness_um=ly.thickness_um, er=ly.er)
+                for ly in self.layers
             ],
             components=[
                 ComponentSchema(
@@ -290,7 +291,7 @@ class DesignGraph:
         )
 
     @classmethod
-    def from_schema(cls, schema: Any) -> "DesignGraph":
+    def from_schema(cls, schema: Any) -> DesignGraph:
         """Reconstruit le graphe depuis un DesignSchema (model_dump tolérant).
 
         Note : la représentation filaire ne porte pas `placed` ni `path` ;

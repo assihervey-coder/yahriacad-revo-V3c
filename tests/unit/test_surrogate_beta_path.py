@@ -101,7 +101,7 @@ def test_headline_value_extraction():
 
 def test_beta_result_passed_threshold():
     """Le verdict β compare la valeur prédite à la limite du simulateur."""
-    from services.simulator.surrogate_models.beta_path import _beta_result, _beta_passed
+    from services.simulator.surrogate_models.beta_path import _beta_passed, _beta_result
 
     sim = ThermalSim()  # max_temp_c = 85 par défaut
     assert _beta_passed("thermal", 84.0, sim) is True

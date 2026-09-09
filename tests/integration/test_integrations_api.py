@@ -168,10 +168,10 @@ def test_proposals_requires_existing_project(client):
 def test_proposals_gate_and_flow(client):
     """Porte VALID + exécution réelle de l'optimizer sur un design routé."""
     # design réel : NL → SKIDL → placement → routage
+    from orchestrator.state_manager import DesignStateManager, ProjectState
     from services.parser import NLToSkidl
     from services.placement_engine.initial_placement import InitialPlacer
     from services.router.engine import RouterEngine
-    from orchestrator.state_manager import DesignStateManager, ProjectState
 
     state = ProjectState.create("proposals_it", tenant_id="default", user_id="anon")
     sk = NLToSkidl(None)

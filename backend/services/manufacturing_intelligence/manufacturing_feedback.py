@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -30,10 +30,10 @@ class ProfileAdjustment:
     """Ajustement proposé pour une contrainte/une règle de profil."""
 
     constraint_id: str
-    adjustment: Dict[str, float] = field(default_factory=dict)
+    adjustment: dict[str, float] = field(default_factory=dict)
 
 
-def _violations(dfm_report: Any) -> List[Dict[str, Any]]:
+def _violations(dfm_report: Any) -> list[dict[str, Any]]:
     """Extrait la liste des violations (dict {violations: [...]} ou liste brute)."""
     if isinstance(dfm_report, dict):
         for key in ("violations", "issues", "dfm_violations"):
@@ -48,9 +48,9 @@ def _violations(dfm_report: Any) -> List[Dict[str, Any]]:
 class ManufacturingFeedback:
     """Transforme un rapport DFM en ajustements de règles, puis boucle l'event."""
 
-    def from_dfm_report(self, dfm_report: Any) -> List[ProfileAdjustment]:
+    def from_dfm_report(self, dfm_report: Any) -> list[ProfileAdjustment]:
         """Rapport DFM → ajustements de contraintes (marges resserrées/élargies)."""
-        adjustments: List[ProfileAdjustment] = []
+        adjustments: list[ProfileAdjustment] = []
         for v in _violations(dfm_report):
             if not isinstance(v, dict):
                 continue
@@ -67,8 +67,8 @@ class ManufacturingFeedback:
         log.info("feedback DFM: %d ajustement(s) proposé(s)", len(adjustments))
         return adjustments
 
-    def apply_to_rules(self, rules: Dict[str, Any],
-                       adjustments: List[ProfileAdjustment]) -> Dict[str, Any]:
+    def apply_to_rules(self, rules: dict[str, Any],
+                       adjustments: list[ProfileAdjustment]) -> dict[str, Any]:
         """Resserre les règles : min_* montent, max_* descendent (jamais d'assouplissement)."""
         out = dict(rules)
         for adj in adjustments:
@@ -88,8 +88,8 @@ class ManufacturingFeedback:
                     out[key] = delta
         return out
 
-    def feedback_loop(self, dfm_report: Any, rules: Dict[str, Any],
-                      project_id: str = "") -> Dict[str, Any]:
+    def feedback_loop(self, dfm_report: Any, rules: dict[str, Any],
+                      project_id: str = "") -> dict[str, Any]:
         """Passe complète : ajustements → règles resserrées → event constraint_bus."""
         adjustments = self.from_dfm_report(dfm_report)
         new_rules = self.apply_to_rules(rules, adjustments)

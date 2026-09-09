@@ -7,10 +7,8 @@ chaque composant converge vers le centroïde de ses voisins connectés.
 from __future__ import annotations
 
 import random
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 log = get_logger("ai_engine.training.data_generator")
@@ -36,9 +34,9 @@ def _random_graph(n_components: int, rng: random.Random):
     graph = DesignGraph()
     board_w, board_h = 60.0, 40.0
 
-    refs: List[str] = []
-    counters: Dict[str, int] = {}
-    for i in range(n_components):
+    refs: list[str] = []
+    counters: dict[str, int] = {}
+    for _ in range(n_components):
         prefix, w, h, power, price = rng.choice(_PARTS)
         counters[prefix] = counters.get(prefix, 0) + 1
         ref = f"{prefix}{counters[prefix]}"
@@ -69,9 +67,9 @@ def _random_graph(n_components: int, rng: random.Random):
 
 
 def _centroid_optimize(graph, sweeps: int = 25,
-                       lr: float = 0.6) -> Dict[str, Tuple[float, float]]:  # noqa: ANN001
+                       lr: float = 0.6) -> dict[str, tuple[float, float]]:  # noqa: ANN001
     """Positions optimales approximées : chaque comp → centroïde de ses voisins."""
-    adjacency: Dict[str, List[str]] = {ref: [] for ref in graph.components}
+    adjacency: dict[str, list[str]] = {ref: [] for ref in graph.components}
     for net in graph.nets.values():
         refs = sorted({str(pin[0]) for pin in (getattr(net, "pins", []) or [])
                        if isinstance(pin, (list, tuple)) and len(pin) >= 2})
@@ -94,8 +92,8 @@ def _centroid_optimize(graph, sweeps: int = 25,
     return pos
 
 
-def generate_placement_episode(n_components: int = 10, seed: Optional[int] = None
-                               ) -> Tuple[object, Dict[str, Tuple[float, float]]]:
+def generate_placement_episode(n_components: int = 10, seed: int | None = None
+                               ) -> tuple[object, dict[str, tuple[float, float]]]:
     """Un épisode : (DesignGraph aléatoire, positions optimales approximées).
 
     Le graphe retourné a des positions INITIALES aléatoires ; les positions
@@ -109,8 +107,8 @@ def generate_placement_episode(n_components: int = 10, seed: Optional[int] = Non
     return graph, optimal
 
 
-def generate_batch(n: int, n_components: int = 10, seed: Optional[int] = None
-                   ) -> List[Tuple[object, Dict[str, Tuple[float, float]]]]:
+def generate_batch(n: int, n_components: int = 10, seed: int | None = None
+                   ) -> list[tuple[object, dict[str, tuple[float, float]]]]:
     """Lot de n épisodes (seeds décalés pour la variété reproductible)."""
     base = seed if seed is not None else int(np.random.randint(0, 2**31 - 1))
     return [generate_placement_episode(n_components, seed=base + i)

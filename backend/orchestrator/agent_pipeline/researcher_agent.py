@@ -3,15 +3,16 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, List
+from typing import Any
 
-from orchestrator.agent_pipeline.base import BaseAgent
-from orchestrator.common import call_probe, get_field, try_import
 from shared.contracts import AgentRole
 from shared.schemas import AgentResultSchema
 
+from orchestrator.agent_pipeline.base import BaseAgent
+from orchestrator.common import call_probe, try_import
+
 # Mots-clés techniques → fiche de connaissances statique (repli hors-RAG)
-_KNOWLEDGE: List[Dict[str, str]] = [
+_KNOWLEDGE: list[dict[str, str]] = [
     {"kw": "esp32", "answer": "ESP32-WROOM-32E: MCU dual-core 240 MHz, WiFi+BT, 38 pads, "
                               "alim 3.3V, ~80-260 mA en TX — prévoir découplage 10µF+100nF et "
                               "antenne en bord de carte (keepout 8mm)."},
@@ -41,7 +42,7 @@ class ResearcherAgent(BaseAgent):
     def supports(self, action: str) -> bool:
         return action in ("research", "research_components", "", "delegate")
 
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         message = str(context.get("message") or "")
         params = context.get("params") or {}
         question = str(params.get("research_question") or message or "composants du projet")
@@ -83,12 +84,12 @@ class ResearcherAgent(BaseAgent):
             "source": source,
         }
         context["research"] = research
-        params_out = {"sources": [source], "topics": self._topics(question)}
+        {"sources": [source], "topics": self._topics(question)}
         self.record_decision(context, "research", answer[:200], confidence=0.7)
         return self.succeeded(context, research, confidence=0.7 if source == "rag" else 0.55,
                               rationale=f"recherche via {source}")
 
-    def _topics(self, question: str) -> List[str]:
+    def _topics(self, question: str) -> list[str]:
         lowered = question.lower()
         topics = []
         for entry in _KNOWLEDGE:

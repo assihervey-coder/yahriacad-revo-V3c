@@ -3,21 +3,21 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
+from shared.utilities import get_logger, new_id
 
 from api_gateway.deps import get_tenant, get_user_id, load_project_graph
 from orchestrator.common import call_probe, get_field, try_import
-from shared.utilities import get_logger, new_id
 
 log = get_logger("api.simulations")
 
 router = APIRouter(prefix="/api/v1/simulations", tags=["simulations"])
 
 # registre en mémoire : (project_id, job_id) → résultat
-_JOBS: Dict[tuple, Dict[str, Any]] = {}
+_JOBS: dict[tuple, dict[str, Any]] = {}
 
 _KIND_MAP = [
     ("thermal", "services.simulator", "ThermalSim"),
@@ -28,10 +28,10 @@ _KIND_MAP = [
 
 
 class SimulationRequest(BaseModel):
-    kinds: List[str] = Field(default_factory=lambda: ["thermal", "si", "pi", "em"])
+    kinds: list[str] = Field(default_factory=lambda: ["thermal", "si", "pi", "em"])
 
 
-def _run_kind(kind: str, module_name: str, class_name: str, graph: Any) -> Dict[str, Any]:
+def _run_kind(kind: str, module_name: str, class_name: str, graph: Any) -> dict[str, Any]:
     cls = try_import(module_name, [class_name]).get(class_name)
     if cls is None:
         return {"skipped": True, "passed": True, "reason": f"{module_name}.{class_name} absent"}
@@ -49,10 +49,10 @@ def _run_kind(kind: str, module_name: str, class_name: str, graph: Any) -> Dict[
         return {"skipped": True, "passed": True, "error": str(exc)[:200]}
 
 
-async def _run_all(project_id: str, job_id: str, graph: Any, kinds: List[str]) -> None:
+async def _run_all(project_id: str, job_id: str, graph: Any, kinds: list[str]) -> None:
     entry = _JOBS[(project_id, job_id)]
     entry["status"] = "running"
-    results: Dict[str, Any] = {}
+    results: dict[str, Any] = {}
     for kind, module_name, class_name in _KIND_MAP:
         if kind not in kinds:
             continue
@@ -68,14 +68,14 @@ async def _run_all(project_id: str, job_id: str, graph: Any, kinds: List[str]) -
 
 
 @router.get("/surrogates/status")
-async def surrogates_status() -> Dict[str, Any]:
+async def surrogates_status() -> dict[str, Any]:
     """État β des surrogates neuronaux (échantillons, entraînement, R², latence)."""
     try:
         from services.simulator.surrogate_models.manager import get_manager
 
         manager = get_manager()
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"surrogates indisponibles: {exc}")
+        raise HTTPException(status_code=503, detail=f"surrogates indisponibles: {exc}") from exc
     return {
         "beta": True,
         "description": "inférence rapide à la place du solveur complet (bêta)",
@@ -85,14 +85,14 @@ async def surrogates_status() -> Dict[str, Any]:
 
 
 @router.post("/surrogates/train")
-async def surrogates_train() -> Dict[str, Any]:
+async def surrogates_train() -> dict[str, Any]:
     """Entraîne tous les surrogates disposant d'assez d'échantillons."""
     try:
         from services.simulator.surrogate_models.manager import get_manager
 
         manager = get_manager()
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"surrogates indisponibles: {exc}")
+        raise HTTPException(status_code=503, detail=f"surrogates indisponibles: {exc}") from exc
     trained = manager.train_all()
     # persiste dans le registre de modèles (rechargé au démarrage)
     saved_to = None
@@ -110,7 +110,7 @@ async def surrogates_train() -> Dict[str, Any]:
 
 @router.post("/{project_id}")
 async def start_simulation(project_id: str, payload: SimulationRequest,
-                           request: Request) -> Dict[str, Any]:
+                           request: Request) -> dict[str, Any]:
     """Lance les simulations en arrière-plan et retourne un job_id immédiatement."""
     graph, revision = load_project_graph(project_id, get_tenant(request), get_user_id(request))
     if graph is None:
@@ -126,7 +126,7 @@ async def start_simulation(project_id: str, payload: SimulationRequest,
 
 
 @router.get("/{project_id}/{job_id}")
-async def get_simulation(project_id: str, job_id: str, request: Request) -> Dict[str, Any]:
+async def get_simulation(project_id: str, job_id: str, request: Request) -> dict[str, Any]:
     """Résultats d'une simulation lancée précédemment."""
     entry = _JOBS.get((project_id, job_id))
     if entry is None:
@@ -135,7 +135,7 @@ async def get_simulation(project_id: str, job_id: str, request: Request) -> Dict
 
 
 @router.get("/{project_id}")
-async def list_simulations(project_id: str, request: Request) -> Dict[str, Any]:
+async def list_simulations(project_id: str, request: Request) -> dict[str, Any]:
     """Liste des simulations du projet."""
     sims = [{"job_id": jid, "status": entry["status"], "kinds": entry["kinds"],
              "passed": entry.get("passed")}

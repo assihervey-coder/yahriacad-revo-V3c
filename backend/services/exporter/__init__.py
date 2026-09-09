@@ -1,5 +1,5 @@
 """exporter — Gerber RS-274X, ODB++, IPC-2581, BOM, Pick&Place, package usine."""
-from typing import Any, Dict
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -29,7 +29,7 @@ _VALID_FORMATS = {"gerber", "odb", "ipc2581", "bom", "pickplace", "package"}
 class ExportFacade:
     """Façade unique d'export : un DesignGraph → dict[fichier, contenu]."""
 
-    def export(self, graph: Any, fmt: str) -> Dict[str, Any]:
+    def export(self, graph: Any, fmt: str) -> dict[str, Any]:
         """Exporte selon fmt ∈ {gerber, odb, ipc2581, bom, pickplace, package}."""
         key = (fmt or "").strip().lower()
         if key == "gerber":
@@ -50,6 +50,6 @@ class ExportFacade:
         raise ValueError(f"format d'export inconnu: {fmt!r} — attendu parmi {sorted(_VALID_FORMATS)}")
 
 
-def export(graph: Any, fmt: str) -> Dict[str, Any]:
+def export(graph: Any, fmt: str) -> dict[str, Any]:
     """Raccourci module-level : ExportFacade().export(graph, fmt)."""
     return ExportFacade().export(graph, fmt)

@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
+from shared.contracts import AgentRole
+from shared.schemas import AgentResultSchema
 
 from orchestrator.agent_pipeline.base import BaseAgent
 from orchestrator.common import (
@@ -15,8 +18,6 @@ from orchestrator.common import (
     set_field,
     try_import,
 )
-from shared.contracts import AgentRole
-from shared.schemas import AgentResultSchema
 
 _POWER_ALIASES = {
     "gnd": "GND", "vss": "GND", "agnd": "GND", "pgnd": "GND",
@@ -32,13 +33,13 @@ class SelectorAgent(BaseAgent):
 
     def __init__(self, orchestrator: Any = None) -> None:
         super().__init__(AgentRole.SELECTOR, "selector", orchestrator)
-        self._ref_counters: Dict[str, int] = {}
+        self._ref_counters: dict[str, int] = {}
 
     def supports(self, action: str) -> bool:
         return action in ("select_components", "select", "build_graph", "")
 
     # ------------------------------------------------------------------ main
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         message = str(context.get("message") or "")
         graph = context.get("graph")
         built_with = "existing"
@@ -57,7 +58,7 @@ class SelectorAgent(BaseAgent):
 
         hints = self._hints(context)
         matched, total = 0, 0
-        added: List[str] = []
+        added: list[str] = []
 
         # 3) Sélection via ComponentLibMatcher pour chaque hint
         if hints:
@@ -113,13 +114,13 @@ class SelectorAgent(BaseAgent):
     def _graph_kind(self, graph: Any) -> str:
         return "simple" if isinstance(graph, SimpleDesignGraph) else "design_core"
 
-    def _components_of(self, graph: Any) -> Dict[str, Any]:
+    def _components_of(self, graph: Any) -> dict[str, Any]:
         return get_field(graph, "components", default={}) or {}
 
-    def _nets_of(self, graph: Any) -> Dict[str, Any]:
+    def _nets_of(self, graph: Any) -> dict[str, Any]:
         return get_field(graph, "nets", default={}) or {}
 
-    def _new_graph(self, context: Dict[str, Any]) -> Any:
+    def _new_graph(self, context: dict[str, Any]) -> Any:
         cls = try_import("services.design_core", ["DesignGraph"]).get("DesignGraph")
         if cls is not None:
             try:
@@ -131,7 +132,7 @@ class SelectorAgent(BaseAgent):
                     pass
         return SimpleDesignGraph(project_id=str(context.get("project_id") or "new"))
 
-    def _graph_from_skidl(self, message: str) -> Optional[Any]:
+    def _graph_from_skidl(self, message: str) -> Any | None:
         mods = try_import("services.parser", ["NLToSkidl"])
         cls = mods.get("NLToSkidl")
         if cls is None:
@@ -146,8 +147,8 @@ class SelectorAgent(BaseAgent):
             self.log.debug("NLToSkidl.build_graph indisponible: %s", exc)
         return None
 
-    def _hints(self, context: Dict[str, Any]) -> List[str]:
-        hints: List[str] = []
+    def _hints(self, context: dict[str, Any]) -> list[str]:
+        hints: list[str] = []
         parse_meta = context.get("intent_parse") or {}
         raw = parse_meta.get("component_hints") or []
         intents = context.get("intents")
@@ -172,7 +173,7 @@ class SelectorAgent(BaseAgent):
         except TypeError:
             return cls(self.orchestrator)
 
-    def _match(self, matcher: Any, hint: str) -> Dict[str, Any]:
+    def _match(self, matcher: Any, hint: str) -> dict[str, Any]:
         if matcher is None:
             return {}
         raw = (call_probe(matcher, "match", (hint,))
@@ -192,7 +193,7 @@ class SelectorAgent(BaseAgent):
                     "description": str(get_field(raw, "description", "value", default=""))}
         return {"description": str(raw)}
 
-    def _next_ref(self, selection: Dict[str, Any], hint: str) -> str:
+    def _next_ref(self, selection: dict[str, Any], hint: str) -> str:
         prefix = "U"
         text = f"{hint} {selection.get('mpn', '')} {selection.get('description', '')}".lower()
         if re.search(r"résistance|resistor|\br[0-9]", text):
@@ -208,8 +209,8 @@ class SelectorAgent(BaseAgent):
         self._ref_counters[prefix] = self._ref_counters.get(prefix, 0) + 1
         return f"{prefix}{self._ref_counters[prefix]}"
 
-    def _payload_from(self, selection: Dict[str, Any], hint: str) -> Dict[str, Any]:
-        payload: Dict[str, Any] = {
+    def _payload_from(self, selection: dict[str, Any], hint: str) -> dict[str, Any]:
+        payload: dict[str, Any] = {
             "value": str(selection.get("value") or hint)[:60],
             "mpn": str(selection.get("mpn") or ""),
             "footprint": str(selection.get("footprint") or selection.get("package") or ""),
@@ -221,8 +222,8 @@ class SelectorAgent(BaseAgent):
             payload["pads"] = [str(p.get("name") if isinstance(p, dict) else p) for p in pads][:48]
         return payload
 
-    def _ensure_power_nets(self, graph: Any) -> List[str]:
-        created: List[str] = []
+    def _ensure_power_nets(self, graph: Any) -> list[str]:
+        created: list[str] = []
         nets = self._nets_of(graph)
         for net_id, class_name in (("GND", "power"), ("VCC", "power")):
             if net_id not in nets:
@@ -237,7 +238,7 @@ class SelectorAgent(BaseAgent):
                         pass
         return created
 
-    def _connect_power(self, graph: Any, power_nets: List[str]) -> int:
+    def _connect_power(self, graph: Any, power_nets: list[str]) -> int:
         """Connecte les pads nommés gnd/vcc/vdd/... aux nets d'alimentation."""
         if not power_nets:
             return 0

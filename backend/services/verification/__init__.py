@@ -5,15 +5,15 @@ le Human Surgical Editor. Aucune « estimation à la main » : les règles
 viennent de DesignRules / profils usine, les résultats sont reproductibles.
 """
 from services.verification.design_rules import DesignRules
-from services.verification.manufacturing_rules import ManufacturingRules
-from services.verification.erc_engine import ERCEngine, ERCReport, ERCViolation
-from services.verification.drc_engine import DRCEngine, DRCReport, DRCViolation
 from services.verification.dfm_engine import DFMEngine, DFMReport, DFMViolation
+from services.verification.drc_engine import DRCEngine, DRCReport, DRCViolation
+from services.verification.erc_engine import ERCEngine, ERCReport, ERCViolation
+from services.verification.manufacturing_rules import ManufacturingRules
 from services.verification.physical_verification import (
     PhysicalVerification,
     PhysicalVerificationReport,
 )
-from services.verification.quality_scoring import QualityScorer, QualityScore
+from services.verification.quality_scoring import QualityScore, QualityScorer
 
 __all__ = [
     "DesignRules", "ManufacturingRules",

@@ -1,9 +1,8 @@
 """Compatibilité composants — avertissements (tension, logique, interfaces)."""
 from __future__ import annotations
 
-from typing import List, Optional
-
 from shared.utilities import get_logger
+
 from services.ai_engine.knowledge_graph.kg import KnowledgeGraph
 
 log = get_logger("ai_engine.kg.compatibility")
@@ -11,18 +10,18 @@ log = get_logger("ai_engine.kg.compatibility")
 COMP = "comp:"
 
 
-def _node_props(kg: KnowledgeGraph, mpn: str) -> Optional[dict]:
+def _node_props(kg: KnowledgeGraph, mpn: str) -> dict | None:
     node = kg.nodes.get(COMP + mpn) or kg.nodes.get(mpn)
     return node.props if node else None
 
 
-def check_compatibility(kg: KnowledgeGraph, mpn_a: str, mpn_b: str) -> List[str]:
+def check_compatibility(kg: KnowledgeGraph, mpn_a: str, mpn_b: str) -> list[str]:
     """Vérifie la compatibilité de deux composants → liste d'avertissements.
 
     Détecte : mismatch de tension d'alimentation, logique 3V3 vs 5V,
     incompatibilité d'interface (I2C vs SPI sans bridge).
     """
-    warnings: List[str] = []
+    warnings: list[str] = []
     pa, pb = _node_props(kg, mpn_a), _node_props(kg, mpn_b)
     if pa is None or pb is None:
         missing = mpn_a if pa is None else mpn_b

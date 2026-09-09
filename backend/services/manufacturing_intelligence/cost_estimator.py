@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -26,7 +26,7 @@ class CostBreakdown:
     assembly_usd: float
     components_usd: float
     total_usd: float
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 def _is_smd(comp: Any) -> bool:
@@ -80,9 +80,9 @@ class CostEstimator:
         return breakdown
 
     # -- optimisation -----------------------------------------------------------
-    def optimize_for_cost(self, graph: Any) -> List[str]:
+    def optimize_for_cost(self, graph: Any) -> list[str]:
         """Suggestions concrètes de réduction de coût, chiffrées."""
-        suggestions: List[str] = []
+        suggestions: list[str] = []
         w, h = graph.board_size if isinstance(graph.board_size, (tuple, list)) else (50.0, 40.0)
         area_mm2 = float(w) * float(h)
         n_layers = len(list(getattr(graph, "layers", []) or [])) or 2
@@ -103,7 +103,7 @@ class CostEstimator:
                 f"Rétrecir la carte ({area_mm2:.0f} → {target:.0f} mm², "
                 f"occupation {100 * used_mm2 / area_mm2:.0f}%) : ~{saving:.2f}$")
 
-        passive_values: Dict[Tuple[str, str], int] = {}
+        passive_values: dict[tuple[str, str], int] = {}
         for ref, comp in graph.components.items():
             if ref[:1].upper() in {"R", "C", "L"}:
                 passive_values[(str(getattr(comp, "value", "")),

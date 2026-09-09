@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from shared.utilities import get_logger, new_id, short_id
 from shared.utilities.config import get_settings
@@ -28,7 +28,7 @@ _LIBRARY_DIR = Path("data/component_library")
 class JLCPCBClient:
     """Client REST JLCPCB (API réelle si clé, estimation/mock sinon)."""
 
-    def __init__(self, api_key: Optional[str] = None) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key or get_settings().jlcpcb_api_key or None
         self.factory = "jlcpcb"
 
@@ -37,7 +37,7 @@ class JLCPCBClient:
         return get_profile("jlcpcb")
 
     # -- devis / gerbers ------------------------------------------------------
-    def quote(self, params: Dict[str, Any]) -> Quote:
+    def quote(self, params: dict[str, Any]) -> Quote:
         """Devis : API réelle si clé configurée, estimation locale sinon."""
         if not self.api_key:
             log.info("JLCPCB_API_KEY absente — devis estimé localement")
@@ -89,10 +89,10 @@ class JLCPCBClient:
             return f"JLC-MOCK-{short_id('')}"
 
     # -- bibliothèque composants ----------------------------------------------
-    def check_part_availability(self, mpn_list: List[str]) -> Dict[str, Dict[str, Any]]:
+    def check_part_availability(self, mpn_list: list[str]) -> dict[str, dict[str, Any]]:
         """Disponibilité SMT par MPN — bibliothèque locale puis mock déterministe."""
         library = self._load_library()
-        out: Dict[str, Dict[str, Any]] = {}
+        out: dict[str, dict[str, Any]] = {}
         for mpn in mpn_list:
             if not mpn:
                 continue
@@ -113,9 +113,9 @@ class JLCPCBClient:
         log.info("dispo JLCPCB vérifiée pour %d MPN", len(out))
         return out
 
-    def _load_library(self) -> Dict[str, Dict[str, Any]]:
+    def _load_library(self) -> dict[str, dict[str, Any]]:
         """Charge data/component_library/*.json (cache local optionnel)."""
-        library: Dict[str, Dict[str, Any]] = {}
+        library: dict[str, dict[str, Any]] = {}
         if _LIBRARY_DIR.is_dir():
             for file in _LIBRARY_DIR.glob("*.json"):
                 try:

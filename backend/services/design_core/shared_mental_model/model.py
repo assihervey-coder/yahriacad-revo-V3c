@@ -9,14 +9,14 @@ niveaux de confiance par domaine. Il alimente notamment les prompts LLM via
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any
 
 from services.design_core.design_graph.graph import DesignGraph
 from services.design_core.intent_graph.intent_graph import IntentGraph
 
 # Pondération de confiance par domaine (le physique a plus de poids).
-DOMAIN_WEIGHTS: Dict[str, float] = {
+DOMAIN_WEIGHTS: dict[str, float] = {
     "physical": 1.5, "simulation": 1.5, "verification": 1.3, "human": 1.2,
     "design": 1.0, "placement": 1.0, "routing": 1.0, "general": 1.0,
 }
@@ -34,14 +34,14 @@ class DecisionRecord:
     ts: float
     domain: str = "general"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "actor": self.actor, "decision": self.decision, "rationale": self.rationale,
             "confidence": self.confidence, "ts": self.ts, "domain": self.domain,
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "DecisionRecord":
+    def from_dict(cls, d: dict[str, Any]) -> DecisionRecord:
         return cls(
             actor=str(d.get("actor", "")), decision=str(d.get("decision", "")),
             rationale=str(d.get("rationale", "")), confidence=float(d.get("confidence", 0.5) or 0.5),
@@ -59,14 +59,14 @@ class Tradeoff:
     weight: float                 # 0..1 (0 = 100% b, 1 = 100% a)
     ts: float
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "criterion_a": self.criterion_a, "criterion_b": self.criterion_b,
             "chose": self.chose, "weight": self.weight, "ts": self.ts,
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Tradeoff":
+    def from_dict(cls, d: dict[str, Any]) -> Tradeoff:
         return cls(
             criterion_a=str(d.get("criterion_a", "")), criterion_b=str(d.get("criterion_b", "")),
             chose=str(d.get("chose", "")), weight=float(d.get("weight", 0.5) or 0.5),
@@ -78,7 +78,7 @@ class ConfidenceTracker:
     """Confiance par domaine (0..1) avec moyenne globale pondérée."""
 
     def __init__(self) -> None:
-        self._scores: Dict[str, float] = {}
+        self._scores: dict[str, float] = {}
 
     def update(self, domain: str, score: float) -> float:
         """Met à jour (clampé 0..1) la confiance d'un domaine."""
@@ -98,16 +98,16 @@ class ConfidenceTracker:
             return DEFAULT_CONFIDENCE
         return sum(s * DOMAIN_WEIGHTS.get(d, 1.0) for d, s in self._scores.items()) / total_w
 
-    def report(self) -> Dict[str, float]:
+    def report(self) -> dict[str, float]:
         """Rapport : score par domaine + 'global'."""
         out = {d: round(s, 3) for d, s in sorted(self._scores.items())}
         out["global"] = round(self.global_score(), 3)
         return out
 
-    def to_dict(self) -> Dict[str, float]:
+    def to_dict(self) -> dict[str, float]:
         return dict(self._scores)
 
-    def load(self, d: Dict[str, float]) -> None:
+    def load(self, d: dict[str, float]) -> None:
         for domain, score in (d or {}).items():
             self.update(domain, score)
 
@@ -117,28 +117,28 @@ class SharedMentalModel:
 
     def __init__(
         self,
-        graph: Optional[DesignGraph] = None,
-        intents: Optional[IntentGraph] = None,
+        graph: DesignGraph | None = None,
+        intents: IntentGraph | None = None,
     ) -> None:
         self.graph = graph
         self.intents = intents
         self.confidence: ConfidenceTracker = ConfidenceTracker()
-        self._context: Dict[str, Dict[str, Any]] = {}
-        self._decisions: List[DecisionRecord] = []
-        self._tradeoffs: List[Tradeoff] = []
+        self._context: dict[str, dict[str, Any]] = {}
+        self._decisions: list[DecisionRecord] = []
+        self._tradeoffs: list[Tradeoff] = []
         if graph is not None:
             self.sync_from_graph()
 
     # ------------------------------------------------------------------ contexte
-    def update_context(self, domain: str, facts: Dict[str, Any]) -> None:
+    def update_context(self, domain: str, facts: dict[str, Any]) -> None:
         """Fusionne des faits dans le contexte d'un domaine (last-write-wins par clé)."""
         self._context.setdefault(domain, {}).update(dict(facts))
 
-    def context(self, domain: str) -> Dict[str, Any]:
+    def context(self, domain: str) -> dict[str, Any]:
         """Copie du contexte d'un domaine ({} si inconnu)."""
         return dict(self._context.get(domain, {}))
 
-    def full_context(self) -> Dict[str, Dict[str, Any]]:
+    def full_context(self) -> dict[str, dict[str, Any]]:
         """Copie de tous les contextes par domaine."""
         return {d: dict(c) for d, c in self._context.items()}
 
@@ -180,15 +180,15 @@ class SharedMentalModel:
         self.confidence.update(domain, record.confidence)
         return record
 
-    def decisions(self) -> List[DecisionRecord]:
+    def decisions(self) -> list[DecisionRecord]:
         """Toutes les décisions (ordre chronologique)."""
         return list(self._decisions)
 
     def decisions_by(
         self,
-        actor: Optional[str] = None,
-        domain: Optional[str] = None,
-    ) -> List[DecisionRecord]:
+        actor: str | None = None,
+        domain: str | None = None,
+    ) -> list[DecisionRecord]:
         """Décisions filtrées par acteur et/ou domaine."""
         return [
             d for d in self._decisions
@@ -207,12 +207,12 @@ class SharedMentalModel:
         self._tradeoffs.append(tradeoff)
         return tradeoff
 
-    def tradeoffs(self) -> List[Tradeoff]:
+    def tradeoffs(self) -> list[Tradeoff]:
         """Tous les arbitrages enregistrés."""
         return list(self._tradeoffs)
 
     # ------------------------------------------------------------- sérialisation
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         """Snapshot complet (le graphe/intentions restent des références vivantes)."""
         return {
             "context": self.full_context(),
@@ -222,7 +222,7 @@ class SharedMentalModel:
         }
 
     @classmethod
-    def restore(cls, d: Dict[str, Any]) -> "SharedMentalModel":
+    def restore(cls, d: dict[str, Any]) -> SharedMentalModel:
         """Reconstruit un SharedMentalModel depuis un snapshot (sans graphe attaché)."""
         model = cls(graph=None, intents=None)
         model._context = {str(k): dict(v) for k, v in d.get("context", {}).items()}
@@ -234,7 +234,7 @@ class SharedMentalModel:
     # ------------------------------------------------------------------ pour LLM
     def export_for_llm(self) -> str:
         """Résumé texte compact destiné aux prompts LLM (intentions, état, décisions)."""
-        lines: List[str] = ["=== CONTEXTE PROJET (modèle mental partagé) ==="]
+        lines: list[str] = ["=== CONTEXTE PROJET (modèle mental partagé) ==="]
 
         if self.intents is not None:
             lines.append("[Intentions prioritaires]")

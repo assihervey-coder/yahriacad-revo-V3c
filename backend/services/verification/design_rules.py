@@ -21,7 +21,7 @@ class DesignRules:
     board_thickness_mm: float = 1.6
 
     @classmethod
-    def from_factory_profile(cls, profile: dict) -> "DesignRules":
+    def from_factory_profile(cls, profile: dict) -> DesignRules:
         """Construit les règles depuis un profil usine (manufacturing_rules)."""
         return cls(
             min_trace_mm=float(profile.get("min_trace_mm", 0.2)),

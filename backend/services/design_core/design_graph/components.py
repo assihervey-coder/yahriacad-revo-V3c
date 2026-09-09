@@ -4,10 +4,10 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 # Empreintes courantes -> (largeur, hauteur) en mm (bbox mécanique incl. pads).
-FOOTPRINT_BBOX: Dict[str, Tuple[float, float]] = {
+FOOTPRINT_BBOX: dict[str, tuple[float, float]] = {
     "0402": (1.0, 0.5),
     "0603": (1.6, 0.8),
     "0805": (2.0, 1.25),
@@ -30,14 +30,14 @@ FOOTPRINT_BBOX: Dict[str, Tuple[float, float]] = {
     "DIP-8": (9.2, 6.4),
 }
 
-DEFAULT_BBOX: Tuple[float, float] = (1.0, 0.5)
+DEFAULT_BBOX: tuple[float, float] = (1.0, 0.5)
 
 # --- inférence paramétrique par nom d'empreinte (QFN-16, TSSOP-20, BGA-64…)
 _RE_PIN_COUNT = re.compile(r"(?:^|[^0-9])(\d{1,3})(?:[^0-9]|$)")
 _RE_PITCH = re.compile(r"0\.(5|4|65|8)(?:mm)?\b")
 
 
-def _infer_bbox_from_name(footprint: str) -> Optional[Tuple[float, float]]:
+def _infer_bbox_from_name(footprint: str) -> tuple[float, float] | None:
     """Déduit (w, h) depuis le nom : QFN-16_0.5mm → (4.5, 4.5), TSSOP-20 →
     (6.5, 4.4), BGA-64 → (8.0, 8.0). Retourne None si non déductible."""
     fp = (footprint or "").lower()
@@ -71,7 +71,7 @@ def _infer_bbox_from_name(footprint: str) -> Optional[Tuple[float, float]]:
     return None
 
 
-def default_bbox_for_footprint(footprint: str) -> Tuple[float, float]:
+def default_bbox_for_footprint(footprint: str) -> tuple[float, float]:
     """Déduit une bbox (w, h) mm plausible à partir du nom d'empreinte.
 
     Ordre : table explicite → inférence paramétrique (boîtier + nombre de
@@ -96,10 +96,10 @@ class Pad:
     y: float = 0.0
     w: float = 0.6
     h: float = 0.6
-    net_id: Optional[str] = None
+    net_id: str | None = None
     layer: int = 0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "x": self.x,
@@ -111,7 +111,7 @@ class Pad:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Pad":
+    def from_dict(cls, d: dict[str, Any]) -> Pad:
         return cls(
             name=str(d.get("name", "1")),
             x=float(d.get("x", d.get("x_mm", 0.0)) or 0.0),
@@ -135,10 +135,10 @@ class Component:
     y: float = 0.0
     rotation: float = 0.0            # degrés
     side: str = "top"                # top | bottom
-    bbox: Tuple[float, float] = DEFAULT_BBOX   # (w, h) mm
+    bbox: tuple[float, float] = DEFAULT_BBOX   # (w, h) mm
     power_w: float = 0.0             # dissipation thermique estimée
     price_usd: float = 0.0
-    pads: List[Pad] = field(default_factory=list)
+    pads: list[Pad] = field(default_factory=list)
     placed: bool = False
 
     @property
@@ -149,7 +149,7 @@ class Component:
     def height(self) -> float:
         return self.bbox[1]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "ref": self.ref,
             "value": self.value,
@@ -167,7 +167,7 @@ class Component:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Component":
+    def from_dict(cls, d: dict[str, Any]) -> Component:
         bbox = d.get("bbox") or d.get("bbox_mm") or list(DEFAULT_BBOX)
         fp = str(d.get("footprint", "") or "")
         return cls(
@@ -204,7 +204,7 @@ _LINEAR_KEYS = ("to-220", "to220", "to-92", "ams1117", "sot-223", "sot223",
 
 
 def implicit_pad_layout(footprint: str, index: int,
-                        bbox: Tuple[float, float]) -> Tuple[float, float, float, float]:
+                        bbox: tuple[float, float]) -> tuple[float, float, float, float]:
     """Position + taille (x, y, w, h) du pad implicite n°``index`` pour l'empreinte.
 
     Remplace l'ancien pad implicite empilé en (0,0) : les pads créés par

@@ -11,7 +11,8 @@ import logging
 import threading
 import time
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from shared.events.event_bus import get_event_bus
 from shared.events.events import EventTypes, make_event
@@ -24,16 +25,16 @@ TOPIC_VIOLATED = "constraint.violated"
 TOPIC_REVALIDATED = "constraint.revalidated"
 
 # Correspondance sujet -> type d'event partagé
-_TOPIC_TO_EVENT: Dict[str, str] = {
+_TOPIC_TO_EVENT: dict[str, str] = {
     TOPIC_UPDATED: EventTypes.CONSTRAINT_UPDATED,
     TOPIC_VIOLATED: EventTypes.CONSTRAINT_VIOLATED,
     TOPIC_REVALIDATED: EventTypes.CONSTRAINT_UPDATED,
 }
 
-Callback = Callable[[Dict[str, Any]], Any]
+Callback = Callable[[dict[str, Any]], Any]
 
 # --- dispatch async non bloquant (loop courante si async, sinon loop de fond) ---
-_bg_loop: Optional[asyncio.AbstractEventLoop] = None
+_bg_loop: asyncio.AbstractEventLoop | None = None
 _bg_lock = threading.Lock()
 
 
@@ -69,8 +70,8 @@ class ConstraintBus:
 
     def __init__(self, project_id: str = "", max_history: int = 5_000) -> None:
         self.project_id = project_id
-        self._subs: Dict[str, List[Callback]] = defaultdict(list)
-        self._history: List[Dict[str, Any]] = []
+        self._subs: dict[str, list[Callback]] = defaultdict(list)
+        self._history: list[dict[str, Any]] = []
         self._max_history = max_history
 
     # ------------------------------------------------------------------ pub/sub
@@ -78,7 +79,7 @@ class ConstraintBus:
         """Abonne un callback (sync ou async) à un sujet."""
         self._subs[topic].append(callback)
 
-    def publish(self, topic: str, payload: Dict[str, Any]) -> None:
+    def publish(self, topic: str, payload: dict[str, Any]) -> None:
         """Publie sur le bus interne (+ historique) ET sur l'event bus shared."""
         entry = {"topic": topic, "payload": dict(payload), "ts": time.time(),
                  "project_id": self.project_id}
@@ -105,7 +106,7 @@ class ConstraintBus:
                 log.exception("publication event bus impossible (%s)", topic)
 
     # ------------------------------------------------------------------ helpers
-    def broadcast_update(self, constraint_id: str, new_spec: Dict[str, Any]) -> None:
+    def broadcast_update(self, constraint_id: str, new_spec: dict[str, Any]) -> None:
         """Diffuse une mise à jour de spécification de contrainte (reconfiguration)."""
         self.publish(TOPIC_UPDATED, {
             "constraint_id": constraint_id, "spec": dict(new_spec), "action": "update",
@@ -122,11 +123,11 @@ class ConstraintBus:
                 "location": violation.location,
             })
 
-    def publish_revalidated(self, constraint_ids: List[str], reason: str = "") -> None:
+    def publish_revalidated(self, constraint_ids: list[str], reason: str = "") -> None:
         """Signale qu'un lot de contraintes a été re-vérifié (ex: après édition)."""
         self.publish(TOPIC_REVALIDATED, {"constraint_ids": list(constraint_ids), "reason": reason})
 
-    def violation_history(self, constraint_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def violation_history(self, constraint_id: str | None = None) -> list[dict[str, Any]]:
         """Historique interne des publications (filtrable par contrainte)."""
         if constraint_id is None:
             return [dict(e) for e in self._history]
@@ -137,7 +138,7 @@ class ConstraintBus:
 
 
 # --- singleton plateforme ----------------------------------------------------
-_bus: Optional[ConstraintBus] = None
+_bus: ConstraintBus | None = None
 
 
 def get_constraint_bus(project_id: str = "") -> ConstraintBus:

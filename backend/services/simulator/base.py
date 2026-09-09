@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 from services.design_core import DesignGraph
 
@@ -13,12 +13,12 @@ class SimResult:
     """Résultat normalisé d'une simulation (tous les moteurs y adhèrent)."""
 
     sim_kind: str                    # "thermal" | "emi" | "si" | "pi" | "mechanical"
-    metrics: Dict[str, Any]
+    metrics: dict[str, Any]
     passed: bool
     runtime_s: float
-    notes: List[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "sim_kind": self.sim_kind,
             "metrics": self.metrics,
@@ -38,7 +38,7 @@ class BaseSim:
 
     # ---------------------------------------------------------------- helpers
     @staticmethod
-    def _timed(metrics: Dict[str, Any], passed: bool, notes: List[str],
+    def _timed(metrics: dict[str, Any], passed: bool, notes: list[str],
                t0: float) -> SimResult:
         return SimResult(sim_kind="?", metrics=metrics, passed=passed,
                          runtime_s=time.perf_counter() - t0, notes=notes)

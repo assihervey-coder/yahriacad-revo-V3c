@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import sys
 import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -34,9 +33,10 @@ def import_design_core_with_retry() -> None:
 
 import_design_core_with_retry()
 
-from services.design_core import DesignGraph, Pad  # noqa: E402
 from shared.geometry import Point, RoutePath  # noqa: E402
 from shared.utilities import configure_logging  # noqa: E402
+
+from services.design_core import DesignGraph, Pad  # noqa: E402
 
 configure_logging("WARNING")
 
@@ -44,7 +44,7 @@ configure_logging("WARNING")
 # [2] Graphe de test : 4 composants + 2 nets routés (3-4 points + 1 via chacun)
 # ---------------------------------------------------------------------------
 g = DesignGraph(project_id="smoke-2d", name="smoke-integrations", board_size=(60.0, 40.0))
-assert [l.name for l in g.layers] == ["F.Cu", "GND", "PWR", "B.Cu"]
+assert [ly.name for ly in g.layers] == ["F.Cu", "GND", "PWR", "B.Cu"]
 
 g.add_component(
     "U1", value="ESP32-WROOM-32E", footprint="ESP32-WROOM", mpn="ESP32-WROOM-32E-N4",
@@ -234,10 +234,8 @@ print(f"[8] Firmware OK: {len(fw)} artefacts (header C, overlay, arduino) + STM3
 # ---------------------------------------------------------------------------
 # [9] Bonus : ODB++, package, session, altium, live host offline, facade
 # ---------------------------------------------------------------------------
-from services.exporter import (ExportFacade, ManufacturingPackage,  # noqa: E402
-                               ODBGenerator)
-from services.pcb_plugin import (AltiumBridge, KiCadLiveHost,  # noqa: E402
-                                 SessionRestorer)
+from services.exporter import ExportFacade, ManufacturingPackage, ODBGenerator  # noqa: E402
+from services.pcb_plugin import AltiumBridge, KiCadLiveHost, SessionRestorer  # noqa: E402
 from services.pcb_plugin.altium import AltiumSynchronizer  # noqa: E402
 
 odb = ODBGenerator(g).generate()

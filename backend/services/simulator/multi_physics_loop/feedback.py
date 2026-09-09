@@ -4,12 +4,11 @@ moteurs placement/router (imports LAZY pour éviter les cycles), re-simule.
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph
-
 from services.simulator.base import BaseSim
 from services.simulator.multi_physics_loop.convergence import ConvergenceMonitor
 from services.simulator.multi_physics_loop.coupling import MultiPhysicsCoupling
@@ -20,14 +19,14 @@ from services.simulator.thermal_sim import ThermalSim
 log = get_logger("simulator.feedback")
 
 
-def default_sims() -> List[BaseSim]:
+def default_sims() -> list[BaseSim]:
     """Jeu de sims par défaut de la boucle (thermique + SI + PI)."""
     return [ThermalSim(), SignalIntegritySim(), PowerIntegritySim()]
 
 
 def run_loop(graph: DesignGraph, max_iters: int = 3,
-             sims: Optional[List[BaseSim]] = None,
-             surrogate_manager: Optional[Any] = None) -> Dict[str, Any]:
+             sims: list[BaseSim] | None = None,
+             surrogate_manager: Any | None = None) -> dict[str, Any]:
     """Boucle simuler → feedbacks → corriger → re-simuler (max `max_iters` tours).
 
     `surrogate_manager` (optionnel) : active la voie β — les surrogates
@@ -46,14 +45,13 @@ def run_loop(graph: DesignGraph, max_iters: int = 3,
     # imports paresseux (moteurs géométriques)
     from services.placement_engine.optimizer import PlacementOptimizer
     from services.router.engine import RouterEngine
-    from services.router.high_speed import MATCH_TOL_MM
 
     g = graph
     monitor = ConvergenceMonitor(tol=1e-3, window=3)
     coupling = MultiPhysicsCoupling()
     sims = sims or default_sims()
-    history: List[Dict[str, Any]] = []
-    applied: List[Dict[str, Any]] = []
+    history: list[dict[str, Any]] = []
+    applied: list[dict[str, Any]] = []
 
     for iteration in range(1, max_iters + 1):
         outcome = coupling.run(g, sims, surrogate_manager=surrogate_manager)
@@ -90,11 +88,11 @@ def run_loop(graph: DesignGraph, max_iters: int = 3,
     }
 
 
-def _apply_feedback(graph: DesignGraph, fb: Dict[str, Any],
-                    RouterEngine, PlacementOptimizer) -> Dict[str, Any]:
+def _apply_feedback(graph: DesignGraph, fb: dict[str, Any],
+                    RouterEngine, PlacementOptimizer) -> dict[str, Any]:
     """Applique un feedback concret via les moteurs (retourne un journal)."""
     action = fb.get("action")
-    entry: Dict[str, Any] = {"action": action, "source": fb.get("source")}
+    entry: dict[str, Any] = {"action": action, "source": fb.get("source")}
 
     if action == "replace_placement":
         hotspot = fb.get("hotspot")
@@ -109,7 +107,7 @@ def _apply_feedback(graph: DesignGraph, fb: Dict[str, Any],
                 tx, ty = comp.x + dx / norm * 6.0, comp.y + dy / norm * 6.0
             else:
                 tx, ty = comp.x + 6.0, comp.y + 6.0
-            from services.router.topological import clamp_to_board, placement_free
+            from services.router.topological import clamp_to_board
             w, h = comp.bbox
             tx, ty = clamp_to_board(graph, tx, ty, w, h, 1.0)
             graph.place(ref, tx, ty, rotation=comp.rotation)

@@ -1,13 +1,13 @@
 """CodeGeneratorAgent — génération du script SKIDL du design."""
 from __future__ import annotations
 
-import json
-from typing import Any, Dict, List
+from typing import Any
 
-from orchestrator.agent_pipeline.base import BaseAgent
-from orchestrator.common import call_probe, get_field, try_import
 from shared.contracts import AgentRole
 from shared.schemas import AgentResultSchema
+
+from orchestrator.agent_pipeline.base import BaseAgent
+from orchestrator.common import get_field, try_import
 
 
 class CodeGeneratorAgent(BaseAgent):
@@ -22,7 +22,7 @@ class CodeGeneratorAgent(BaseAgent):
     def supports(self, action: str) -> bool:
         return action in ("generate_skidl", "generate_code", "code", "skidl", "")
 
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         message = str(context.get("message") or "")
         graph = context.get("graph")
         code = ""
@@ -71,13 +71,13 @@ class CodeGeneratorAgent(BaseAgent):
     def _code_from_graph(self, graph: Any) -> str:
         comps = get_field(graph, "components", default={}) or {}
         nets = get_field(graph, "nets", default={}) or {}
-        lines: List[str] = [
+        lines: list[str] = [
             "from skidl import *",
             "",
             f"# Design PCB_AI_DESIGNER_V3 — {len(comps)} composants, {len(nets)} nets",
             "",
         ]
-        comp_vars: Dict[str, str] = {}
+        comp_vars: dict[str, str] = {}
         for ref, comp in comps.items():
             var = ref.lower().replace("-", "_")
             comp_vars[ref] = var
@@ -86,7 +86,7 @@ class CodeGeneratorAgent(BaseAgent):
             lines.append(f"{var} = Part('{mpn or 'Device'}', '{ref}', "
                          f"footprint='{footprint}', value='{get_field(comp, 'value', default=ref)}')")
         lines.append("")
-        net_vars: Dict[str, str] = {}
+        net_vars: dict[str, str] = {}
         for net_id, net in nets.items():
             var = "net_" + str(net_id).lower().replace("-", "_").replace(" ", "_")
             net_vars[str(net_id)] = var

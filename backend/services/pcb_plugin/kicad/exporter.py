@@ -7,8 +7,10 @@ formatées en mm à 6 décimales.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+import math
+from typing import Any
 
+from shared.geometry import Point
 from shared.utilities import get_logger
 
 log = get_logger(__name__)
@@ -57,7 +59,7 @@ def _kicad_layer_id(name: str, dense_index: int) -> int:
     return max(1, dense_index) if dense_index < 31 else dense_index
 
 
-def _pad_layers_txt(graph: Any, pad_layer: int) -> "tuple[str, str]":
+def _pad_layers_txt(graph: Any, pad_layer: int) -> tuple[str, str]:
     """(type, clause layers) KiCad pour un pad selon la couche design_core."""
     lname = _layer_name(graph, pad_layer)
     if lname == "F.Cu":
@@ -67,11 +69,11 @@ def _pad_layers_txt(graph: Any, pad_layer: int) -> "tuple[str, str]":
     return "thru_hole", '(layers "*.Cu" "*.Mask")'
 
 
-def _net_numbers(graph: Any) -> Dict[str, int]:
+def _net_numbers(graph: Any) -> dict[str, int]:
     return {net_id: i + 1 for i, net_id in enumerate(sorted(graph.nets))}
 
 
-def _component_module(graph: Any, comp: Any, net_numbers: Dict[str, int]) -> str:
+def _component_module(graph: Any, comp: Any, net_numbers: dict[str, int]) -> str:
     """Bloc (module ...) complet d'un composant, pads transformés par rotation."""
     side = str(getattr(comp, "side", "top") or "top")
     module_layer = "B.Cu" if side == "bottom" else "F.Cu"
@@ -84,7 +86,7 @@ def _component_module(graph: Any, comp: Any, net_numbers: Dict[str, int]) -> str
     value = str(getattr(comp, "value", "") or "")
     silk = "B.SilkS" if side == "bottom" else "F.SilkS"
 
-    lines: List[str] = [
+    lines: list[str] = [
         f'  (module {_q(fp)} (layer {_q(module_layer)}) '
         f'(at {format_number(cx)} {format_number(cy)} {format_number(rot)})',
         f'    (fp_text reference {_q(ref)} (at 0 0 0) (layer {_q(silk)}) '
@@ -119,7 +121,7 @@ def export_kicad_pcb(graph: Any) -> str:
     w, h = (float(graph.board_size[0]), float(graph.board_size[1])) \
         if isinstance(graph.board_size, (list, tuple)) else (50.0, 40.0)
 
-    lines: List[str] = [
+    lines: list[str] = [
         f'(kicad_pcb (version {KICAD_VERSION}) (generator "pcb_ai_designer_v3")',
         "  (general (thickness 1.6))",
         '  (paper "A4")',
@@ -189,9 +191,9 @@ def export_kicad_netlist(graph: Any) -> str:
     Symétrique de import_kicad_netlist : le fichier produit se recharge dans
     la plateforme (ou dans KiCad) sans perte de composants/nets/pins.
     """
-    lines: List[str] = [
+    lines: list[str] = [
         '(export (version "E") (design (source "pcb_ai_designer_v3")',
-        f'  (date "") (tool "PCB_AI_DESIGNER_V3"))',
+        '  (date "") (tool "PCB_AI_DESIGNER_V3"))',
         "  (components",
     ]
     for ref in sorted(graph.components):
@@ -210,7 +212,7 @@ def export_kicad_netlist(graph: Any) -> str:
     lines.append("  (nets")
 
     # pins par net depuis les pads des composants
-    nets_pins: Dict[str, List[tuple]] = {}
+    nets_pins: dict[str, list[tuple]] = {}
     for ref in sorted(graph.components):
         comp = graph.components[ref]
         for pad in list(getattr(comp, "pads", []) or []):
@@ -218,9 +220,7 @@ def export_kicad_netlist(graph: Any) -> str:
             if net_id:
                 nets_pins.setdefault(net_id, []).append((ref, str(getattr(pad, "name", "") or "")))
 
-    code = 0
-    for net_id in sorted(nets_pins):
-        code += 1
+    for code, net_id in enumerate(sorted(nets_pins), start=1):
         nodes = "".join(
             f' (node (ref {_q(ref)}) (pin {_q(pin)}))' for ref, pin in nets_pins[net_id])
         lines.append(f'    (net (code {code}) (name {_q(net_id)}){nodes})')

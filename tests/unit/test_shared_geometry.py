@@ -6,7 +6,6 @@ BBox (overlaps). Toutes les valeurs en millimètres (format interne).
 from __future__ import annotations
 
 import pytest
-
 from shared.geometry import BBox, Point, Polygon, RoutePath
 
 

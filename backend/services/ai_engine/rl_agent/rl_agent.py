@@ -3,11 +3,10 @@ from __future__ import annotations
 
 import os
 from collections import deque
-from typing import Deque, Dict, List, Optional, Tuple
 
 import numpy as np
-
 from shared.utilities import get_logger
+
 from services.ai_engine.rl_agent.action_space import ActionSpace
 from services.ai_engine.rl_agent.policy_network import PolicyNetwork
 from services.ai_engine.rl_agent.value_network import ValueNetwork
@@ -27,12 +26,12 @@ class RLAgent:
         self.value = value
         self.world_model = world_model
         self.action_space = action_space
-        self._memory: Deque[Dict] = deque(maxlen=10_000)
-        self._current_features: Optional[np.ndarray] = None
-        self.episode_buffer: List[Tuple[np.ndarray, int]] = []
+        self._memory: deque[dict] = deque(maxlen=10_000)
+        self._current_features: np.ndarray | None = None
+        self.episode_buffer: list[tuple[np.ndarray, int]] = []
 
     # ------------------------------------------------------------- observe
-    def observe(self, state_dict: Dict) -> np.ndarray:
+    def observe(self, state_dict: dict) -> np.ndarray:
         """Encode un état et le mémorise comme feature courante."""
         feats = self.world_model.encoder(state_dict)
         self._current_features = feats
@@ -62,16 +61,16 @@ class RLAgent:
         self._memory.append({"features": np.asarray(features, dtype=np.float64),
                              "action": int(action_idx)})
 
-    def episode_end(self) -> List[Tuple[np.ndarray, int]]:
+    def episode_end(self) -> list[tuple[np.ndarray, int]]:
         """Clôt l'épisode et retourne la trajectoire (features, action)."""
         traj = list(self.episode_buffer)
         self.episode_buffer.clear()
         return traj
 
     # ---------------------------------------------------------------- learn
-    def learn(self, rewards: List[float], states: List[np.ndarray],
-              actions: List[int], lr_policy: float = 1e-3,
-              lr_value: float = 1e-3, use_baseline: bool = True) -> Dict:
+    def learn(self, rewards: list[float], states: list[np.ndarray],
+              actions: list[int], lr_policy: float = 1e-3,
+              lr_value: float = 1e-3, use_baseline: bool = True) -> dict:
         """REINFORCE complet : retours escomptés + avantages + baseline.
 
         reward[t] = -wire_length_delta - violations (convention plate-forme).

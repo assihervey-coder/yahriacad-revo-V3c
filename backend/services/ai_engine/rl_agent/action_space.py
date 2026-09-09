@@ -5,7 +5,6 @@ import math
 import random
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Tuple
 
 
 class PlacementActionKind(Enum):
@@ -65,19 +64,19 @@ class ActionSpace:
     bijectivement vers des indices entiers pour le policy network.
     """
 
-    MOVE_STEPS: Tuple[float, ...] = (-2.0, -1.5, -1.0, -0.5, 0.0,
+    MOVE_STEPS: tuple[float, ...] = (-2.0, -1.5, -1.0, -0.5, 0.0,
                                      0.5, 1.0, 1.5, 2.0)
-    ROTATIONS: Tuple[int, ...] = (0, 90, 180, 270)
+    ROTATIONS: tuple[int, ...] = (0, 90, 180, 270)
 
-    def __init__(self, refs: List[str] | None = None) -> None:
-        self.refs: List[str] = refs or ["U1"]
-        self._actions: List[PlacementAction] = []
+    def __init__(self, refs: list[str] | None = None) -> None:
+        self.refs: list[str] = refs or ["U1"]
+        self._actions: list[PlacementAction] = []
         self._rebuild()
 
     # -------------------------------------------------------------- builders
     def _rebuild(self) -> None:
         """Reconstruit la table d'actions pour les refs courants."""
-        acts: List[PlacementAction] = []
+        acts: list[PlacementAction] = []
         for ref in self.refs:
             for dx in self.MOVE_STEPS:
                 for dy in self.MOVE_STEPS:
@@ -93,13 +92,13 @@ class ActionSpace:
         acts.append(PlacementAction(PlacementActionKind.NOP))
         self._actions = acts
 
-    def place(self, max_grid: int = 40) -> "ActionSpace":
+    def place(self, max_grid: int = 40) -> ActionSpace:
         """Espace complet de placement (borné par max_grid refs)."""
         self.refs = self.refs[:max(1, min(max_grid, len(self.refs)))]
         self._rebuild()
         return self
 
-    def set_refs(self, refs: List[str]) -> "ActionSpace":
+    def set_refs(self, refs: list[str]) -> ActionSpace:
         """Reparamètre l'espace sur de nouveaux refs."""
         self.refs = list(refs) or ["U1"]
         self._rebuild()
@@ -114,7 +113,7 @@ class ActionSpace:
     def n(self) -> int:
         return len(self._actions)
 
-    def all_actions(self) -> List[PlacementAction]:
+    def all_actions(self) -> list[PlacementAction]:
         return list(self._actions)
 
     def sample(self) -> PlacementAction:

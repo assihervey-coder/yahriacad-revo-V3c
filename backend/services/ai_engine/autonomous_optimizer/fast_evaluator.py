@@ -1,11 +1,8 @@
 """FastEvaluator — évaluation rapide d'un DesignGraph (score, breakdown)."""
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Tuple
-
-import numpy as np
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -17,13 +14,13 @@ class EvalResult:
     """Résultat d'évaluation — score : plus haut = mieux."""
 
     score: float
-    breakdown: Dict[str, float] = field(default_factory=dict)
+    breakdown: dict[str, float] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"score": self.score, "breakdown": self.breakdown}
 
 
-def board_extents(graph) -> Tuple[float, float]:  # noqa: ANN001
+def board_extents(graph) -> tuple[float, float]:  # noqa: ANN001
     """Extents de carte déduits (ou fournis par le graphe)."""
     try:
         from services.ai_engine.self_verifier.deterministic import _board_extents
@@ -40,7 +37,7 @@ def board_extents(graph) -> Tuple[float, float]:  # noqa: ANN001
     return max(60.0, (max(xs) - min(xs)) * 1.2), max(40.0, (max(ys) - min(ys)) * 1.2)
 
 
-def effective_wire_length(graph) -> Tuple[float, float]:  # noqa: ANN001
+def effective_wire_length(graph) -> tuple[float, float]:  # noqa: ANN001
     """(longueur routée + HPWL des nets non routés, hpwl seul).
 
     `graph.total_wire_length()` ne compte que les nets ROUTÉS (path) ;
@@ -58,8 +55,8 @@ def effective_wire_length(graph) -> Tuple[float, float]:  # noqa: ANN001
     for net in (getattr(graph, "nets", {}) or {}).values():
         if getattr(net, "routed", False) and getattr(net, "path", None) is not None:
             continue
-        xs: List[float] = []
-        ys: List[float] = []
+        xs: list[float] = []
+        ys: list[float] = []
         for pin in (getattr(net, "pins", None) or []):
             try:
                 ref = str(pin[0])
@@ -159,8 +156,7 @@ class FastEvaluator:
                     log.debug("constraint_engine.%s échoué: %s", meth, exc)
         # fallback : checks déterministes count
         try:
-            from services.ai_engine.self_verifier.deterministic import \
-                check_deterministic
+            from services.ai_engine.self_verifier.deterministic import check_deterministic
             return float(len(check_deterministic(graph)))
         except Exception:
             return 0.0

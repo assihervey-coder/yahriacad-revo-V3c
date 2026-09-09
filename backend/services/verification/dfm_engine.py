@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 from shared.utilities import get_logger
+
 from services.design_core.design_graph.graph import DesignGraph
 from services.verification.manufacturing_rules import ManufacturingRules
 
@@ -16,9 +17,9 @@ class DFMViolation:
     code: str
     message: str
     severity: str = "error"        # error | warning | info
-    location: Dict[str, Any] = field(default_factory=dict)
+    location: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"code": self.code, "message": self.message,
                 "severity": self.severity, "location": self.location}
 
@@ -26,7 +27,7 @@ class DFMViolation:
 @dataclass
 class DFMReport:
     factory: str = "jlcpcb"
-    violations: List[DFMViolation] = field(default_factory=list)
+    violations: list[DFMViolation] = field(default_factory=list)
     checked: int = 0
 
     @property
@@ -42,7 +43,7 @@ class DFMReport:
         penalty += 0.5 * sum(1.0 for v in self.violations if v.severity == "warning")
         return max(0.0, 1.0 - penalty / max(1.0, self.checked))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"factory": self.factory, "passed": self.passed, "score": self.score,
                 "checked": self.checked,
                 "violations": [v.to_dict() for v in self.violations]}
@@ -87,10 +88,10 @@ class DFMEngine:
         for net in graph.nets.values():
             if net.path is None:
                 continue
-            for pos, _fl, _tl in net.path.vias:
+            for _pos, _fl, _tl in net.path.vias:
                 report.checked += 1
                 # forage par défaut 0.3mm / pad 0.6mm (représentation interne)
-                if 0.3 < min_hole - 1e-9:
+                if min_hole - 1e-9 > 0.3:
                     report.violations.append(DFMViolation(
                         "DFM_MIN_HOLE",
                         f"Forage via 0.300mm < {min_hole}mm chez {prof.get('name')}",

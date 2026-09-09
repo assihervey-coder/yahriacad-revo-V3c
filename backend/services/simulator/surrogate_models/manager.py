@@ -17,11 +17,11 @@ from __future__ import annotations
 
 import math
 import time
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 from services.simulator.surrogate_models.dataset import SurrogateDataset
@@ -44,7 +44,7 @@ class SurrogateStatus:
     r2: float | None = None
     last_latency_ms: float | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "kind": self.kind,
             "n_samples": self.n_samples,
@@ -68,7 +68,7 @@ class BenchmarkResult:
     surrogate_ms: float
     speedup_x: float
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "kind": self.kind,
             "full_value": round(self.full_value, 4),
@@ -90,9 +90,9 @@ class SurrogateManager:
         self.n_hidden = int(n_hidden)
         self.epochs = int(epochs)
         self.lr = float(lr)
-        self.surrogates: Dict[str, NeuralSurrogate] = {}
-        self.status: Dict[str, SurrogateStatus] = {}
-        self._datasets: Dict[str, SurrogateDataset] = {}
+        self.surrogates: dict[str, NeuralSurrogate] = {}
+        self.status: dict[str, SurrogateStatus] = {}
+        self._datasets: dict[str, SurrogateDataset] = {}
         self._roots = data_root
         self._lock = None  # threading introduit seulement si besoin (lectures atomiques)
 
@@ -102,8 +102,8 @@ class SurrogateManager:
             self._datasets[kind] = SurrogateDataset(kind, root=self._roots)
         return self._datasets[kind]
 
-    def record(self, kind: str, features: Dict[str, float], value: float,
-               meta: Dict[str, Any] | None = None) -> int:
+    def record(self, kind: str, features: dict[str, float], value: float,
+               meta: dict[str, Any] | None = None) -> int:
         """Enregistre un échantillon (features → valeur mesurée). Retourne n."""
         self.dataset(kind).append(features, value, meta=meta)
         n = len(self.dataset(kind))
@@ -113,7 +113,7 @@ class SurrogateManager:
         return n
 
     # -------------------------------------------------------------- entraînement
-    def maybe_train(self, kind: str) -> Optional[SurrogateStatus]:
+    def maybe_train(self, kind: str) -> SurrogateStatus | None:
         """Entraîne si assez d'échantillons. Retourne le statut ou None."""
         ds = self.dataset(kind)
         feats, values = ds.load()
@@ -163,9 +163,9 @@ class SurrogateManager:
                      kind, n, st.val_mae)
         return st
 
-    def train_all(self) -> Dict[str, SurrogateStatus]:
+    def train_all(self) -> dict[str, SurrogateStatus]:
         """Tente l'entraînement de tous les kinds ayant assez de données."""
-        out: Dict[str, SurrogateStatus] = {}
+        out: dict[str, SurrogateStatus] = {}
         for kind in list(self._datasets) or ["thermal", "si", "pi", "emi"]:
             st = self.maybe_train(kind)
             if st is not None:
@@ -173,7 +173,7 @@ class SurrogateManager:
         return out
 
     # ---------------------------------------------------------------- inférence
-    def predict_fast(self, kind: str, x: Dict[str, float]) -> Dict[str, Any]:
+    def predict_fast(self, kind: str, x: dict[str, float]) -> dict[str, Any]:
         """Inférence rapide (β) : {"value", "beta", "latency_ms", "trained"}.
 
         Retourne trained=False si aucun surrogate dispo (l'appelant retombe
@@ -194,8 +194,8 @@ class SurrogateManager:
                 "latency_ms": latency_ms}
 
     # --------------------------------------------------------------- benchmark
-    def benchmark(self, kind: str, x: Dict[str, float],
-                  full_solver: Callable[[], float]) -> Optional[BenchmarkResult]:
+    def benchmark(self, kind: str, x: dict[str, float],
+                  full_solver: Callable[[], float]) -> BenchmarkResult | None:
         """Chronomètre solveur complet vs surrogate → speedup réel.
 
         Enregistre AUSSI l'échantillon (features, valeur du solveur complet)
@@ -223,9 +223,9 @@ class SurrogateManager:
         )
 
     # ------------------------------------------------------------------- divers
-    def status_all(self) -> Dict[str, Dict[str, Any]]:
+    def status_all(self) -> dict[str, dict[str, Any]]:
         """Statut complet pour l'API (dashboard β)."""
-        out: Dict[str, Dict[str, Any]] = {}
+        out: dict[str, dict[str, Any]] = {}
         for kind in ("thermal", "si", "pi", "emi"):
             if kind in self.status:
                 out[kind] = self.status[kind].to_dict()
@@ -266,7 +266,7 @@ class SurrogateManager:
 
 
 # ---------------------------------------------------------------- singleton
-_MANAGER: Optional[SurrogateManager] = None
+_MANAGER: SurrogateManager | None = None
 
 
 def get_manager() -> SurrogateManager:

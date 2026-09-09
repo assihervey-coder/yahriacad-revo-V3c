@@ -10,7 +10,7 @@ Les fils sont fusionnés par union-find : tout ensemble de pins reliées
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -19,10 +19,10 @@ from services.design_core.design_graph.graph import DesignGraph
 
 log = get_logger("parser.schematic")
 
-Pin = Tuple[str, str]
+Pin = tuple[str, str]
 
 
-def _wire_pins(wire: Any) -> Optional[Tuple[Pin, Pin]]:
+def _wire_pins(wire: Any) -> tuple[Pin, Pin] | None:
     """Normalise un fil (liste [ref1,pad1,ref2,pad2] ou dict {from, to})."""
     if isinstance(wire, dict):
         a, b = wire.get("from"), wire.get("to")
@@ -38,7 +38,7 @@ class _UnionFind:
     """Union-find minuscule pour regrouper les pins connectées par les fils."""
 
     def __init__(self) -> None:
-        self._parent: Dict[Pin, Pin] = {}
+        self._parent: dict[Pin, Pin] = {}
 
     def find(self, x: Pin) -> Pin:
         self._parent.setdefault(x, x)
@@ -55,7 +55,7 @@ class _UnionFind:
             self._parent[rb] = ra
 
 
-def parse_schematic(json_dict: Dict[str, Any]) -> DesignGraph:
+def parse_schematic(json_dict: dict[str, Any]) -> DesignGraph:
     """Construit un DesignGraph depuis un schéma JSON (composants + fils)."""
     graph = DesignGraph(
         project_id=str(json_dict.get("project_id", "schematic") or "schematic"),
@@ -82,7 +82,7 @@ def parse_schematic(json_dict: Dict[str, Any]) -> DesignGraph:
             continue
         uf.union(*pins)
 
-    groups: Dict[Pin, List[Pin]] = {}
+    groups: dict[Pin, list[Pin]] = {}
     for wire in wires:
         pins = _wire_pins(wire)
         if pins is None:
@@ -91,7 +91,7 @@ def parse_schematic(json_dict: Dict[str, Any]) -> DesignGraph:
             groups.setdefault(uf.find(pin), []).append(pin)
 
     # Optionnel : noms de nets fournis {"R1:1": "VCC"} sinon auto "N1", "N2"...
-    net_names: Dict[str, str] = json_dict.get("net_names", {})
+    net_names: dict[str, str] = json_dict.get("net_names", {})
     for i, (root, pins) in enumerate(sorted(groups.items(), key=lambda kv: kv[1][0]), start=1):
         unique_pins = list(dict.fromkeys(pins))
         net_id = f"N{i}"

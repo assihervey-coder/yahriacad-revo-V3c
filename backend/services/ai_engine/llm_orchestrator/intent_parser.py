@@ -9,9 +9,10 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
+
 from services.ai_engine._dc_bridge import intent_graph_cls
 from services.ai_engine.llm_orchestrator.orchestrator import LLMOrchestrator
 
@@ -27,14 +28,14 @@ class IntentParseResult:
     raw: str
     project_type: str = "generic"
     layers: int = 2
-    board_size: Optional[Tuple[float, float]] = None
-    component_hints: List[str] = field(default_factory=list)
-    constraints_text: List[str] = field(default_factory=list)
-    target_factory: Optional[str] = None
-    priority_goals: List[str] = field(default_factory=list)
+    board_size: tuple[float, float] | None = None
+    component_hints: list[str] = field(default_factory=list)
+    constraints_text: list[str] = field(default_factory=list)
+    target_factory: str | None = None
+    priority_goals: list[str] = field(default_factory=list)
     confidence: float = 0.5
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Sérialisation compatible JSON."""
         return {
             "raw": self.raw,
@@ -96,7 +97,7 @@ _GOAL_KEYWORDS = {
 class IntentParser:
     """Parse une demande en langage naturel vers une intention structurée."""
 
-    def __init__(self, orchestrator: Optional[LLMOrchestrator] = None) -> None:
+    def __init__(self, orchestrator: LLMOrchestrator | None = None) -> None:
         self.orchestrator = orchestrator
 
     # ---------------------------------------------------------------- parse
@@ -180,7 +181,7 @@ class IntentParser:
         return result
 
     # ------------------------------------------------------------------ LLM
-    def _llm_parse(self, text: str) -> Optional[IntentParseResult]:
+    def _llm_parse(self, text: str) -> IntentParseResult | None:
         assert self.orchestrator is not None
         raw = self.orchestrator.ask(
             question=text,
@@ -219,7 +220,7 @@ class IntentParser:
     # ---------------------------------------------------------------- merge
     @staticmethod
     def _merge(base: IntentParseResult,
-               refined: Optional[IntentParseResult]) -> IntentParseResult:
+               refined: IntentParseResult | None) -> IntentParseResult:
         """Fusionne heuristique + LLM (l'heuristique complète les trous)."""
         if refined is None:
             return base
@@ -253,7 +254,7 @@ def to_intent_graph(result: IntentParseResult):
     )
     root = graph.add_intent(root_goal, kind="functional", priority=1)
 
-    def _add(label: str, kind: str, payload: Dict[str, Any]) -> None:
+    def _add(label: str, kind: str, payload: dict[str, Any]) -> None:
         graph.add_intent(label, kind=kind, priority=3, parent_id=root.id,
                          metadata=payload)
 

@@ -9,7 +9,7 @@ Sert au re-import de sessions sauvegardées (les RoutePath des nets sont reconst
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -25,10 +25,10 @@ def _as_float(v: Any, default: float = 0.0) -> float:
         return default
 
 
-def _normalize(data: Dict[str, Any]) -> Dict[str, Any]:
+def _normalize(data: dict[str, Any]) -> dict[str, Any]:
     """Ramène les variantes de format vers le dict canonique de DesignGraph.to_dict()."""
     board = data.get("board_size") or data.get("board_size_mm") or [100.0, 80.0]
-    canonical: Dict[str, Any] = {
+    canonical: dict[str, Any] = {
         "project_id": str(data.get("project_id", "") or ""),
         "name": str(data.get("name", "pcb-import") or "pcb-import"),
         "board_size": [_as_float(board[0], 100.0), _as_float(board[1], 80.0)],
@@ -57,7 +57,7 @@ def _normalize(data: Dict[str, Any]) -> Dict[str, Any]:
         canonical["components"].append(c)
 
     # --- nets : path direct, ou routes séparées au niveau racine
-    routes_by_net: Dict[str, Dict[str, Any]] = {}
+    routes_by_net: dict[str, dict[str, Any]] = {}
     for route in data.get("routes", []):
         if isinstance(route, dict) and route.get("net_id"):
             routes_by_net[str(route["net_id"])] = route

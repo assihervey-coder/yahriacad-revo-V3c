@@ -7,13 +7,12 @@ Sinon : identité anonyme {"tenant": "default", "user": "anon", "scopes": ["*"]}
 from __future__ import annotations
 
 import os
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
+from shared.utilities import get_logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-
-from shared.utilities import get_logger
 
 log = get_logger("api.auth")
 

@@ -10,8 +10,8 @@ from shared.geometry import Point, RoutePath
 
 from services.design_core import DesignGraph
 from services.design_core.design_graph.layers import Layer
-from services.verification.drc_engine import DRCEngine
 from services.verification.dfm_engine import DFMEngine
+from services.verification.drc_engine import DRCEngine
 from services.verification.erc_engine import ERCEngine
 from services.verification.quality_scoring import QualityScorer
 

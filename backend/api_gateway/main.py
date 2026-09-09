@@ -14,21 +14,22 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager, suppress
-from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from shared.events import get_event_bus
+from shared.utilities import configure_logging, get_logger, get_settings
 
 from api_gateway.deps import get_engine
 from api_gateway.graphql import router as graphql_router
+from api_gateway.mcp_server import router as mcp_router
 from api_gateway.middleware import (
     AuditMiddleware,
     AuthMiddleware,
     RateLimitMiddleware,
     TenantMiddleware,
 )
-from api_gateway.mcp_server import router as mcp_router
 from api_gateway.routes import (
     billing_router,
     chat_router,
@@ -43,8 +44,6 @@ from api_gateway.routes import (
 from api_gateway.websocket import router as websocket_router
 from orchestrator.common import register_main_loop
 from orchestrator.workflow_engine.runner import consume_forever, ensure_chat_subscription
-from shared.events import get_event_bus
-from shared.utilities import configure_logging, get_logger, get_settings
 
 log = get_logger("api_gateway")
 

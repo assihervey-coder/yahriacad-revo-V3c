@@ -3,18 +3,13 @@ USB-C centré au bord bas, LED d'indication au bord, zones d'assemblage respect�
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
-
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph
-
 from services.placement_engine.constraint_placement import find_free_spot
 from services.router.topological import (
-    classify_component,
     clamp_to_board,
-    placement_free,
-    rect_hits_keepout,
+    classify_component,
     snap,
 )
 
@@ -30,7 +25,7 @@ class MechanicalPlacer:
         self.edge_mm = edge_mm
 
     def place(self, graph: DesignGraph,
-              constraints: Optional[Dict] = None) -> DesignGraph:
+              constraints: dict | None = None) -> DesignGraph:
         """Retourne une COPIE du graphe avec les contraintes mécaniques appliquées."""
         g = graph.copy()
         bw, bh = g.board_size
@@ -39,7 +34,7 @@ class MechanicalPlacer:
         # 1) trous de montage → coins (insets = demi-empreinte + 1 mm)
         mounts = [r for r, c in g.components.items()
                   if classify_component(c) == "mount"]
-        corners = [(1.0 + 1.0, 1.0 + 1.0), (bw - 4.0, 2.0),
+        [(1.0 + 1.0, 1.0 + 1.0), (bw - 4.0, 2.0),
                    (2.0, bh - 4.0), (bw - 4.0, bh - 4.0)]
         for i, ref in enumerate(mounts[:4]):
             comp = g.get(ref)

@@ -1,13 +1,14 @@
 """CheckpointManager — sauvegarde versionnée avec rétention (5 derniers)."""
 from __future__ import annotations
 
+import builtins
 import json
 import os
 import re
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from shared.utilities import get_logger, short_id
+from shared.utilities import get_logger
 
 log = get_logger("ai_engine.training.checkpoints")
 
@@ -29,7 +30,7 @@ class CheckpointManager:
         os.makedirs(self.directory, exist_ok=True)
 
     # ----------------------------------------------------------------- save
-    def save(self, name: str, obj_dict: Dict[str, Any], step: int) -> str:
+    def save(self, name: str, obj_dict: dict[str, Any], step: int) -> str:
         """Sauvegarde un checkpoint (JSON) avec meta (step, ts)."""
         fname = f"{name}_{int(step)}.json"
         path = os.path.join(self.directory, fname)
@@ -45,9 +46,9 @@ class CheckpointManager:
         return path
 
     # ----------------------------------------------------------------- list
-    def list(self, name: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list(self, name: str | None = None) -> builtins.list[dict[str, Any]]:
         """Liste les checkpoints [{name, step, path}] triés par step."""
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         if not os.path.isdir(self.directory):
             return out
         for fname in sorted(os.listdir(self.directory)):
@@ -65,14 +66,14 @@ class CheckpointManager:
         return sorted(out, key=lambda c: c["step"])
 
     # ----------------------------------------------------------------- load
-    def load_latest(self, name: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def load_latest(self, name: str | None = None) -> dict[str, Any] | None:
         """Charge le checkpoint le plus récent (par step) — None si vide."""
         entries = self.list(name)
         if not entries:
             return None
         latest = entries[-1]
         try:
-            with open(latest["path"], "r", encoding="utf-8") as f:
+            with open(latest["path"], encoding="utf-8") as f:
                 return json.load(f)
         except (OSError, ValueError) as exc:
             log.warning("chargement checkpoint échoué: %s", exc)

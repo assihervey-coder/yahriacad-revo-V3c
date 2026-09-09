@@ -3,13 +3,12 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
+from shared.utilities import get_logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-
-from shared.utilities import get_logger
 
 audit_log = get_logger("api_gateway.audit")
 

@@ -4,15 +4,13 @@ groupes appariés alignés, résolution dure des chevauchements (spirale).
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional, Tuple
 
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph
-
 from services.router.topological import (
-    classify_component,
     clamp_to_board,
+    classify_component,
     component_nets,
     pad_position,
     placement_free,
@@ -25,7 +23,7 @@ EDGE_MARGIN_MM = 3.0      # recul des composants power pour dissipation en bord
 
 
 def find_free_spot(graph: DesignGraph, ref: str, cx: float, cy: float,
-                   max_tries: int = 400) -> Optional[Tuple[float, float]]:
+                   max_tries: int = 400) -> tuple[float, float] | None:
     """Premier emplacement libre autour de (cx, cy) — spirale archimédienne.
 
     Pas de 0.4 mm, angle d'or (2.399 rad) pour un balayage uniforme ; teste
@@ -59,7 +57,7 @@ def resolve_overlaps(graph: DesignGraph) -> int:
     return moved
 
 
-def _first_overlap(graph: DesignGraph, ref: str) -> Optional[str]:
+def _first_overlap(graph: DesignGraph, ref: str) -> str | None:
     comp = graph.get(ref)
     w, h = comp.bbox
     for other_ref, other in graph.components.items():
@@ -83,7 +81,7 @@ class ConstraintPlacer:
         self.edge_margin_mm = edge_margin_mm
 
     def place(self, graph: DesignGraph,
-              constraints: Optional[Dict] = None) -> DesignGraph:
+              constraints: dict | None = None) -> DesignGraph:
         """Retourne une COPIE du graphe avec les contraintes appliquées."""
         g = graph.copy()
         n_power = self._power_near_edges(g)
@@ -157,7 +155,7 @@ class ConstraintPlacer:
 
     def _align_matched_groups(self, g: DesignGraph) -> int:
         """Composants d'un même matched_group alignés (même Y, ordre X conservé)."""
-        groups: Dict[str, List[str]] = {}
+        groups: dict[str, list[str]] = {}
         for net in g.nets.values():
             if not net.matched_group:
                 continue
@@ -165,7 +163,7 @@ class ConstraintPlacer:
                 if pin_ref in g.components and pin_ref not in groups.get(net.matched_group, []):
                     groups.setdefault(net.matched_group, []).append(pin_ref)
         moved = 0
-        for group, refs in groups.items():
+        for _group, refs in groups.items():
             if len(refs) < 2:
                 continue
             mean_y = sum(g.get(r).y for r in refs) / len(refs)

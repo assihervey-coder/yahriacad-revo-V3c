@@ -9,7 +9,7 @@ import io
 import json
 import math
 import tarfile
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -34,9 +34,9 @@ class ODBGenerator:
         self.name = _sanitize(getattr(graph, "name", "") or "pcb")
 
     # -- fichiers texte ---------------------------------------------------------
-    def generate_files(self) -> Dict[str, str]:
+    def generate_files(self) -> dict[str, str]:
         """dict[chemin interne, contenu texte] de la structure ODB++."""
-        files: Dict[str, str] = {}
+        files: dict[str, str] = {}
         layers = self._copper_layers()
 
         # matrix
@@ -54,7 +54,7 @@ class ODBGenerator:
             "Y_ORIGIN=0",
             f"SIZE_X={_c(w)}",
             f"SIZE_Y={_c(h)}",
-            f"NAME=pcb",
+            "NAME=pcb",
             "",
         ])
 
@@ -76,7 +76,7 @@ class ODBGenerator:
         }, indent=2) + "\n"
         return files
 
-    def generate(self) -> Dict[str, bytes]:
+    def generate(self) -> dict[str, bytes]:
         """Archive tar.gz en mémoire → {f"{name}.odb.tgz": bytes}."""
         payload = io.BytesIO()
         with tarfile.open(fileobj=payload, mode="w:gz") as tar:
@@ -90,20 +90,20 @@ class ODBGenerator:
         return {f"{self.name}.odb.tgz": payload.getvalue()}
 
     # -- internes -----------------------------------------------------------------
-    def _board_size(self) -> Tuple[float, float]:
+    def _board_size(self) -> tuple[float, float]:
         bs = getattr(self.graph, "board_size", (50.0, 40.0))
         if isinstance(bs, (tuple, list)) and len(bs) >= 2:
             return (float(bs[0]), float(bs[1]))
         return (50.0, 40.0)
 
-    def _copper_layers(self) -> List[Tuple[int, str]]:
+    def _copper_layers(self) -> list[tuple[int, str]]:
         """Toutes les couches cuivre du stackup (index dense)."""
-        return [(i, str(getattr(l, "name", f"L{i}")))
-                for i, l in enumerate(list(getattr(self.graph, "layers", []) or []))] or \
+        return [(i, str(getattr(ly, "name", f"L{i}")))
+                for i, ly in enumerate(list(getattr(self.graph, "layers", []) or []))] or \
             [(0, "F.Cu"), (1, "B.Cu")]
 
     @staticmethod
-    def _pad_abs(comp: Any, pad: Any) -> Tuple[float, float]:
+    def _pad_abs(comp: Any, pad: Any) -> tuple[float, float]:
         """Position absolue d'un pad (offset local tourné + centre composant)."""
         rot = math.radians(float(getattr(comp, "rotation", 0.0) or 0.0))
         c, s = math.cos(rot), math.sin(rot)

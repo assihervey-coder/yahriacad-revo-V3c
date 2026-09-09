@@ -1,15 +1,15 @@
 """Route projets — CRUD + arborescence data/projects/{tenant}/..."""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
+from shared.utilities import get_logger
 
 from api_gateway.deps import get_tenant, get_user_id
 from api_gateway.middleware.tenant import safe_path_segment
 from orchestrator.state_manager import DesignStateManager, ProjectState
-from shared.utilities import get_logger
 
 log = get_logger("api.projects")
 
@@ -23,7 +23,7 @@ class ProjectCreate(BaseModel):
 
 
 @router.post("", status_code=201)
-async def create_project(payload: ProjectCreate, request: Request) -> Dict[str, Any]:
+async def create_project(payload: ProjectCreate, request: Request) -> dict[str, Any]:
     """Crée le projet + son arborescence (design, jobs, exports, simulations)."""
     tenant = safe_path_segment(get_tenant(request) if payload.tenant_id == "default" else payload.tenant_id)
     user = safe_path_segment(payload.user_id if payload.user_id != "default" else get_user_id(request))
@@ -35,15 +35,15 @@ async def create_project(payload: ProjectCreate, request: Request) -> Dict[str, 
 
 @router.get("")
 async def list_projects(request: Request,
-                        tenant: str = "") -> Dict[str, Any]:
+                        tenant: str = "") -> dict[str, Any]:
     """Liste les projets d'un tenant."""
     tenant_id = safe_path_segment(tenant or get_tenant(request))
-    projects: List[Dict[str, Any]] = [p.to_dict() for p in ProjectState.list_projects(tenant_id)]
+    projects: list[dict[str, Any]] = [p.to_dict() for p in ProjectState.list_projects(tenant_id)]
     return {"tenant_id": tenant_id, "count": len(projects), "projects": projects}
 
 
 @router.get("/{project_id}")
-async def get_project(project_id: str, request: Request) -> Dict[str, Any]:
+async def get_project(project_id: str, request: Request) -> dict[str, Any]:
     """État du projet + révision courante du design."""
     tenant = get_tenant(request)
     user = get_user_id(request)
@@ -61,7 +61,7 @@ async def get_project(project_id: str, request: Request) -> Dict[str, Any]:
 
 
 @router.delete("/{project_id}")
-async def delete_project(project_id: str, request: Request) -> Dict[str, Any]:
+async def delete_project(project_id: str, request: Request) -> dict[str, Any]:
     """Supprime le projet et son arborescence."""
     tenant = get_tenant(request)
     user = get_user_id(request)

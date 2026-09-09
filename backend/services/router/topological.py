@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Iterable, List, Optional, Sequence, Tuple
 
 from shared.geometry import Point
 from shared.utilities import get_logger
+
 from services.design_core import Component, DesignGraph, Net, Pad
 
 log = get_logger("router.topological")
@@ -66,7 +66,7 @@ def class_rank(net: Net) -> int:
 
 
 # --------------------------------------------------------------------------- pads / positions
-def find_pad(comp: Component, pad_name: str) -> Optional[Pad]:
+def find_pad(comp: Component, pad_name: str) -> Pad | None:
     """Pad `pad_name` d'un composant, None sinon."""
     for p in comp.pads:
         if p.name == pad_name:
@@ -92,14 +92,14 @@ def pad_position(graph: DesignGraph, ref: str, pad_name: str) -> Point:
     return Point(comp.x + px * ca - py * sa, comp.y + px * sa + py * ca)
 
 
-def component_pad_positions(graph: DesignGraph, ref: str) -> List[Tuple[str, Point]]:
+def component_pad_positions(graph: DesignGraph, ref: str) -> list[tuple[str, Point]]:
     """Tous les pads d'un composant : liste (pad_name, position absolue)."""
     return [(p.name, pad_position(graph, ref, p.name)) for p in graph.get(ref).pads]
 
 
-def net_pad_positions(graph: DesignGraph, net: Net) -> List[Tuple[Tuple[str, str], Point]]:
+def net_pad_positions(graph: DesignGraph, net: Net) -> list[tuple[tuple[str, str], Point]]:
     """Positions absolues de tous les pins d'un net : [((ref, pad), Point), ...]."""
-    out: List[Tuple[Tuple[str, str], Point]] = []
+    out: list[tuple[tuple[str, str], Point]] = []
     for ref, pad_name in net.pins:
         if ref in graph.components:
             out.append(((ref, pad_name), pad_position(graph, ref, pad_name)))
@@ -107,7 +107,7 @@ def net_pad_positions(graph: DesignGraph, net: Net) -> List[Tuple[Tuple[str, str
 
 
 # --------------------------------------------------------------------------- MST (Prim maison)
-def build_net_topology(graph: DesignGraph, net: Net) -> List[Tuple[Point, Point]]:
+def build_net_topology(graph: DesignGraph, net: Net) -> list[tuple[Point, Point]]:
     """Paires de pads à relier : arbre couvrant minimal (Prim O(n²)) des pins du net.
 
     Nœuds = positions absolues des pads ; arêtes = distances euclidiennes.
@@ -121,7 +121,7 @@ def build_net_topology(graph: DesignGraph, net: Net) -> List[Tuple[Point, Point]
     in_tree[0] = True
     best = [nodes[0].distance_to(p) for p in nodes]   # distance au nœud 0
     best_from = [0] * n
-    edges: List[Tuple[Point, Point]] = []
+    edges: list[tuple[Point, Point]] = []
     for _ in range(n - 1):
         # plus proche nœud hors arbre
         dmin, j = math.inf, -1
@@ -148,7 +148,7 @@ def net_length_estimate(graph: DesignGraph, net: Net) -> float:
 
 
 # --------------------------------------------------------------------------- centroïdes / HPWL
-def net_centroid(graph: DesignGraph, net: Net) -> Optional[Point]:
+def net_centroid(graph: DesignGraph, net: Net) -> Point | None:
     """Centroïde des positions de pads d'un net (None si aucun pin valide)."""
     pads = net_pad_positions(graph, net)
     if not pads:
@@ -174,10 +174,10 @@ def hpwl_wire_length(graph: DesignGraph) -> float:
     return total
 
 
-def component_nets(graph: DesignGraph, ref: str) -> List[Net]:
+def component_nets(graph: DesignGraph, ref: str) -> list[Net]:
     """Nets auxquels participent les pads d'un composant (dédupliqués)."""
     seen: set[str] = set()
-    out: List[Net] = []
+    out: list[Net] = []
     for pad in graph.get(ref).pads:
         nid = pad.net_id
         if nid and nid not in seen and nid in graph.nets:
@@ -187,9 +187,9 @@ def component_nets(graph: DesignGraph, ref: str) -> List[Net]:
 
 
 # --------------------------------------------------------------------------- keepouts
-def keepout_rects(graph: DesignGraph) -> List[Tuple[float, float, float, float]]:
+def keepout_rects(graph: DesignGraph) -> list[tuple[float, float, float, float]]:
     """Keepouts sous forme de rects (min_x, min_y, max_x, max_y) via bbox des polygones."""
-    rects: List[Tuple[float, float, float, float]] = []
+    rects: list[tuple[float, float, float, float]] = []
     for k in graph.keepouts or []:
         poly = getattr(k, "polygon", None)
         if poly is None and isinstance(k, (tuple, list)) and len(k) == 4:
@@ -282,7 +282,7 @@ def snap(value: float, pitch: float = 2.54) -> float:
 
 
 def clamp_to_board(graph: DesignGraph, x: float, y: float, w: float, h: float,
-                   margin: float = 1.0) -> Tuple[float, float]:
+                   margin: float = 1.0) -> tuple[float, float]:
     """Contraint un centre (x, y) pour que la bbox reste dans la carte."""
     bw, bh = graph.board_size
     x = min(max(x, w / 2 + margin), bw - w / 2 - margin)
@@ -290,6 +290,6 @@ def clamp_to_board(graph: DesignGraph, x: float, y: float, w: float, h: float,
     return x, y
 
 
-def component_pads_on_net(graph: DesignGraph, ref: str, net: Net) -> List[str]:
+def component_pads_on_net(graph: DesignGraph, ref: str, net: Net) -> list[str]:
     """Noms des pads de `ref` qui appartiennent au net `net`."""
     return [pad_name for pin_ref, pad_name in net.pins if pin_ref == ref]

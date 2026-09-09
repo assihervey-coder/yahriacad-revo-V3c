@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
-
 from shared.utilities import get_logger
+
 from services.ai_engine.autonomous_optimizer.fast_evaluator import FastEvaluator
 from services.ai_engine.rl_agent.action_space import ActionSpace
 from services.ai_engine.rl_agent.policy_network import PolicyNetwork
@@ -52,18 +52,17 @@ class TrainingPipeline:
     @staticmethod
     def _violation_count(graph) -> int:  # noqa: ANN001
         try:
-            from services.ai_engine.self_verifier.deterministic import \
-                check_deterministic
+            from services.ai_engine.self_verifier.deterministic import check_deterministic
             return len(check_deterministic(graph))
         except Exception:
             return 0
 
     # ---------------------------------------------------------------- train
     def train_placement_policy(self, episodes: int = 100,
-                               checkpoint_dir: Optional[str] = None,
+                               checkpoint_dir: str | None = None,
                                n_components: int = 8,
                                lr_policy: float = 1e-3,
-                               lr_value: float = 1e-3) -> Dict[str, Any]:
+                               lr_value: float = 1e-3) -> dict[str, Any]:
         """Boucle REINFORCE complète — retourne les métriques d'entraînement."""
         checkpoint_dir = checkpoint_dir or self.checkpoint_dir
         ckpt = CheckpointManager(checkpoint_dir)
@@ -77,7 +76,7 @@ class TrainingPipeline:
         agent = RLAgent(policy, value, WorldModel(seed=self.seed), space)
 
         evaluator = FastEvaluator()
-        history: List[Dict[str, Any]] = []
+        history: list[dict[str, Any]] = []
         t0 = time.time()
 
         for ep in range(1, episodes + 1):
@@ -86,9 +85,9 @@ class TrainingPipeline:
             refs = sorted(graph.components.keys())
             space.set_refs(refs)
 
-            ep_states: List[np.ndarray] = []
-            ep_actions: List[int] = []
-            ep_rewards: List[float] = []
+            ep_states: list[np.ndarray] = []
+            ep_actions: list[int] = []
+            ep_rewards: list[float] = []
             ep_wl_start = evaluator.evaluate(graph).breakdown.get("wire_length", 0.0)
 
             state = state_from_graph(graph)

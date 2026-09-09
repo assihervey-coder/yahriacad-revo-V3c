@@ -1,6 +1,6 @@
 """firmware_bridge — PinMap MCU + génération header C / Zephyr / Arduino / STM32."""
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -31,7 +31,7 @@ log = get_logger(__name__)
 class FirmwareBridge:
     """Façade : DesignGraph → fichiers firmware virtuels (dict chemin → contenu)."""
 
-    def generate_all(self, graph: Any, mcu_ref: Optional[str] = None) -> Dict[str, str]:
+    def generate_all(self, graph: Any, mcu_ref: str | None = None) -> dict[str, str]:
         """Génère tous les artefacts firmware (header C, overlay, Arduino, STM32)."""
         pin_map = PinExporter().export(graph, mcu_ref=mcu_ref)
         issues = validate(pin_map)
@@ -48,6 +48,6 @@ class FirmwareBridge:
         }
 
 
-def generate_all(graph: Any, mcu_ref: Optional[str] = None) -> Dict[str, str]:
+def generate_all(graph: Any, mcu_ref: str | None = None) -> dict[str, str]:
     """Raccourci module-level : FirmwareBridge().generate_all(graph, mcu_ref)."""
     return FirmwareBridge().generate_all(graph, mcu_ref=mcu_ref)

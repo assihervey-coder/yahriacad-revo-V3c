@@ -1,17 +1,17 @@
 """Planner — transforme les intentions en délégations ordonnées par rôle."""
 from __future__ import annotations
 
-import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from orchestrator.common import get_field
 from shared.contracts import AgentRole, Delegation
 from shared.utilities import get_logger, new_id
+
+from orchestrator.common import get_field
 
 log = get_logger("super_agent.planner")
 
 # Séquence canonique quand aucun indice thématique n'est détecté
-DEFAULT_SEQUENCE: List[AgentRole] = [
+DEFAULT_SEQUENCE: list[AgentRole] = [
     AgentRole.SELECTOR,
     AgentRole.PLACEMENT,
     AgentRole.ROUTING,
@@ -22,7 +22,7 @@ DEFAULT_SEQUENCE: List[AgentRole] = [
 ]
 
 # Heuristique LLM-less : mots-clés d'intention → rôle
-KEYWORD_ROLES: List[Tuple[Tuple[str, ...], AgentRole]] = [
+KEYWORD_ROLES: list[tuple[tuple[str, ...], AgentRole]] = [
     (("composant", "component", "sélection", "select", "bom", "référence"), AgentRole.SELECTOR),
     (("place", "position", "implantation"), AgentRole.PLACEMENT),
     (("route", "routage", "piste", "net "), AgentRole.ROUTING),
@@ -35,7 +35,7 @@ KEYWORD_ROLES: List[Tuple[Tuple[str, ...], AgentRole]] = [
 ]
 
 # Ordre canonique de dépendances (plus petit = plus tôt)
-CANONICAL_ORDER: Dict[AgentRole, int] = {
+CANONICAL_ORDER: dict[AgentRole, int] = {
     AgentRole.PLANNER: 0,
     AgentRole.RESEARCHER: 1,
     AgentRole.CODE_GENERATOR: 2,
@@ -48,7 +48,7 @@ CANONICAL_ORDER: Dict[AgentRole, int] = {
     AgentRole.MANUFACTURING: 9,
 }
 
-OBJECTIVES: Dict[AgentRole, str] = {
+OBJECTIVES: dict[AgentRole, str] = {
     AgentRole.PLANNER: "Parser l'intention et produire le plan d'exécution",
     AgentRole.RESEARCHER: "Rechercher les contraintes techniques des composants",
     AgentRole.SELECTOR: "Sélectionner les composants et construire le DesignGraph",
@@ -65,11 +65,11 @@ OBJECTIVES: Dict[AgentRole, str] = {
 class Planner:
     """Planification heuristique (enrichissable par LLM) des délégations."""
 
-    def build_plan(self, intents: Any) -> List[Delegation]:
+    def build_plan(self, intents: Any) -> list[Delegation]:
         """Intentions prioritaires → délégations ordonnées par rôle."""
         goals = self._goals(intents)
         text = " ".join(goals).lower()
-        roles: List[AgentRole] = []
+        roles: list[AgentRole] = []
         for keywords, role in KEYWORD_ROLES:
             for keyword in keywords:
                 if keyword in text and role not in roles:
@@ -92,7 +92,7 @@ class Planner:
             for role in roles
         ]
 
-    def replan(self, plan: List[Delegation], feedback: Dict[str, Any]) -> List[Delegation]:
+    def replan(self, plan: list[Delegation], feedback: dict[str, Any]) -> list[Delegation]:
         """Re-planifie : retire les rôles en échec, injecte une correction."""
         failed_roles = set()
         for role in (feedback.get("failed_roles") or []):
@@ -102,7 +102,7 @@ class Planner:
                 continue
         if feedback.get("verification_failed"):
             failed_roles.add(AgentRole.CORRECTOR)
-        replanned: List[Delegation] = []
+        replanned: list[Delegation] = []
         for delegation in plan:
             if delegation.role in failed_roles and delegation.role != AgentRole.CORRECTOR:
                 continue
@@ -125,7 +125,7 @@ class Planner:
         return self._canonical_order(replanned)
 
     # ------------------------------------------------------------ internals
-    def _goals(self, intents: Any) -> List[str]:
+    def _goals(self, intents: Any) -> list[str]:
         if intents is None:
             return []
         if isinstance(intents, str):
@@ -134,7 +134,7 @@ class Planner:
             value = get_field(intents, attr, default=None)
             if isinstance(value, list) and value:
                 return [str(goal) for goal in value]
-        goals: List[str] = []
+        goals: list[str] = []
         hints = get_field(intents, "component_hints", "components", default=None)
         if isinstance(hints, list) and hints:
             goals.append("composants: " + ", ".join(str(h) for h in hints[:10]))
@@ -145,14 +145,14 @@ class Planner:
                 break
         return goals
 
-    def _canonical_order(self, roles: List[AgentRole]) -> List[AgentRole]:
-        seen: List[AgentRole] = []
+    def _canonical_order(self, roles: list[AgentRole]) -> list[AgentRole]:
+        seen: list[AgentRole] = []
         for role in sorted(set(roles), key=lambda r: CANONICAL_ORDER.get(r, 99)):
             seen.append(role)
         return seen
 
-    def _criteria(self, role: AgentRole) -> List[str]:
-        criteria: Dict[AgentRole, List[str]] = {
+    def _criteria(self, role: AgentRole) -> list[str]:
+        criteria: dict[AgentRole, list[str]] = {
             AgentRole.SELECTOR: ["tous les component hints matchés", "graph avec ≥1 composant"],
             AgentRole.PLACEMENT: ["aucun recouvrement", "longueur de fil réduite"],
             AgentRole.ROUTING: ["100% des nets routés ou échecs justifiés"],

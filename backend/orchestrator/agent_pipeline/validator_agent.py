@@ -1,7 +1,11 @@
 """ValidatorAgent — vérification complète (self + physique + qualité)."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
+
+from shared.contracts import AgentRole
+from shared.events import EventTypes
+from shared.schemas import AgentResultSchema
 
 from orchestrator.agent_pipeline.base import BaseAgent
 from orchestrator.agent_pipeline.validator_checks import local_checks
@@ -10,9 +14,6 @@ from orchestrator.common import (
     get_field,
     try_import,
 )
-from shared.contracts import AgentRole
-from shared.events import EventTypes
-from shared.schemas import AgentResultSchema
 
 
 class ValidatorAgent(BaseAgent):
@@ -31,15 +32,15 @@ class ValidatorAgent(BaseAgent):
     def supports(self, action: str) -> bool:
         return action in ("verify_all", "verify", "")
 
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         graph = context.get("graph")
         if graph is None:
             return self.failed(context, "aucun DesignGraph dans le contexte")
         params = context.get("params") or {}
         factory = params.get("factory")
 
-        verification: Dict[str, Any] = {}
-        reports: List[Any] = []
+        verification: dict[str, Any] = {}
+        reports: list[Any] = []
 
         # 1) Self-verifier du cerveau IA
         self_mod = try_import("services.ai_engine", ["SelfVerifier"])
@@ -126,8 +127,8 @@ class ValidatorAgent(BaseAgent):
                               rationale=("vérification PASS" if all_passed
                                          else f"vérification FAIL — {len(suggestions)} corrections suggérées"))
 
-    def _suggestions(self, verification: Dict[str, Any]) -> List[str]:
-        suggestions: List[str] = []
+    def _suggestions(self, verification: dict[str, Any]) -> list[str]:
+        suggestions: list[str] = []
         for key in ("self", "physical", "local"):
             for issue in verification.get(key, {}).get("issues", []) or []:
                 text = str(issue)
@@ -136,11 +137,11 @@ class ValidatorAgent(BaseAgent):
         return suggestions[:30]
 
 
-def _stringify_issues(issues: Any) -> List[str]:
+def _stringify_issues(issues: Any) -> list[str]:
     if issues is None:
         return []
     if isinstance(issues, (list, tuple)):
-        out: List[str] = []
+        out: list[str] = []
         for issue in issues:
             if isinstance(issue, dict):
                 message = (issue.get("message") or issue.get("description")
@@ -161,10 +162,10 @@ def json_dumps(value: Any) -> str:
         return str(value)
 
 
-def _summary(report: Any) -> Dict[str, Any]:
+def _summary(report: Any) -> dict[str, Any]:
     if isinstance(report, dict):
         return {k: v for k, v in report.items() if k not in ("issues", "violations")}
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     for field in ("drc", "erc", "dfm", "passed", "confidence", "score"):
         value = get_field(report, field, default=None)
         if value is not None:

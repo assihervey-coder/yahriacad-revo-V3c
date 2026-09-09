@@ -3,15 +3,15 @@ from __future__ import annotations
 
 import json
 import re
-from typing import List, Optional
 
 from shared.utilities import get_logger
+
 from services.ai_engine.llm_orchestrator.orchestrator import LLMOrchestrator
 
 log = get_logger("ai_engine.llm.reasoning")
 
 # Sous-objectifs canoniques du pipeline EDA
-CANONICAL_STEPS: List[str] = [
+CANONICAL_STEPS: list[str] = [
     "Sélection des composants (MPN, empreintes, disponibilité usine)",
     "Placement des composants (proximité des nets critiques)",
     "Routage des pistes (alimentation puis signaux rapides)",
@@ -37,7 +37,7 @@ _STEP_KEYWORDS = [
 def chain_of_thought(
     orchestrator: LLMOrchestrator,
     question: str,
-    steps_hint: Optional[List[str]] = None,
+    steps_hint: list[str] | None = None,
 ) -> str:
     """Prompt CoT structuré : force le LLM à raisonner étape par étape."""
     steps = steps_hint or [
@@ -60,9 +60,9 @@ def chain_of_thought(
 
 
 def decompose_objective(
-    orchestrator: Optional[LLMOrchestrator],
+    orchestrator: LLMOrchestrator | None,
     objective: str,
-) -> List[str]:
+) -> list[str]:
     """Découpe un objectif en sous-objectifs (LLM, sinon heuristique mots-clés)."""
     if orchestrator is not None:
         try:
@@ -88,10 +88,10 @@ def decompose_objective(
     return _heuristic_decompose(objective)
 
 
-def _heuristic_decompose(objective: str) -> List[str]:
+def _heuristic_decompose(objective: str) -> list[str]:
     """Découpage par mots-clés sur les étapes canoniques du pipeline."""
     low = objective.lower()
-    ordered: List[str] = []
+    ordered: list[str] = []
     seen: set[str] = set()
     for kw, label in _STEP_KEYWORDS:
         if kw in low and label not in seen:

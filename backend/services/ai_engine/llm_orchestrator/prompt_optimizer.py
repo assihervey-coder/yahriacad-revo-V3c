@@ -5,7 +5,6 @@ import json
 import os
 import random
 from collections import defaultdict
-from typing import Dict, List, Tuple
 
 from shared.utilities import get_logger
 
@@ -22,7 +21,7 @@ class PromptOptimizer:
     """
 
     def __init__(self, persist_path: str | None = None) -> None:
-        self._scores: Dict[str, Dict[str, List[float]]] = defaultdict(
+        self._scores: dict[str, dict[str, list[float]]] = defaultdict(
             lambda: defaultdict(list)
         )
         self.persist_path = persist_path or os.getenv("PROMPT_OPTIMIZER_PATH", "")
@@ -30,7 +29,7 @@ class PromptOptimizer:
             self._load()
 
     # ------------------------------------------------------------- variants
-    _TEMPLATE_VARIANTS: Dict[str, Tuple[str, str]] = {
+    _TEMPLATE_VARIANTS: dict[str, tuple[str, str]] = {
         "placement": (
             "Optimise le placement en minimisant la longueur totale des fils. "
             "Suggère des déplacements précis (dx, dy) par composant.",
@@ -55,7 +54,7 @@ class PromptOptimizer:
         ),
     }
 
-    def variants(self, task: str) -> List[str]:
+    def variants(self, task: str) -> list[str]:
         """Retourne les 2 variantes A/B pour une tâche donnée."""
         key = task if task in self._TEMPLATE_VARIANTS else "default"
         a, b = self._TEMPLATE_VARIANTS[key]
@@ -76,7 +75,7 @@ class PromptOptimizer:
         a, b = self._TEMPLATE_VARIANTS[task if task in self._TEMPLATE_VARIANTS
                                        else "default"]
         names = [a, b]
-        samples: List[float] = []
+        samples: list[float] = []
         for name in names:
             scores = self._scores[task].get(name, [])
             if not scores:
@@ -89,9 +88,9 @@ class PromptOptimizer:
         best_idx = max(range(len(names)), key=lambda i: samples[i])
         return names[best_idx]
 
-    def stats(self, task: str) -> Dict[str, Dict[str, float]]:
+    def stats(self, task: str) -> dict[str, dict[str, float]]:
         """Statistiques moyennes par variante (observabilité)."""
-        out: Dict[str, Dict[str, float]] = {}
+        out: dict[str, dict[str, float]] = {}
         for name, scores in self._scores.get(task, {}).items():
             if scores:
                 out[name] = {"mean": sum(scores) / len(scores), "n": float(len(scores))}
@@ -105,7 +104,7 @@ class PromptOptimizer:
 
     def _load(self) -> None:
         try:
-            with open(self.persist_path, "r", encoding="utf-8") as f:
+            with open(self.persist_path, encoding="utf-8") as f:
                 data = json.load(f)
             for task, variants in data.items():
                 for name, scores in variants.items():

@@ -7,18 +7,15 @@ chevauchement → décalage en spirale via `find_free_spot`.
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional, Tuple
 
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph
-
 from services.placement_engine.constraint_placement import find_free_spot
 from services.router.topological import (
-    classify_component,
     clamp_to_board,
+    classify_component,
     component_nets,
-    placement_free,
     snap,
 )
 
@@ -87,8 +84,8 @@ class InitialPlacer:
         return g
 
     # ----------------------------------------------------------------- internes
-    def _classify(self, g: DesignGraph) -> Dict[str, List[str]]:
-        groups: Dict[str, List[str]] = {
+    def _classify(self, g: DesignGraph) -> dict[str, list[str]]:
+        groups: dict[str, list[str]] = {
             "mount": [], "connector": [], "mcu": [], "power": [],
             "passive": [], "other": [],
         }
@@ -141,13 +138,13 @@ class InitialPlacer:
         return cells
 
     def _next_grid_cell(self, g: DesignGraph, occupied: set, cx0: float, cy0: float,
-                        pitch: float) -> Optional[Tuple[float, float]]:
+                        pitch: float) -> tuple[float, float] | None:
         """Plus proche cellule de grille libre autour du centre (rangées concentriques)."""
         bw, bh = g.board_size
         n_x = int((bw - 2 * self.edge_margin) / pitch)
         n_y = int((bh - 2 * self.edge_margin) / pitch)
-        ix0, iy0 = int(round(cx0 / pitch)), int(round(cy0 / pitch))
-        candidates: List[Tuple[float, int, int]] = []
+        _ix0, _iy0 = int(round(cx0 / pitch)), int(round(cy0 / pitch))
+        candidates: list[tuple[float, int, int]] = []
         for ix in range(1, n_x):
             for iy in range(1, n_y):
                 if (ix, iy) in occupied:

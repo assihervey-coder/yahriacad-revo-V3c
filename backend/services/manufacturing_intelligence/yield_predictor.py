@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -12,7 +12,7 @@ from services.manufacturing_intelligence.factory_profiles import FactoryProfile
 log = get_logger(__name__)
 
 _MODEL_PATH = os.path.join("data", "trained_models", "yield_model.joblib")
-_model_cache: Optional[Any] = None
+_model_cache: Any | None = None
 
 
 @dataclass
@@ -20,7 +20,7 @@ class YieldPrediction:
     """Rendement attendu (0..1) et facteurs de risque identifiés."""
 
     expected_yield: float
-    risk_factors: List[str] = field(default_factory=list)
+    risk_factors: list[str] = field(default_factory=list)
     model: str = "heuristic"  # heuristic | sklearn
 
 
@@ -40,7 +40,7 @@ class YieldPredictor:
             except Exception as exc:
                 log.warning("modèle yield inutilisable (%s) — fallback heuristique", exc)
 
-        risks: List[str] = []
+        risks: list[str] = []
         score = 0.99
 
         n_layers = len(list(getattr(graph, "layers", []) or [])) or 2
@@ -66,9 +66,9 @@ class YieldPredictor:
         small_vias = 0
         for net in graph.nets.values():
             path = getattr(net, "path", None)
-            for via in (getattr(path, "vias", []) or []) if path is not None else []:
+            for _via in (getattr(path, "vias", []) or []) if path is not None else []:
                 # taille via par défaut 0.6 / drill 0.3 (constantes exporter)
-                if 0.6 - 0.3 < 2 * profile.min_annular_ring_mm or 0.3 < profile.min_hole_mm:
+                if 2 * profile.min_annular_ring_mm > 0.6 - 0.3 or profile.min_hole_mm > 0.3:
                     small_vias += 1
         if small_vias:
             score -= min(0.10, 0.01 * small_vias)
@@ -100,7 +100,7 @@ class YieldPredictor:
 
     # -- internes ---------------------------------------------------------------
     @staticmethod
-    def _features(graph: Any, profile: FactoryProfile) -> List[float]:
+    def _features(graph: Any, profile: FactoryProfile) -> list[float]:
         """Vecteur de features [densité, ratio_trace, couches, n_comp, n_vias, largeur_moy]."""
         try:
             w, h = graph.board_size
@@ -125,7 +125,7 @@ class YieldPredictor:
         ]
 
     @staticmethod
-    def _load_model() -> Optional[Any]:
+    def _load_model() -> Any | None:
         """Charge le modèle sklearn sauvé (lazy, jamais bloquant)."""
         global _model_cache
         if _model_cache is not None:

@@ -13,7 +13,7 @@ le keeper valide toujours sur l'évaluateur réel (sécurité inchangée).
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -29,7 +29,7 @@ log = get_logger("ai_engine.opt.world_proposer")
 class WorldModelProposer:
     """Proposer « imagine-puis-propose » piloté par le world model."""
 
-    def __init__(self, world_model: Optional[WorldModel] = None,
+    def __init__(self, world_model: WorldModel | None = None,
                  pool_size: int = 40, top_k: int = 4,
                  rollout_depth: int = 2, gamma: float = 0.95,
                  max_refs: int = 8) -> None:
@@ -39,12 +39,12 @@ class WorldModelProposer:
         self.rollout_depth = int(rollout_depth)
         self.gamma = float(gamma)
         self.max_refs = int(max_refs)
-        self.last_imagined: List[Dict[str, Any]] = []
+        self.last_imagined: list[dict[str, Any]] = []
 
     # ------------------------------------------------------------------ public
     def propose(self, graph,  # noqa: ANN001
                 eval_result=None,  # noqa: ANN001 — compat interface proposers
-                k: Optional[int] = None) -> List[Proposal]:
+                k: int | None = None) -> list[Proposal]:
         """Top-k propositions classées par récompense imaginée."""
         top_k = self.top_k if k is None else int(k)
         refs = self._refs_by_degree(graph)
@@ -68,7 +68,7 @@ class WorldModelProposer:
             }
             for a, v in scored[:top_k]
         ]
-        proposals: List[Proposal] = []
+        proposals: list[Proposal] = []
         for action, value in scored[:top_k]:
             if abs(action.dx) < 1e-9 and abs(action.dy) < 1e-9:
                 continue
@@ -85,26 +85,26 @@ class WorldModelProposer:
 
     # ------------------------------------------------------------------ privé
     @staticmethod
-    def _refs_by_degree(graph) -> List[str]:  # noqa: ANN001
+    def _refs_by_degree(graph) -> list[str]:  # noqa: ANN001
         """Refs triés par degré de connexion décroissant (cap max_refs)."""
-        degree: Dict[str, int] = {ref: 0 for ref in graph.components}
+        degree: dict[str, int] = {ref: 0 for ref in graph.components}
         for net in graph.nets.values():
             for ref, _pad in getattr(net, "pins", []) or []:
                 if ref in degree:
                     degree[ref] += 1
         return sorted(degree, key=lambda r: degree[r], reverse=True)
 
-    def _candidate_moves(self, graph, refs: List[str]) -> List[PlacementAction]:  # noqa: ANN001
+    def _candidate_moves(self, graph, refs: list[str]) -> list[PlacementAction]:  # noqa: ANN001
         """Pool de moves vers le centroïde des pads des nets connectés."""
         board_w, board_h = board_extents(graph)
-        actions: List[PlacementAction] = []
+        actions: list[PlacementAction] = []
         steps = (0.5, 1.0, 2.0)
         for ref in refs[: self.max_refs]:
             comp = graph.components.get(ref)
             if comp is None:
                 continue
             nets = component_nets(graph, ref)
-            pad_pts: List[Any] = []
+            pad_pts: list[Any] = []
             for net in nets:
                 pad_pts.extend(pos for _, pos in net_pad_positions(graph, net))
             if not pad_pts:

@@ -3,23 +3,24 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any
 
 from shared.utilities import get_logger
+
 from services.design_core.design_graph.graph import DesignGraph
 from services.verification.design_rules import DesignRules
+from services.verification.dfm_engine import DFMEngine
 from services.verification.drc_engine import DRCEngine
 from services.verification.erc_engine import ERCEngine
-from services.verification.dfm_engine import DFMEngine
 
 log = get_logger(__name__)
 
 
 @dataclass
 class PhysicalVerificationReport:
-    erc: Dict[str, Any] = field(default_factory=dict)
-    drc: Dict[str, Any] = field(default_factory=dict)
-    dfm: Dict[str, Any] = field(default_factory=dict)
+    erc: dict[str, Any] = field(default_factory=dict)
+    drc: dict[str, Any] = field(default_factory=dict)
+    dfm: dict[str, Any] = field(default_factory=dict)
     passed: bool = False
     duration_ms: float = 0.0
 
@@ -30,7 +31,7 @@ class PhysicalVerificationReport:
             n += len(section.get("violations", []))
         return n
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "erc": self.erc, "drc": self.drc, "dfm": self.dfm,
             "passed": self.passed, "duration_ms": round(self.duration_ms, 1),
@@ -44,11 +45,11 @@ class PhysicalVerification:
     Utilisé par : validator_agent, self_verifier, api, human surgical editor.
     """
 
-    def __init__(self, rules: Optional[DesignRules] = None, factory: str = "jlcpcb") -> None:
+    def __init__(self, rules: DesignRules | None = None, factory: str = "jlcpcb") -> None:
         self.rules = rules
         self.factory = factory
 
-    def run_all(self, graph: DesignGraph, factory: Optional[str] = None) -> PhysicalVerificationReport:
+    def run_all(self, graph: DesignGraph, factory: str | None = None) -> PhysicalVerificationReport:
         t0 = time.perf_counter()
         factory = factory or self.factory
         erc_report = ERCEngine().run(graph)

@@ -1,10 +1,12 @@
 """Tool-use — spécification, registre et boucle d'exécution des outils."""
 from __future__ import annotations
 
+import builtins
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 from shared.utilities import get_logger
 
@@ -20,10 +22,10 @@ class ToolSpec:
 
     name: str
     description: str
-    parameters: Dict[str, Any]          # JSON-schema du payload
+    parameters: dict[str, Any]          # JSON-schema du payload
     handler: Callable[..., Any]         # fn(**arguments) -> Any
 
-    def openapi(self) -> Dict[str, Any]:
+    def openapi(self) -> dict[str, Any]:
         """Représentation type OpenAI function-calling."""
         return {
             "type": "function",
@@ -40,7 +42,7 @@ class ToolLoopResult:
     """Résultat d'une boucle tool-use complète."""
 
     final_content: str
-    tool_calls_made: List[Dict[str, Any]] = field(default_factory=list)
+    tool_calls_made: list[dict[str, Any]] = field(default_factory=list)
     iterations: int = 0
 
 
@@ -48,19 +50,19 @@ class ToolRegistry:
     """Registre des outils exposés au LLM."""
 
     def __init__(self) -> None:
-        self._tools: Dict[str, ToolSpec] = {}
+        self._tools: dict[str, ToolSpec] = {}
 
     def register(self, spec: ToolSpec) -> None:
         """Enregistre (ou remplace) un outil."""
         self._tools[spec.name] = spec
 
-    def get(self, name: str) -> Optional[ToolSpec]:
+    def get(self, name: str) -> ToolSpec | None:
         return self._tools.get(name)
 
-    def list(self) -> List[ToolSpec]:
+    def list(self) -> builtins.list[ToolSpec]:
         return list(self._tools.values())
 
-    def openapi_schema(self) -> List[Dict[str, Any]]:
+    def openapi_schema(self) -> builtins.list[dict[str, Any]]:
         """Schéma complet prêt pour l'API tools."""
         return [t.openapi() for t in self._tools.values()]
 
@@ -78,7 +80,7 @@ class ToolRegistry:
         )
         return "\n".join(lines)
 
-    def execute(self, name: str, arguments: Dict[str, Any]) -> Any:
+    def execute(self, name: str, arguments: dict[str, Any]) -> Any:
         """Exécute un outil par nom, avec erreurs encapsulées."""
         spec = self.get(name)
         if spec is None:
@@ -86,7 +88,7 @@ class ToolRegistry:
         return spec.handler(**arguments)
 
 
-def parse_tool_call(text: str) -> Optional[Dict[str, Any]]:
+def parse_tool_call(text: str) -> dict[str, Any] | None:
     """Parse {"tool": name, "arguments": {...}} dans une réponse LLM (tolérant)."""
     txt = text.strip()
     if txt.startswith("```"):
@@ -124,8 +126,8 @@ def run_tool_loop(
     )
     full_system = sys_prompt + "\n" + registry.describe_for_prompt()
 
-    transcript: List[Dict[str, str]] = [{"role": "user", "content": user_msg}]
-    calls_made: List[Dict[str, Any]] = []
+    transcript: list[dict[str, str]] = [{"role": "user", "content": user_msg}]
+    calls_made: list[dict[str, Any]] = []
 
     for it in range(1, max_iters + 1):
         raw = orchestrator.chat(

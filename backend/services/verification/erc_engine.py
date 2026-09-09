@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from shared.utilities import get_logger
+
 from services.design_core.design_graph.graph import DesignGraph
 
 log = get_logger(__name__)
@@ -18,16 +19,16 @@ class ERCViolation:
     code: str
     message: str
     severity: str = "error"          # error | warning | info
-    location: Dict[str, Any] = field(default_factory=dict)
+    location: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"code": self.code, "message": self.message,
                 "severity": self.severity, "location": self.location}
 
 
 @dataclass
 class ERCReport:
-    violations: List[ERCViolation] = field(default_factory=list)
+    violations: list[ERCViolation] = field(default_factory=list)
     checked: int = 0
 
     @property
@@ -43,7 +44,7 @@ class ERCReport:
         penalty += 0.5 * sum(1.0 for v in self.violations if v.severity == "warning")
         return max(0.0, 1.0 - penalty / max(1.0, self.checked))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"passed": self.passed, "score": self.score, "checked": self.checked,
                 "violations": [v.to_dict() for v in self.violations]}
 
@@ -61,7 +62,7 @@ def _is_gnd(name: str) -> bool:
 class ERCEngine:
     """Vérifie la cohérence électrique du DesignGraph."""
 
-    def __init__(self, max_single_pin_nets: Optional[int] = None) -> None:
+    def __init__(self, max_single_pin_nets: int | None = None) -> None:
         self.max_single_pin_nets = max_single_pin_nets
 
     def run(self, graph: DesignGraph) -> ERCReport:
@@ -129,7 +130,7 @@ class ERCEngine:
 
         # 5. Un même pad ne peut pas appartenir à deux nets différents
         for comp in comps.values():
-            seen: Dict[str, str] = {}
+            seen: dict[str, str] = {}
             for pad in comp.pads:
                 if pad.net_id is None:
                     continue

@@ -1,14 +1,12 @@
 """Contraintes électriques : largeur de piste, impédance, paires diff, découplage."""
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 from services.design_core.constraint_engine.engine import BaseConstraint, Violation
 from services.design_core.design_graph.geometry import bbox_gap_mm, component_bbox_mm
 from services.design_core.design_graph.graph import DesignGraph
 
 # Largeur de piste par défaut (mm) selon la classe de net — proxy sans impédance.
-DEFAULT_CLASS_WIDTH_MM: Dict[str, float] = {
+DEFAULT_CLASS_WIDTH_MM: dict[str, float] = {
     "default": 0.25,
     "power": 0.5,
     "analog": 0.2,
@@ -27,8 +25,8 @@ class MinTraceWidth(BaseConstraint):
         )
         self.min_width_mm = min_width_mm
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
-        violations: List[Violation] = []
+    def check(self, graph: DesignGraph) -> list[Violation]:
+        violations: list[Violation] = []
         for net in graph.nets.values():
             width = (
                 net.path.width_mm if net.path is not None
@@ -46,7 +44,7 @@ class MinTraceWidth(BaseConstraint):
 class ImpedanceTarget(BaseConstraint):
     """Nets haut débit / différentiels sans cible d'impédance (ou hors tolérance)."""
 
-    def __init__(self, required_ohm: Optional[float] = None, tolerance: float = 0.05) -> None:
+    def __init__(self, required_ohm: float | None = None, tolerance: float = 0.05) -> None:
         super().__init__(
             "impedance_target", "electrical", "warning",
             "les nets high_speed/differential doivent viser une impédance contrôlée",
@@ -54,8 +52,8 @@ class ImpedanceTarget(BaseConstraint):
         self.required_ohm = required_ohm
         self.tolerance = tolerance
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
-        violations: List[Violation] = []
+    def check(self, graph: DesignGraph) -> list[Violation]:
+        violations: list[Violation] = []
         for net in graph.nets.values():
             if net.class_name not in ("high_speed", "differential"):
                 continue
@@ -85,12 +83,12 @@ class DifferentialPairSymmetry(BaseConstraint):
         )
         self.tolerance_mm = tolerance_mm
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
-        groups: Dict[str, List[float]] = {}
+    def check(self, graph: DesignGraph) -> list[Violation]:
+        groups: dict[str, list[float]] = {}
         for net in graph.nets.values():
             if net.matched_group and net.max_length_mm is not None:
                 groups.setdefault(net.matched_group, []).append(net.max_length_mm)
-        violations: List[Violation] = []
+        violations: list[Violation] = []
         for group, lengths in groups.items():
             if len(lengths) > 1 and (max(lengths) - min(lengths)) > self.tolerance_mm:
                 violations.append(self.violation(
@@ -118,10 +116,10 @@ class DecouplingCapProximity(BaseConstraint):
         """Proxy standard : les condensateurs sont référencés 'C...'."""
         return ref.upper().startswith("C")
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
+    def check(self, graph: DesignGraph) -> list[Violation]:
         placed = graph.placed_components()
         caps = [c for c in placed if self._is_cap(c.ref)]
-        violations: List[Violation] = []
+        violations: list[Violation] = []
         for comp in placed:
             if comp.power_w < self.power_threshold_w or self._is_cap(comp.ref):
                 continue

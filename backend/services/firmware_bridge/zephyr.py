@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional, Tuple
 
 from shared.utilities import get_logger
 
@@ -13,7 +12,7 @@ _GPIO_RE = re.compile(r"^GPIO(\d{1,2})$")
 _NON_ALNUM = re.compile(r"[^A-Za-z0-9_]+")
 
 
-def _gpio_ref(gpio: str) -> Optional[Tuple[str, int]]:
+def _gpio_ref(gpio: str) -> tuple[str, int] | None:
     """'PA9' → ('gpioa', 9) ; 'GPIO5' → ('gpio0', 5). None si non reconnu."""
     m = _STM_PORT_RE.match(gpio or "")
     if m:
@@ -25,7 +24,7 @@ def _gpio_ref(gpio: str) -> Optional[Tuple[str, int]]:
     return None
 
 
-def _label(net_name: str, used: Dict[str, int]) -> str:
+def _label(net_name: str, used: dict[str, int]) -> str:
     base = "net_" + (_NON_ALNUM.sub("_", (net_name or "unknown")).strip("_").lower() or "unknown")
     if base in used:
         used[base] += 1
@@ -34,10 +33,10 @@ def _label(net_name: str, used: Dict[str, int]) -> str:
     return base
 
 
-def generate_zephyr_overlay(pin_map: Dict[str, Dict[str, dict]],
+def generate_zephyr_overlay(pin_map: dict[str, dict[str, dict]],
                             board: str = "nucleo_f103rb") -> str:
     """Génère un overlay devicetree Zephyr : un nœud par net avec `gpios`."""
-    lines: List[str] = [
+    lines: list[str] = [
         f"/* Overlay devicetree généré par PCB_AI_DESIGNER_V3 — cible {board} */",
         "#include <dt-bindings/gpio/gpio.h>",
         "",
@@ -47,7 +46,7 @@ def generate_zephyr_overlay(pin_map: Dict[str, Dict[str, dict]],
         '\t\tstatus = "okay";',
         "",
     ]
-    used: Dict[str, int] = {}
+    used: dict[str, int] = {}
     for ref in sorted(pin_map):
         lines.append(f"\t\t/* {ref} */")
         for pin in sorted(pin_map[ref]):

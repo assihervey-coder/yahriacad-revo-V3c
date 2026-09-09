@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from itertools import combinations
-from typing import List
 
 from services.design_core.constraint_engine.engine import BaseConstraint, Violation
 from services.design_core.design_graph.geometry import (
@@ -23,9 +22,9 @@ class MinClearance(BaseConstraint):
         )
         self.min_clearance_mm = min_clearance_mm
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
+    def check(self, graph: DesignGraph) -> list[Violation]:
         placed = graph.placed_components()
-        violations: List[Violation] = []
+        violations: list[Violation] = []
         for a, b in combinations(placed, 2):
             gap = bbox_gap_mm(component_bbox_mm(a), component_bbox_mm(b))
             if gap < self.min_clearance_mm:
@@ -46,9 +45,9 @@ class BoardOutline(BaseConstraint):
         )
         self.margin_mm = margin_mm
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
+    def check(self, graph: DesignGraph) -> list[Violation]:
         w, h = graph.board_size
-        violations: List[Violation] = []
+        violations: list[Violation] = []
         for comp in graph.placed_components():
             x0, y0, x1, y1 = component_bbox_mm(comp)
             if x0 < -self.margin_mm or y0 < -self.margin_mm or x1 > w + self.margin_mm or y1 > h + self.margin_mm:
@@ -69,8 +68,8 @@ class KeepoutViolation(BaseConstraint):
             "aucun composant ne doit entrer dans un keepout",
         )
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
-        violations: List[Violation] = []
+    def check(self, graph: DesignGraph) -> list[Violation]:
+        violations: list[Violation] = []
         for comp in graph.placed_components():
             for keepout in graph.violates_keepouts(comp.x, comp.y, *comp.bbox):
                 violations.append(self.violation(
@@ -90,7 +89,7 @@ class MaxBoardUtilization(BaseConstraint):
         )
         self.max_utilization = max_utilization
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
+    def check(self, graph: DesignGraph) -> list[Violation]:
         utilization = graph.utilization()
         if utilization > self.max_utilization:
             board_area = graph.board_size[0] * graph.board_size[1]

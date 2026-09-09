@@ -1,7 +1,7 @@
 """Scorer de confiance — agrège les issues en un score global 0..1."""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -21,10 +21,10 @@ class ConfidenceScorer:
         self.penalties = {"error": penalty_error,
                           "warning": penalty_warning, "info": penalty_info}
 
-    def score(self, graph, issues: List[Dict[str, Any]]) -> float:  # noqa: ANN001
+    def score(self, graph, issues: list[dict[str, Any]]) -> float:  # noqa: ANN001
         """Score de confiance global du graphe face à ses issues."""
         score = 1.0
-        by_kind: Dict[str, int] = {}
+        by_kind: dict[str, int] = {}
         for issue in issues:
             sev = str(issue.get("severity", "info")).lower()
             score -= self.penalties.get(sev, 0.02)

@@ -9,10 +9,11 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+from shared.utilities import get_logger
 
 from orchestrator.common import data_root
-from shared.utilities import get_logger
 
 log = get_logger("state.agents")
 
@@ -20,10 +21,10 @@ log = get_logger("state.agents")
 class AgentStateStore:
     """Registre (task_id, rôle) → statut/confiance, persisté en JSON."""
 
-    def __init__(self, path: Optional[str] = None) -> None:
+    def __init__(self, path: str | None = None) -> None:
         self.path = Path(path) if path else data_root() / "agent_state.json"
         self._lock = threading.Lock()
-        self._data: Dict[str, Dict[str, Dict[str, Any]]] = {}
+        self._data: dict[str, dict[str, dict[str, Any]]] = {}
         self._load()
 
     # -- persistance ----------------------------------------------------------
@@ -48,7 +49,7 @@ class AgentStateStore:
     # -- opérations --------------------------------------------------------------
     def set_agent_status(self, task_id: str, role: str, status: str,
                          confidence: float = 0.0,
-                         output: Optional[Dict[str, Any]] = None) -> None:
+                         output: dict[str, Any] | None = None) -> None:
         """Met à jour le statut d'un agent pour une tâche."""
         entry = {
             "role": str(role),
@@ -61,28 +62,28 @@ class AgentStateStore:
             self._data.setdefault(str(task_id), {})[str(role)] = entry
             self._persist()
 
-    def get_agent_status(self, task_id: str) -> Dict[str, Dict[str, Any]]:
+    def get_agent_status(self, task_id: str) -> dict[str, dict[str, Any]]:
         """Statut de tous les agents d'une tâche : {role: entry}."""
         with self._lock:
             snapshot = self._data.get(str(task_id), {})
             return json.loads(json.dumps(snapshot, default=str))
 
-    def active_agents(self) -> List[Dict[str, Any]]:
+    def active_agents(self) -> list[dict[str, Any]]:
         """Agents actuellement en cours d'exécution (status == running)."""
-        active: List[Dict[str, Any]] = []
+        active: list[dict[str, Any]] = []
         with self._lock:
             for task_id, roles in self._data.items():
-                for role, entry in roles.items():
+                for _role, entry in roles.items():
                     if entry.get("status") == "running":
                         active.append({"task_id": task_id, **entry})
         return active
 
-    def tasks(self) -> List[str]:
+    def tasks(self) -> list[str]:
         with self._lock:
             return list(self._data.keys())
 
 
-_STORE: Optional[AgentStateStore] = None
+_STORE: AgentStateStore | None = None
 
 
 def get_agent_state_store() -> AgentStateStore:

@@ -1,13 +1,10 @@
 """Minimisation des vias — re-routage mono-couche des nets multi-vias."""
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
-
 from shared.geometry import Point, RoutePath
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph, Net
-
 from services.router.geometrical import MazeRouter
 from services.router.topological import build_net_topology
 
@@ -15,9 +12,9 @@ log = get_logger("router.via_minimizer")
 
 
 def _route_single_layer(graph: DesignGraph, net: Net, maze: MazeRouter,
-                        layer: int, width_mm: float) -> Optional[List[Point]]:
+                        layer: int, width_mm: float) -> list[Point] | None:
     """Tente de router TOUT le net (MST complet) sur une seule couche."""
-    points: List[Point] = []
+    points: list[Point] = []
     for a, b in build_net_topology(graph, net):
         path = maze.route_pair(graph, net, a, b, layer, width_mm)
         if path is None:
@@ -28,7 +25,7 @@ def _route_single_layer(graph: DesignGraph, net: Net, maze: MazeRouter,
     return points
 
 
-def minimize(graph: DesignGraph, maze: Optional[MazeRouter] = None,
+def minimize(graph: DesignGraph, maze: MazeRouter | None = None,
              max_length_ratio: float = 1.5) -> int:
     """Ré-essaie les nets à ≥1 via sur une seule couche ; retourne les vias économisés.
 

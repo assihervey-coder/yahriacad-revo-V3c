@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.geometry import Point, RoutePath
 
 
-def routepath_to_dict(path: RoutePath) -> Dict[str, Any]:
+def routepath_to_dict(path: RoutePath) -> dict[str, Any]:
     """Sérialise un RoutePath en dict JSON-compatible."""
     return {
         "net_id": path.net_id,
@@ -18,7 +18,7 @@ def routepath_to_dict(path: RoutePath) -> Dict[str, Any]:
     }
 
 
-def routepath_from_dict(d: Dict[str, Any]) -> RoutePath:
+def routepath_from_dict(d: dict[str, Any]) -> RoutePath:
     """Reconstruit un RoutePath depuis sa sérialisation."""
     return RoutePath(
         net_id=str(d.get("net_id", "")),
@@ -36,14 +36,14 @@ class Net:
     net_id: str
     name: str = ""
     class_name: str = "default"   # default | power | high_speed | differential | analog
-    pins: List[Tuple[str, str]] = field(default_factory=list)   # (ref, pad)
-    impedance_target_ohm: Optional[float] = None
-    max_length_mm: Optional[float] = None
-    matched_group: Optional[str] = None
+    pins: list[tuple[str, str]] = field(default_factory=list)   # (ref, pad)
+    impedance_target_ohm: float | None = None
+    max_length_mm: float | None = None
+    matched_group: str | None = None
     routed: bool = False
-    path: Optional[RoutePath] = None
+    path: RoutePath | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "net_id": self.net_id,
             "name": self.name,
@@ -57,9 +57,9 @@ class Net:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Net":
+    def from_dict(cls, d: dict[str, Any]) -> Net:
         pins_raw = d.get("pins", [])
-        pins: List[Tuple[str, str]] = []
+        pins: list[tuple[str, str]] = []
         for p in pins_raw:
             if isinstance(p, dict):          # {"ref": "R1", "pin": "1"}
                 pins.append((str(p.get("ref", "")), str(p.get("pin", p.get("pad", "")))))

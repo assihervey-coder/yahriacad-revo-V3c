@@ -4,15 +4,16 @@ from __future__ import annotations
 import json
 import os
 import random
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from collections.abc import Iterable
+from typing import Any
 
 from shared.utilities import get_logger
 
 log = get_logger("ai_engine.training.dataset")
 
 
-def save_episode(path: str, graph_dict: Dict[str, Any],
-                 actions: List[Dict[str, Any]], reward: float) -> None:
+def save_episode(path: str, graph_dict: dict[str, Any],
+                 actions: list[dict[str, Any]], reward: float) -> None:
     """Sauvegarde un épisode en JSONL (append) : graph, actions, reward."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     record = {"graph": graph_dict, "actions": actions, "reward": float(reward)}
@@ -20,7 +21,7 @@ def save_episode(path: str, graph_dict: Dict[str, Any],
         f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
 
 
-def to_jsonl(records: Iterable[Dict[str, Any]], path: str) -> int:
+def to_jsonl(records: Iterable[dict[str, Any]], path: str) -> int:
     """Écrit des records en JSONL — retourne le nombre écrit."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     n = 0
@@ -31,12 +32,12 @@ def to_jsonl(records: Iterable[Dict[str, Any]], path: str) -> int:
     return n
 
 
-def load_jsonl(path: str) -> List[Dict[str, Any]]:
+def load_jsonl(path: str) -> list[dict[str, Any]]:
     """Charge un fichier JSONL en liste de dicts."""
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     if not os.path.exists(path):
         return out
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -56,23 +57,23 @@ class DatasetManager:
         os.makedirs(root, exist_ok=True)
 
     # ------------------------------------------------------------ episodes
-    def save_episode(self, name: str, graph_dict: Dict[str, Any],
-                     actions: List[Dict[str, Any]], reward: float) -> str:
+    def save_episode(self, name: str, graph_dict: dict[str, Any],
+                     actions: list[dict[str, Any]], reward: float) -> str:
         """Sauvegarde un épisode dans root/episodes/<name>.jsonl."""
         path = os.path.join(self.root, "episodes", f"{name}.jsonl")
         save_episode(path, graph_dict, actions, reward)
         return path
 
-    def load(self, name: str) -> List[Dict[str, Any]]:
+    def load(self, name: str) -> list[dict[str, Any]]:
         """Charge un dataset d'épisodes."""
         return load_jsonl(os.path.join(self.root, "episodes", f"{name}.jsonl"))
 
     # --------------------------------------------------------------- split
     @staticmethod
-    def split(records: List[Dict[str, Any]], seed: int = 42,
-              ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1)
-              ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]],
-                         List[Dict[str, Any]]]:
+    def split(records: list[dict[str, Any]], seed: int = 42,
+              ratios: tuple[float, float, float] = (0.8, 0.1, 0.1)
+              ) -> tuple[list[dict[str, Any]], list[dict[str, Any]],
+                         list[dict[str, Any]]]:
         """Split déterministe train/val/test (80/10/10 par défaut)."""
         data = list(records)
         rng = random.Random(seed)
@@ -84,8 +85,8 @@ class DatasetManager:
                 data[n_train:n_train + n_val],
                 data[n_train + n_val:])
 
-    def write_splits(self, name: str, records: List[Dict[str, Any]],
-                     seed: int = 42) -> Dict[str, int]:
+    def write_splits(self, name: str, records: list[dict[str, Any]],
+                     seed: int = 42) -> dict[str, int]:
         """Split + écriture train/val/test — retourne les tailles."""
         train, val, test = self.split(records, seed=seed)
         counts = {
@@ -99,7 +100,7 @@ class DatasetManager:
         log.info("splits écrits: %s", counts)
         return counts
 
-    def stats(self, records: List[Dict[str, Any]]) -> Dict[str, float]:
+    def stats(self, records: list[dict[str, Any]]) -> dict[str, float]:
         """Statistiques rapides du dataset."""
         rewards = [float(r.get("reward", 0.0)) for r in records]
         if not rewards:

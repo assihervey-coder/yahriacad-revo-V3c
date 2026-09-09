@@ -1,13 +1,13 @@
 """RoutingAgent — routage des nets via RouterEngine."""
 from __future__ import annotations
 
-import math
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
-from orchestrator.agent_pipeline.base import BaseAgent
-from orchestrator.common import get_field, set_field, try_import
 from shared.contracts import AgentRole
 from shared.schemas import AgentResultSchema
+
+from orchestrator.agent_pipeline.base import BaseAgent
+from orchestrator.common import call_probe, get_field, set_field, try_import
 
 
 class RoutingAgent(BaseAgent):
@@ -22,7 +22,7 @@ class RoutingAgent(BaseAgent):
     def supports(self, action: str) -> bool:
         return action in ("route_all", "route", "route_net", "")
 
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         graph = context.get("graph")
         if graph is None:
             return self.failed(context, "aucun DesignGraph dans le contexte")
@@ -56,7 +56,7 @@ class RoutingAgent(BaseAgent):
         stats = get_field(graph, "stats", default=None)
         stats = call_probe(graph, "stats") if callable(getattr(graph, "stats", None)) else stats
         rev = self.commit(context, f"routage ({engine_used}) — {routed} nets")
-        output: Dict[str, Any] = {
+        output: dict[str, Any] = {
             "engine": engine_used,
             "routed": routed,
             "failed": failed,
@@ -77,14 +77,14 @@ class RoutingAgent(BaseAgent):
                               rationale=f"routage {engine_used}: {routed} nets, "
                                         f"{len(failed)} échecs")
 
-    def _fallback_route(self, graph: Any) -> Tuple[int, List[str], float]:
+    def _fallback_route(self, graph: Any) -> tuple[int, list[str], float]:
         """Repli : longueur manhattan par net, marquage routed si service absent."""
         comps = get_field(graph, "components", default={}) or {}
         nets = get_field(graph, "nets", default={}) or {}
         routed, failed, total = 0, [], 0.0
         for net_id, net in nets.items():
             pins = get_field(net, "pins", default=[]) or []
-            points: List[Tuple[float, float]] = []
+            points: list[tuple[float, float]] = []
             for pin in pins:
                 try:
                     ref = str(pin[0] if isinstance(pin, (list, tuple)) else get_field(pin, "ref", default=""))

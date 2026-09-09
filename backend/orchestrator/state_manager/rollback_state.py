@@ -9,10 +9,11 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+from shared.utilities import get_logger
 
 from orchestrator.common import data_root
-from shared.utilities import get_logger
 
 log = get_logger("state.rollback")
 
@@ -20,10 +21,10 @@ log = get_logger("state.rollback")
 class RollbackState:
     """Suivi des révisions valides/invalides + journal des rollbacks."""
 
-    def __init__(self, path: Optional[str] = None) -> None:
+    def __init__(self, path: str | None = None) -> None:
         self.path = Path(path) if path else data_root() / "rollback_state.json"
-        self._valid: List[int] = []
-        self._invalid: List[Dict[str, Any]] = []
+        self._valid: list[int] = []
+        self._invalid: list[dict[str, Any]] = []
         self._load()
 
     # -- persistance ----------------------------------------------------------
@@ -48,7 +49,7 @@ class RollbackState:
             log.debug("persistance rollback_state impossible", exc_info=True)
 
     # -- opérations ------------------------------------------------------------
-    def mark_valid(self, rev: Optional[int]) -> None:
+    def mark_valid(self, rev: int | None) -> None:
         """Déclare une révision comme point de restauration sûr."""
         if rev is None:
             return
@@ -56,7 +57,7 @@ class RollbackState:
             self._valid.append(int(rev))
         self._persist()
 
-    def mark_invalid(self, rev: Optional[int], reason: str = "") -> None:
+    def mark_invalid(self, rev: int | None, reason: str = "") -> None:
         """Déclare une révision défaillante (la retire des valides)."""
         if rev is None:
             return
@@ -66,13 +67,13 @@ class RollbackState:
         self._invalid.append({"rev": rev, "reason": reason, "ts": time.time()})
         self._persist()
 
-    def last_valid(self) -> Optional[int]:
+    def last_valid(self) -> int | None:
         """Dernière révision valide connue (None si aucune)."""
         return max(self._valid) if self._valid else None
 
-    def rollback_log(self) -> List[Dict[str, Any]]:
+    def rollback_log(self) -> list[dict[str, Any]]:
         """Historique des invalidations (audit)."""
         return list(self._invalid)
 
-    def valid_revisions(self) -> List[int]:
+    def valid_revisions(self) -> list[int]:
         return sorted(self._valid)

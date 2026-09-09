@@ -8,17 +8,16 @@ from __future__ import annotations
 
 import math
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph, Net
-
 from services.router.high_speed import MATCH_TOL_MM
 from services.router.impedance_control import (
     DEFAULT_HEIGHT_UM,
-    microstrip_z0,
     effective_er,
+    microstrip_z0,
     propagation_delay_ns,
 )
 from services.router.topological import is_high_speed_net
@@ -45,12 +44,12 @@ class SignalIntegritySim(BaseSim):
 
     def run(self, graph: DesignGraph) -> SimResult:
         t0 = time.perf_counter()
-        notes: List[str] = []
+        notes: list[str] = []
         er = graph.layers[0].er if graph.layers else 4.3
 
         targets = [n for n in graph.nets.values()
                    if is_high_speed_net(n) and len(n.pins) >= 2]
-        nets_report: Dict[str, Dict[str, Any]] = {}
+        nets_report: dict[str, dict[str, Any]] = {}
         worst_gamma, max_mismatch = 0.0, 0.0
         n_fail = 0
 
@@ -63,7 +62,7 @@ class SignalIntegritySim(BaseSim):
             e_eff = effective_er(width_mm, er, self.height_um)
             delay_ns = propagation_delay_ns(length_mm, er, width_mm, self.height_um)
             ok = gamma < self.gamma_limit
-            entry: Dict[str, Any] = {
+            entry: dict[str, Any] = {
                 "length_mm": round(length_mm, 2),
                 "width_mm": round(width_mm, 3),
                 "z0_ohm": round(z0, 1),
@@ -82,7 +81,7 @@ class SignalIntegritySim(BaseSim):
                              f"(Z0 {z0:.0f} Ω vs cible {zl:.0f} Ω) — ajuster la largeur")
 
         # mismatch au sein des groupes appariés
-        groups: Dict[str, List[Net]] = {}
+        groups: dict[str, list[Net]] = {}
         for net in targets:
             if net.matched_group:
                 groups.setdefault(net.matched_group, []).append(net)
@@ -102,7 +101,7 @@ class SignalIntegritySim(BaseSim):
             max_mismatch = max(max_mismatch, spread)
 
         passed = n_fail == 0
-        metrics: Dict[str, Any] = {
+        metrics: dict[str, Any] = {
             "n_checked": len(targets),
             "n_failed": n_fail,
             "worst_gamma": round(worst_gamma, 3),

@@ -9,24 +9,22 @@ Méthodes :
 """
 from __future__ import annotations
 
-import asyncio
 import json
-import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
+from shared.utilities import get_logger
 
 from api_gateway.deps import get_tenant, get_user_id, load_project_graph
-from api_gateway.middleware.auth import user_scopes
 from api_gateway.mcp_server.permissions import resource_allowed, tool_allowed
+from api_gateway.middleware.auth import user_scopes
 from api_gateway.routes.chat import submit_chat_command
 from api_gateway.routes.exports import create_export
-from orchestrator.common import get_field, graph_stats, serialize_graph, try_import, call_probe
-from orchestrator.state_manager import DesignStateManager, ProjectState, get_agent_state_store
+from orchestrator.common import call_probe, get_field, graph_stats, serialize_graph, try_import
+from orchestrator.state_manager import ProjectState, get_agent_state_store
 from orchestrator.workflow_engine.jobs import get_job_store
 from orchestrator.workflow_engine.tasks import get_task_queue
-from shared.utilities import get_logger
 
 log = get_logger("api.mcp")
 
@@ -35,7 +33,7 @@ router = APIRouter(tags=["mcp"])
 PROTOCOL_VERSION = "2024-11-05"
 SERVER_INFO = {"name": "pcb-ai-designer-mcp", "version": "3.0.0"}
 
-TOOLS: List[Dict[str, Any]] = [
+TOOLS: list[dict[str, Any]] = [
     {
         "name": "run_design_command",
         "description": "Commande en langage naturel → design complet "
@@ -96,7 +94,7 @@ class McpError(Exception):
 
 
 # --------------------------------------------------------------------- outils
-def _tool_run_design_command(args: Dict[str, Any], tenant: str, user: str) -> Dict[str, Any]:
+def _tool_run_design_command(args: dict[str, Any], tenant: str, user: str) -> dict[str, Any]:
     message = str(args.get("message") or "").strip()
     if not message:
         raise McpError(-32602, "paramètre 'message' requis")
@@ -108,7 +106,7 @@ def _tool_run_design_command(args: Dict[str, Any], tenant: str, user: str) -> Di
             "project_id": result["project_id"]}
 
 
-def _tool_query_design(args: Dict[str, Any], tenant: str, user: str) -> Dict[str, Any]:
+def _tool_query_design(args: dict[str, Any], tenant: str, user: str) -> dict[str, Any]:
     project_id = str(args.get("project_id") or "")
     graph, revision = load_project_graph(project_id, tenant, user)
     if graph is None:
@@ -118,7 +116,7 @@ def _tool_query_design(args: Dict[str, Any], tenant: str, user: str) -> Dict[str
             "serialized": serialize_graph(graph)}
 
 
-def _tool_export_package(args: Dict[str, Any], tenant: str, user: str) -> Dict[str, Any]:
+def _tool_export_package(args: dict[str, Any], tenant: str, user: str) -> dict[str, Any]:
     project_id = str(args.get("project_id") or "")
     graph, revision = load_project_graph(project_id, tenant, user)
     if graph is None:
@@ -129,7 +127,7 @@ def _tool_export_package(args: Dict[str, Any], tenant: str, user: str) -> Dict[s
     return result
 
 
-def _tool_simulate(args: Dict[str, Any], tenant: str, user: str) -> Dict[str, Any]:
+def _tool_simulate(args: dict[str, Any], tenant: str, user: str) -> dict[str, Any]:
     project_id = str(args.get("project_id") or "")
     graph, _rev = load_project_graph(project_id, tenant, user)
     if graph is None:
@@ -137,7 +135,7 @@ def _tool_simulate(args: Dict[str, Any], tenant: str, user: str) -> Dict[str, An
     kinds = list(args.get("kinds") or ["thermal", "si", "pi", "em"])
     kind_map = [("thermal", "ThermalSim"), ("si", "SignalIntegritySim"),
                 ("pi", "PowerIntegritySim"), ("em", "EMIProxySim")]
-    results: Dict[str, Any] = {}
+    results: dict[str, Any] = {}
     for kind, class_name in kind_map:
         if kind not in kinds:
             continue
@@ -169,8 +167,8 @@ _TOOL_FUNCTIONS = {
 
 
 # ----------------------------------------------------------------- ressources
-def _resources_list(tenant: str) -> List[Dict[str, Any]]:
-    resources: List[Dict[str, Any]] = []
+def _resources_list(tenant: str) -> list[dict[str, Any]]:
+    resources: list[dict[str, Any]] = []
     for state in ProjectState.list_projects(tenant):
         resources.append({
             "uri": f"design://{state.project_id}",
@@ -191,7 +189,7 @@ def _resources_list(tenant: str) -> List[Dict[str, Any]]:
     return resources
 
 
-def _resource_read(uri: str, tenant: str, user: str) -> Dict[str, Any]:
+def _resource_read(uri: str, tenant: str, user: str) -> dict[str, Any]:
     if uri.startswith("design://"):
         project_id = uri.split("://", 1)[1].strip("/")
         graph, revision = load_project_graph(project_id, tenant, user)
@@ -201,7 +199,7 @@ def _resource_read(uri: str, tenant: str, user: str) -> Dict[str, Any]:
                 "text": json.dumps(serialize_graph(graph), indent=2, default=str)}
     if uri.startswith("report://"):
         task_id = uri.split("://", 1)[1].strip("/")
-        report: Dict[str, Any] = {"task_id": task_id}
+        report: dict[str, Any] = {"task_id": task_id}
         task = get_task_queue().get(task_id)
         if task is not None:
             report["task"] = task.to_dict()
@@ -248,8 +246,8 @@ async def mcp_endpoint(request: Request) -> Response:
                             status_code=500)
 
 
-def _dispatch(method: str, params: Dict[str, Any], tenant: str, user: str,
-              scopes: List[str]) -> Any:
+def _dispatch(method: str, params: dict[str, Any], tenant: str, user: str,
+              scopes: list[str]) -> Any:
     if method == "initialize":
         return {
             "protocolVersion": PROTOCOL_VERSION,

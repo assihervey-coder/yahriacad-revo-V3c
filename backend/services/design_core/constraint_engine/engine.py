@@ -7,14 +7,15 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from services.design_core.design_graph.graph import DesignGraph
 
 log = logging.getLogger(__name__)
 
-SEVERITY_WEIGHTS: Dict[str, float] = {"error": 1.0, "warning": 0.4, "info": 0.1}
+SEVERITY_WEIGHTS: dict[str, float] = {"error": 1.0, "warning": 0.4, "info": 0.1}
 
 
 @dataclass
@@ -25,9 +26,9 @@ class Violation:
     severity: str                 # error | warning | info
     category: str
     message: str
-    location: Dict[str, Any] = field(default_factory=dict)
+    location: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "constraint_id": self.constraint_id, "severity": self.severity,
             "category": self.category, "message": self.message,
@@ -39,7 +40,7 @@ class Violation:
 class ConstraintReport:
     """Résultat d'une passe d'évaluation : violations + score de conformité."""
 
-    violations: List[Violation] = field(default_factory=list)
+    violations: list[Violation] = field(default_factory=list)
     checked: int = 0
 
     @property
@@ -53,13 +54,13 @@ class ConstraintReport:
         weighted = sum(SEVERITY_WEIGHTS.get(v.severity, 0.5) for v in self.violations)
         return max(0.0, min(1.0, 1.0 - weighted / max(1, self.checked)))
 
-    def by_severity(self) -> Dict[str, int]:
-        counts: Dict[str, int] = {}
+    def by_severity(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
         for v in self.violations:
             counts[v.severity] = counts.get(v.severity, 0) + 1
         return counts
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "checked": self.checked, "passed": self.passed,
             "score": round(self.score, 4),
@@ -84,14 +85,14 @@ class BaseConstraint(ABC):
         self.description = description or constraint_id
 
     @abstractmethod
-    def check(self, graph: DesignGraph) -> List[Violation]:
+    def check(self, graph: DesignGraph) -> list[Violation]:
         """Vérifie la contrainte sur le graphe et renvoie les violations."""
 
     def violation(
         self,
         message: str,
-        location: Optional[Dict[str, Any]] = None,
-        severity: Optional[str] = None,
+        location: dict[str, Any] | None = None,
+        severity: str | None = None,
     ) -> Violation:
         """Fabrique une Violation cohérente avec l'identité de la contrainte."""
         return Violation(
@@ -110,16 +111,16 @@ class ConstraintEngine:
     """Registre + évaluation de l'ensemble des contraintes actives."""
 
     def __init__(self) -> None:
-        self._constraints: List[BaseConstraint] = []
-        self._listeners: List[Callable[[ConstraintReport], None]] = []
+        self._constraints: list[BaseConstraint] = []
+        self._listeners: list[Callable[[ConstraintReport], None]] = []
 
     # ------------------------------------------------------------------ registre
-    def register(self, constraint: BaseConstraint) -> "ConstraintEngine":
+    def register(self, constraint: BaseConstraint) -> ConstraintEngine:
         """Enregistre une contrainte (chaînable)."""
         self._constraints.append(constraint)
         return self
 
-    def register_defaults(self) -> "ConstraintEngine":
+    def register_defaults(self) -> ConstraintEngine:
         """Enregistre les 11 contraintes standard de la plateforme."""
         # import local pour éviter tout cycle au chargement du package
         from services.design_core.constraint_engine.cost import MaxCostUSD
@@ -147,7 +148,7 @@ class ConstraintEngine:
         return self
 
     @property
-    def constraints(self) -> List[BaseConstraint]:
+    def constraints(self) -> list[BaseConstraint]:
         return list(self._constraints)
 
     def on_report(self, listener: Callable[[ConstraintReport], None]) -> None:
@@ -157,7 +158,7 @@ class ConstraintEngine:
     # ---------------------------------------------------------------- évaluation
     def evaluate(self, graph: DesignGraph) -> ConstraintReport:
         """Évalue toutes les contraintes ; une contrainte défaillante ne bloque pas."""
-        violations: List[Violation] = []
+        violations: list[Violation] = []
         for constraint in self._constraints:
             try:
                 violations.extend(constraint.check(graph))

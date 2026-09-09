@@ -1,16 +1,16 @@
 """Route optimisation — TaskSpec "reoptimize" dans la TaskQueue + historique."""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
+from shared.utilities import get_logger
 
 from api_gateway.deps import get_tenant, get_user_id, get_versioning, load_project_graph
 from orchestrator.common import revisions_list
 from orchestrator.state_manager import DesignStateManager, ProjectState
 from orchestrator.workflow_engine.tasks import TaskSpec, get_task_queue
-from shared.utilities import get_logger
 
 log = get_logger("api.optimization")
 
@@ -25,7 +25,7 @@ class OptimizationRequest(BaseModel):
 
 @router.post("/{project_id}")
 async def start_optimization(project_id: str, payload: OptimizationRequest,
-                             request: Request) -> Dict[str, Any]:
+                             request: Request) -> dict[str, Any]:
     """Crée une tâche "reoptimize" (verify → optimize → verify → export)."""
     tenant = get_tenant(request)
     user = get_user_id(request)
@@ -47,7 +47,7 @@ async def start_optimization(project_id: str, payload: OptimizationRequest,
 
 
 @router.get("/{project_id}/history")
-async def optimization_history(project_id: str, request: Request) -> Dict[str, Any]:
+async def optimization_history(project_id: str, request: Request) -> dict[str, Any]:
     """Historique des révisions (traces d'optimisations successives)."""
     tenant = get_tenant(request)
     user = get_user_id(request)
@@ -55,7 +55,7 @@ async def optimization_history(project_id: str, request: Request) -> Dict[str, A
              or ProjectState.load(project_id, tenant, "default"))
     if state is None:
         raise HTTPException(status_code=404, detail=f"projet inconnu: {project_id}")
-    entries: List[Dict[str, Any]] = []
+    entries: list[dict[str, Any]] = []
     versioning = get_versioning(project_id)
     if versioning is not None:
         entries = revisions_list(versioning)
@@ -78,7 +78,7 @@ class ProposalsRequest(BaseModel):
 
 @router.post("/{project_id}/proposals")
 async def optimization_proposals(project_id: str, payload: ProposalsRequest,
-                                 request: Request) -> Dict[str, Any]:
+                                 request: Request) -> dict[str, Any]:
     """Propositions RL/LLM du AutonomousOptimizer — UNIQUEMENT après verdict VALID.
 
     1. porte de verdict : le SelfVerifier doit renvoyer VALID (sinon 409 avec
@@ -122,7 +122,7 @@ async def optimization_proposals(project_id: str, payload: ProposalsRequest,
                                     max_iters=payload.max_iters,
                                     objective=payload.objective)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"optimisation échouée: {exc}")
+        raise HTTPException(status_code=500, detail=f"optimisation échouée: {exc}") from exc
 
     from orchestrator.common import get_field
 
@@ -152,6 +152,7 @@ async def optimization_proposals(project_id: str, payload: ProposalsRequest,
     # ---- événement plateforme (dashboard optimization / WS live)
     try:
         from shared.events import EventTypes, make_event
+
         from orchestrator.common import publish_event
 
         publish_event(make_event(
@@ -209,7 +210,7 @@ def _self_verdict(graph: Any) -> tuple:
 
 def _baseline_score(optimizer: Any, graph: Any, objective: str) -> float:
     """Score de référence du design courant (FastEvaluator de l'optimizer)."""
-    from orchestrator.common import get_field, call_probe
+    from orchestrator.common import call_probe, get_field
 
     evaluator = get_field(optimizer, "evaluator", default=None)
     if evaluator is None:

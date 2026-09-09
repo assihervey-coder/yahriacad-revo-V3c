@@ -5,9 +5,8 @@ locale déterministe (mock) — aucune clé API en dur dans le code.
 """
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 from shared.utilities import get_logger, new_id, short_id
 from shared.utilities.config import get_settings
@@ -33,7 +32,7 @@ class Quote:
     source: str = "estimate"  # estimate | api
 
 
-def _estimate(params: Dict[str, Any], factor: float, shipping: float) -> Quote:
+def _estimate(params: dict[str, Any], factor: float, shipping: float) -> Quote:
     """Estimation locale : base 5$ + surface + surcharge couches + quantité."""
     w = float(params.get("width_mm", 50.0))
     h = float(params.get("height_mm", 40.0))
@@ -52,7 +51,7 @@ def _estimate(params: Dict[str, Any], factor: float, shipping: float) -> Quote:
 class PCBWayClient:
     """Client REST PCBWay (API réelle si clé, estimation locale sinon)."""
 
-    def __init__(self, api_key: Optional[str] = None) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key or get_settings().pcbway_api_key or None
         self.factory = "pcbway"
 
@@ -60,7 +59,7 @@ class PCBWayClient:
         """Profil DFM PCBWay."""
         return get_profile("pcbway")
 
-    def quote(self, params: Dict[str, Any]) -> Quote:
+    def quote(self, params: dict[str, Any]) -> Quote:
         """Devis : API réelle si clé configurée, estimation locale sinon."""
         if not self.api_key:
             log.info("PCBWAY_API_KEY absente — devis estimé localement")

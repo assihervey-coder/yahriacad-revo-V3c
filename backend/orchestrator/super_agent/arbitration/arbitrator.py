@@ -9,9 +9,8 @@ Cas d'usage typiques :
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from orchestrator.common import get_field
 from shared.contracts import ArbitrationPolicy
 from shared.utilities import get_logger
 
@@ -25,28 +24,28 @@ PHYSICAL_ROLES = {"validator", "simulation", "manufacturing"}
 class ArbitrationResult:
     """Issue d'un arbitrage : gagnant, justification et votes pondérés."""
 
-    winner: Dict[str, Any]
+    winner: dict[str, Any]
     rationale: str
-    votes: Dict[str, float] = field(default_factory=dict)
+    votes: dict[str, float] = field(default_factory=dict)
     policy: ArbitrationPolicy = ArbitrationPolicy.CONSENSUS_CONFIDENCE
-    resolved: List[Dict[str, Any]] = field(default_factory=list)
+    resolved: list[dict[str, Any]] = field(default_factory=list)
 
 
 class Arbitrator:
     """Applique une ArbitrationPolicy sur une liste de conflits."""
 
-    def resolve(self, conflicts: List[Dict[str, Any]],
+    def resolve(self, conflicts: list[dict[str, Any]],
                 policy: ArbitrationPolicy = ArbitrationPolicy.CONSENSUS_CONFIDENCE,
-                context: Optional[Dict[str, Any]] = None) -> ArbitrationResult:
+                context: dict[str, Any] | None = None) -> ArbitrationResult:
         """Résout les conflits (le premier conflit détermine le gagnant global)."""
         context = context or {}
         if not conflicts:
             return ArbitrationResult(winner={}, rationale="aucun conflit à arbitrer",
                                      votes={}, policy=policy, resolved=[])
 
-        votes: Dict[str, float] = {}
-        resolved: List[Dict[str, Any]] = []
-        primary: Optional[Dict[str, Any]] = None
+        votes: dict[str, float] = {}
+        resolved: list[dict[str, Any]] = []
+        primary: dict[str, Any] | None = None
 
         for conflict in conflicts:
             candidates = self._candidates(conflict)
@@ -67,8 +66,8 @@ class Arbitrator:
         )
 
     # ------------------------------------------------------------ internals
-    def _resolve_one(self, conflict: Dict[str, Any], candidates: List[Dict[str, Any]],
-                     policy: ArbitrationPolicy, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _resolve_one(self, conflict: dict[str, Any], candidates: list[dict[str, Any]],
+                     policy: ArbitrationPolicy, context: dict[str, Any]) -> dict[str, Any]:
         subject = str(conflict.get("subject") or conflict.get("topic") or "conflit")
         if policy == ArbitrationPolicy.HUMAN_FIRST:
             return {
@@ -131,11 +130,11 @@ class Arbitrator:
             "votes": {},
         }
 
-    def _candidates(self, conflict: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _candidates(self, conflict: dict[str, Any]) -> list[dict[str, Any]]:
         raw = conflict.get("candidates") or conflict.get("parties") or []
         if isinstance(raw, dict):
             raw = [dict(value, agent=str(key)) for key, value in raw.items()]
-        candidates: List[Dict[str, Any]] = []
+        candidates: list[dict[str, Any]] = []
         for index, item in enumerate(raw):
             if not isinstance(item, dict):
                 item = {"agent": str(item)}

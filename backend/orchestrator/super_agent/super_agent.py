@@ -11,11 +11,8 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from orchestrator.common import get_field
-from orchestrator.super_agent.decision_policy.policy import DecisionPolicy
-from orchestrator.super_agent.planning.planner import Planner
 from shared.contracts import (
     AgentRole,
     ArbitrationPolicy,
@@ -24,12 +21,16 @@ from shared.contracts import (
 )
 from shared.utilities import get_logger, new_id
 
+from orchestrator.common import get_field
+from orchestrator.super_agent.decision_policy.policy import DecisionPolicy
+from orchestrator.super_agent.planning.planner import Planner
+
 log = get_logger("super_agent")
 
 VALID_ACTIONS = {"delegate", "verify", "optimize", "escalate", "export", "done"}
 
 # phase → (action, rôle délégué)
-PHASE_ACTION: Dict[str, tuple] = {
+PHASE_ACTION: dict[str, tuple] = {
     "parse": ("delegate", AgentRole.PLANNER),
     "select": ("delegate", AgentRole.SELECTOR),
     "place": ("delegate", AgentRole.PLACEMENT),
@@ -58,8 +59,8 @@ class SuperAgent:
     """Décide du prochain mouvement de l'orchestration globale."""
 
     def __init__(self, orchestrator: Any = None,
-                 policy: Optional[DecisionPolicy] = None,
-                 planner: Optional[Planner] = None) -> None:
+                 policy: DecisionPolicy | None = None,
+                 planner: Planner | None = None) -> None:
         self.llm = orchestrator
         self.policy = policy or DecisionPolicy()
         self.planner = planner or Planner()
@@ -67,7 +68,7 @@ class SuperAgent:
         self.log = get_logger("super_agent")
 
     # ------------------------------------------------------------ décision
-    def decide(self, context: Dict[str, Any]) -> SuperAgentDecision:
+    def decide(self, context: dict[str, Any]) -> SuperAgentDecision:
         """Choisit next_action selon le contexte {phase, design_stats, smm_export,
         verification, conflicts, retries_left, confidence...}."""
         self._cycles += 1
@@ -93,9 +94,9 @@ class SuperAgent:
         return decision
 
     # ------------------------------------------------------------- mode LLM
-    def _llm_decide(self, cycle_id: str, context: Dict[str, Any],
-                    signals: Dict[str, Any],
-                    arbitration: ArbitrationPolicy) -> Optional[SuperAgentDecision]:
+    def _llm_decide(self, cycle_id: str, context: dict[str, Any],
+                    signals: dict[str, Any],
+                    arbitration: ArbitrationPolicy) -> SuperAgentDecision | None:
         if self.llm is None:
             return None
         user_prompt = json.dumps({
@@ -121,7 +122,7 @@ class SuperAgent:
         next_action = str(data.get("next_action", "")).lower().strip()
         if next_action not in VALID_ACTIONS:
             return None
-        delegations: List[Delegation] = []
+        delegations: list[Delegation] = []
         for raw in (data.get("delegations") or [])[:6]:
             try:
                 role = AgentRole(str(raw.get("role", "")).lower())
@@ -153,8 +154,8 @@ class SuperAgent:
         )
 
     # --------------------------------------------------- mode déterministe
-    def _policy_decide(self, cycle_id: str, context: Dict[str, Any],
-                       signals: Dict[str, Any], conflicts: List[Dict[str, Any]],
+    def _policy_decide(self, cycle_id: str, context: dict[str, Any],
+                       signals: dict[str, Any], conflicts: list[dict[str, Any]],
                        arbitration: ArbitrationPolicy) -> SuperAgentDecision:
         phase = str(signals.get("phase") or "parse")
 
@@ -198,10 +199,7 @@ class SuperAgent:
         # 3) Machine à états — si la phase courante n'a pas encore produit son
         #    output (phase_done=False), on exécute d'abord SON action.
         phase_done = bool(signals.get("phase_done", True))
-        if not phase_done:
-            next_phase = phase
-        else:
-            next_phase = self.policy.next_phase(phase, signals)
+        next_phase = phase if not phase_done else self.policy.next_phase(phase, signals)
         if next_phase == "escalate":
             return SuperAgentDecision(
                 cycle_id=cycle_id, next_action="escalate",
@@ -210,7 +208,7 @@ class SuperAgent:
                 arbitration=arbitration, metadata={"source": "policy"},
             )
         action, role = PHASE_ACTION.get(next_phase, ("delegate", AgentRole.PLANNER))
-        delegations: List[Delegation] = []
+        delegations: list[Delegation] = []
         rationale = ""
         if action == "delegate" and role is not None:
             delegations = self.planner.build_plan(context.get("intents"))
@@ -247,7 +245,7 @@ class SuperAgent:
         )
 
     # ------------------------------------------------------------ internals
-    def _signals(self, context: Dict[str, Any], phase: str) -> Dict[str, Any]:
+    def _signals(self, context: dict[str, Any], phase: str) -> dict[str, Any]:
         signals = dict(context.get("signals") or {})
         verification = context.get("verification") or signals.get("verification") or {}
         passed = bool(get_field(verification, "passed", "ok", default=True)) if verification else True
@@ -266,7 +264,7 @@ class SuperAgent:
                 signals["quality"] = quality
         return signals
 
-    def _arbitration_for(self, conflicts: List[Dict[str, Any]]) -> ArbitrationPolicy:
+    def _arbitration_for(self, conflicts: list[dict[str, Any]]) -> ArbitrationPolicy:
         """Choisit la politique d'arbitrage adaptée aux conflits observés."""
         if not conflicts:
             return ArbitrationPolicy.CONSENSUS_CONFIDENCE
@@ -283,7 +281,7 @@ class SuperAgent:
         return ArbitrationPolicy.CONSENSUS_CONFIDENCE
 
 
-def _parse_json(text: str) -> Optional[Dict[str, Any]]:
+def _parse_json(text: str) -> dict[str, Any] | None:
     """Extrait le premier objet JSON d'une réponse LLM (tolère les fences)."""
     if not text:
         return None

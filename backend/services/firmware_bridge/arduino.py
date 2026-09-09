@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List
 
 from shared.utilities import get_logger
 
@@ -17,14 +16,14 @@ def _pin_number(gpio: str) -> str:
     return m.group(1) if m else gpio
 
 
-def generate_arduino_defs(pin_map: Dict[str, Dict[str, dict]]) -> str:
+def generate_arduino_defs(pin_map: dict[str, dict[str, dict]]) -> str:
     """Génère un header Arduino : #define PIN_xxx <numéro> // net."""
-    lines: List[str] = [
+    lines: list[str] = [
         "// pins_arduino.h — généré par PCB_AI_DESIGNER_V3 (firmware_bridge)",
         "#pragma once",
         "",
     ]
-    used: Dict[str, int] = {}
+    used: dict[str, int] = {}
     for ref in sorted(pin_map):
         lines.append(f"// ---- {ref} ----")
         for pin in sorted(pin_map[ref]):

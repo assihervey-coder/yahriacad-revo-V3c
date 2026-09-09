@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Tuple
 
 from shared.utilities import get_logger
 
@@ -11,11 +10,11 @@ log = get_logger(__name__)
 _STM_PORT_RE = re.compile(r"^P([A-H])(\d{1,2})$")
 
 
-def _by_port(pin_map: Dict[str, Dict[str, dict]]) -> Dict[str, List[Tuple[str, str, str]]]:
+def _by_port(pin_map: dict[str, dict[str, dict]]) -> dict[str, list[tuple[str, str, str]]]:
     """Port → [(pin, gpio, net)] triés par index, seulement pour des GPIOs STM32."""
-    ports: Dict[str, List[Tuple[str, str, str]]] = {}
-    for ref, pins in pin_map.items():
-        for pin, info in pins.items():
+    ports: dict[str, list[tuple[str, str, str]]] = {}
+    for _ref, pins in pin_map.items():
+        for _pin, info in pins.items():
             m = _STM_PORT_RE.match(str(info.get("gpio", "")))
             if m:
                 ports.setdefault(m.group(1), []).append(
@@ -25,10 +24,10 @@ def _by_port(pin_map: Dict[str, Dict[str, dict]]) -> Dict[str, List[Tuple[str, s
     return ports
 
 
-def generate_stm32_init(pin_map: Dict[str, Dict[str, dict]]) -> str:
+def generate_stm32_init(pin_map: dict[str, dict[str, dict]]) -> str:
     """Génère la fonction pcb_gpio_init() avec HAL_GPIO_Init par port."""
     ports = _by_port(pin_map)
-    lines: List[str] = [
+    lines: list[str] = [
         "/* stm32_gpio_init.c — généré par PCB_AI_DESIGNER_V3 (firmware_bridge) */",
         '#include "stm32f1xx_hal.h"',
         "",

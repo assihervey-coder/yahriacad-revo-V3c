@@ -1,19 +1,19 @@
 """Dépendances FastAPI — tenant, orchestrator LLM, versioning, moteur."""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from fastapi import Request
+from shared.utilities import get_logger, get_settings
 
 from orchestrator.common import call_probe, extract_rev, get_field, try_import
 from orchestrator.workflow_engine.engine import WorkflowEngine
-from shared.utilities import get_logger, get_settings
 
 log = get_logger("api.deps")
 
 _ORCHESTRATOR: Any = None
-_ENGINE: Optional[WorkflowEngine] = None
-_VERSIONINGS: Dict[str, Any] = {}
+_ENGINE: WorkflowEngine | None = None
+_VERSIONINGS: dict[str, Any] = {}
 
 
 def get_tenant(request: Request) -> str:
@@ -79,7 +79,7 @@ def get_engine() -> WorkflowEngine:
 
 
 def load_project_graph(project_id: str, tenant: str = "default",
-                       user: str = "default") -> Tuple[Any, int]:
+                       user: str = "default") -> tuple[Any, int]:
     """Graphe courant d'un projet : état persisté, sinon versioning.current()."""
     from orchestrator.state_manager import DesignStateManager
 

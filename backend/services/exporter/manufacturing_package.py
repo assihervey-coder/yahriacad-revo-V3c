@@ -9,7 +9,7 @@ import io
 import time
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from shared.events import EventTypes, make_event
 from shared.utilities import get_logger
@@ -19,8 +19,8 @@ from services.exporter.gerber_generator import GerberGenerator
 from services.exporter.ipc2581_generator import IPC2581Generator
 from services.exporter.pickplace_generator import PickPlaceGenerator
 from services.integration_utils import publish_event_now
-from services.manufacturing_intelligence.factory_profiles import get_profile
 from services.manufacturing_intelligence.cost_estimator import CostEstimator
+from services.manufacturing_intelligence.factory_profiles import get_profile
 from services.manufacturing_intelligence.yield_predictor import YieldPredictor
 
 log = get_logger(__name__)
@@ -34,10 +34,10 @@ class ManufacturingPackage:
         self.factory = factory
 
     # -- contenu -----------------------------------------------------------------
-    def build(self, output_dir: Optional[str] = None) -> Dict[str, bytes]:
+    def build(self, output_dir: str | None = None) -> dict[str, bytes]:
         """Génère tous les fichiers, les écrit sur disque et les retourne en bytes."""
         gerbers = GerberGenerator(self.graph).generate()
-        files: Dict[str, bytes] = {}
+        files: dict[str, bytes] = {}
         for fname, content in gerbers.items():
             files[fname] = content.encode("utf-8")
         files["ipc2581.xml"] = IPC2581Generator(
@@ -67,7 +67,7 @@ class ManufacturingPackage:
         ))
         return files
 
-    def make_zip(self, output_path: Optional[str] = None) -> bytes:
+    def make_zip(self, output_path: str | None = None) -> bytes:
         """Archive zip du package complet (en mémoire)."""
         files = self.build()
         buf = io.BytesIO()

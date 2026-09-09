@@ -7,7 +7,7 @@ from __future__ import annotations
 import csv
 import io
 import json
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -16,7 +16,7 @@ log = get_logger(__name__)
 COLUMNS = ["Ref", "Qty", "Value", "Footprint", "MPN", "Description", "Price"]
 
 
-def _group_key(comp: Any) -> Tuple[str, str, str]:
+def _group_key(comp: Any) -> tuple[str, str, str]:
     mpn = str(getattr(comp, "mpn", "") or "").strip()
     value = str(getattr(comp, "value", "") or "").strip()
     footprint = str(getattr(comp, "footprint", "") or "").strip()
@@ -29,13 +29,13 @@ class BOMGenerator:
     def __init__(self, graph: Any) -> None:
         self.graph = graph
 
-    def rows(self) -> List[Dict[str, Any]]:
+    def rows(self) -> list[dict[str, Any]]:
         """Lignes de BOM [{Ref, Qty, Value, Footprint, MPN, Description, Price}]."""
-        groups: Dict[Tuple[str, str, str], List[Any]] = {}
+        groups: dict[tuple[str, str, str], list[Any]] = {}
         for ref in sorted(self.graph.components):
             groups.setdefault(_group_key(self.graph.components[ref]), []).append(
                 self.graph.components[ref])
-        rows: List[Dict[str, Any]] = []
+        rows: list[dict[str, Any]] = []
         for (mpn, value, footprint), comps in groups.items():
             refs = sorted(str(getattr(c, "ref", "")) for c in comps)
             price = sum(float(getattr(c, "price_usd", 0.0) or 0.0) for c in comps) / len(comps)

@@ -4,12 +4,10 @@ affectation des largeurs de piste par classe de net.
 from __future__ import annotations
 
 import math
-from typing import Dict
 
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph
-
 from services.router.topological import is_high_speed_net, is_power_net
 
 log = get_logger("router.impedance")
@@ -74,14 +72,14 @@ def propagation_delay_ns(length_mm: float, er: float = DEFAULT_ER,
 
 def assign_trace_widths(graph: DesignGraph, default_mm: float = 0.2,
                         power_mm: float = 0.5, min_mm: float = 0.2,
-                        height_um: float = DEFAULT_HEIGHT_UM) -> Dict[str, float]:
+                        height_um: float = DEFAULT_HEIGHT_UM) -> dict[str, float]:
     """Largeur de piste (mm) par net_id : power 0.5, high_speed/differential via
     microstrip_width(impédance cible, er couche 0), default 0.2.
 
     Toute largeur est clampée à `min_mm` (limite de fabrication, cf. DesignRules).
     """
     er = graph.layers[0].er if graph.layers else DEFAULT_ER
-    widths: Dict[str, float] = {}
+    widths: dict[str, float] = {}
     for net in graph.nets.values():
         if is_power_net(net):
             w = power_mm

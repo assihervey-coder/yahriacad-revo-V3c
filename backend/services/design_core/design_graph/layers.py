@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
 
 
 @dataclass
@@ -15,7 +15,7 @@ class Layer:
     thickness_um: float = 35.0   # épaisseur cuivre
     er: float = 4.3              # permittivité relative (FR4)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "index": self.index,
             "name": self.name,
@@ -25,7 +25,7 @@ class Layer:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Layer":
+    def from_dict(cls, d: dict[str, Any]) -> Layer:
         return cls(
             index=int(d.get("index", 0) or 0),
             name=str(d.get("name", f"L{d.get('index', 0)}")),
@@ -35,7 +35,7 @@ class Layer:
         )
 
 
-def make_default_stackup(n_layers: int = 4) -> List[Layer]:
+def make_default_stackup(n_layers: int = 4) -> list[Layer]:
     """Stackup standard : 2 couches (F.Cu/B.Cu), 4 (F.Cu/GND/PWR/B.Cu), 6 ou générique."""
     if n_layers <= 2:
         return [Layer(0, "F.Cu"), Layer(1, "B.Cu")]
@@ -56,7 +56,7 @@ def make_default_stackup(n_layers: int = 4) -> List[Layer]:
             Layer(5, "B.Cu", "signal"),
         ]
     # Générique : cuivres externes + plans de masse/alternés à l'intérieur.
-    layers: List[Layer] = [Layer(0, "F.Cu", "signal")]
+    layers: list[Layer] = [Layer(0, "F.Cu", "signal")]
     for i in range(1, n_layers - 1):
         layers.append(Layer(i, "GND" if i % 2 == 1 else f"SIG{i}", "ground" if i % 2 == 1 else "signal"))
     layers.append(Layer(n_layers - 1, "B.Cu", "signal"))

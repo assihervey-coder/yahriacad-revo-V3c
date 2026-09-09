@@ -1,8 +1,6 @@
 """Loader de standards — data/knowledge/standards (IPC, etc.)."""
 from __future__ import annotations
 
-from typing import List
-
 from services.ai_engine.rag_engine import datasheets as _ds
 
 
@@ -28,6 +26,6 @@ class StandardsLoader:
         return self.retriever.index_dir(standards_dir())
 
 
-def ensure_sample_corpus(base_dir: str | None = None) -> List[str]:
+def ensure_sample_corpus(base_dir: str | None = None) -> list[str]:
     """Assure le mini-corpus (délègue au corpus commun)."""
     return _ds.ensure_sample_corpus(base_dir)

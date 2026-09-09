@@ -5,14 +5,11 @@ from __future__ import annotations
 
 import math
 import time
-from typing import Any, Dict, List, Tuple
-
-from shared.geometry import Point, Segment
+from typing import Any
 
 from shared.utilities import get_logger
 
-from services.design_core import DesignGraph, Net
-
+from services.design_core import DesignGraph
 from services.router.geometrical import segment_segment_distance
 from services.router.topological import is_high_speed_net, is_power_net
 from services.simulator.base import BaseSim, SimResult
@@ -42,7 +39,7 @@ class EMIProxySim(BaseSim):
     # ------------------------------------------------------------------ public
     def run(self, graph: DesignGraph) -> SimResult:
         t0 = time.perf_counter()
-        notes: List[str] = []
+        notes: list[str] = []
 
         plane_cap_nf = self._plane_capacitance_nf(graph, notes)
         worst_xtalk_db, worst_pair = self._worst_crosstalk_db(graph)
@@ -59,7 +56,7 @@ class EMIProxySim(BaseSim):
                 f"boucle de retour estimée {loop_area:.0f} mm² > "
                 f"{self.loop_area_limit_mm2} mm² — rapprocher le plan de masse")
 
-        metrics: Dict[str, Any] = {
+        metrics: dict[str, Any] = {
             "plane_capacitance_nf": round(plane_cap_nf, 3),
             "worst_crosstalk_db": round(worst_xtalk_db, 2),
             "worst_crosstalk_pair": list(worst_pair) if worst_pair else None,
@@ -72,9 +69,9 @@ class EMIProxySim(BaseSim):
                          runtime_s=time.perf_counter() - t0, notes=notes)
 
     # ----------------------------------------------------------------- private
-    def _plane_capacitance_nf(self, graph: DesignGraph, notes: List[str]) -> float:
+    def _plane_capacitance_nf(self, graph: DesignGraph, notes: list[str]) -> float:
         """C = ε₀·εᵣ·A/d entre les deux plans les plus proches (ground/power)."""
-        planes = [l for l in graph.layers if l.ltype in ("ground", "power")]
+        planes = [ly for ly in graph.layers if ly.ltype in ("ground", "power")]
         if len(planes) >= 2:
             er = planes[0].er
         else:
@@ -84,14 +81,14 @@ class EMIProxySim(BaseSim):
         d_m = self.dielectric_mm * 1e-3
         return EPS0 * er * area_m2 / d_m * 1e9
 
-    def _worst_crosstalk_db(self, graph: DesignGraph) -> Tuple[float, Tuple[str, str]]:
+    def _worst_crosstalk_db(self, graph: DesignGraph) -> tuple[float, tuple[str, str]]:
         """Crosstalk proxy entre traces parallèles d'un même layer : k/d² (dB)."""
         nets = [n for n in graph.nets.values() if n.path is not None]
         aggressors = [n for n in nets if is_high_speed_net(n) or is_power_net(n)] or nets
         worst_db = -120.0
-        worst_pair: Tuple[str, str] = ("", "")
+        worst_pair: tuple[str, str] = ("", "")
         budget = MAX_SEGMENT_PAIRS
-        for i, aggr in enumerate(aggressors):
+        for _i, aggr in enumerate(aggressors):
             for vict in nets:
                 if budget <= 0:
                     break
@@ -136,7 +133,7 @@ class EMIProxySim(BaseSim):
                         return best
         return best
 
-    def _loop_area_mm2(self, graph: DesignGraph, notes: List[str]) -> float:
+    def _loop_area_mm2(self, graph: DesignGraph, notes: list[str]) -> float:
         """Σ aire des boucles de courant : longueur × distance au chemin de retour."""
         gnd_paths = [n.path for n in graph.nets.values()
                      if n.path is not None and (n.class_name or "").lower() in ("gnd", "ground")]

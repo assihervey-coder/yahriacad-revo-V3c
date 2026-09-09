@@ -4,13 +4,11 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple
 
 from shared.events import EventTypes, get_event_bus, make_event
 from shared.utilities import get_logger, new_id
 
 from services.design_core import DesignGraph, Net
-
 from services.router.differential_pairs import DifferentialPairRouter, find_differential_pairs
 from services.router.geometrical import MazeRouter
 from services.router.high_speed import length_match
@@ -18,7 +16,6 @@ from services.router.impedance_control import assign_trace_widths
 from services.router.route_optimizer import rip_up_and_reroute, route_net_segments
 from services.router.topological import (
     class_rank,
-    is_differential_net,
     net_length_estimate,
 )
 from services.router.via_minimizer import minimize as minimize_vias
@@ -35,10 +32,10 @@ class RoutingResult:
     total_length_mm: float
     vias: int
     duration_ms: float
-    details: Dict[str, object] = field(default_factory=dict)
-    graph: Optional[DesignGraph] = None     # copie routée (source de vérité inchangée)
+    details: dict[str, object] = field(default_factory=dict)
+    graph: DesignGraph | None = None     # copie routée (source de vérité inchangée)
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "routed": self.routed, "failed": self.failed,
             "total_length_mm": round(self.total_length_mm, 2),
@@ -71,13 +68,13 @@ class RouterEngine:
 
     # ------------------------------------------------------------------ helpers
     @staticmethod
-    def _signal_layers(graph: DesignGraph) -> Tuple[int, ...]:
+    def _signal_layers(graph: DesignGraph) -> tuple[int, ...]:
         """Indices des couches de signal (fallback [0, 1])."""
-        idx = tuple(l.index for l in graph.layers if l.ltype in ("signal", "mixed"))
+        idx = tuple(ly.index for ly in graph.layers if ly.ltype in ("signal", "mixed"))
         return idx or (0, 1)
 
     def route_all(self, graph: DesignGraph, strategy: str = "auto",
-                  widths: Optional[Dict[str, float]] = None) -> RoutingResult:
+                  widths: dict[str, float] | None = None) -> RoutingResult:
         """Route tous les nets sur une COPIE du graphe (l'original est intact).
 
         Pipeline : largeurs → tri (power, high_speed, default courts) →
@@ -97,12 +94,12 @@ class RouterEngine:
             key=lambda n: (class_rank(n), net_length_estimate(g, n)),
         )
         pairs = find_differential_pairs(g)
-        pair_partner: Dict[str, Net] = {}
+        pair_partner: dict[str, Net] = {}
         for p, n in pairs:
             pair_partner[p.net_id] = n
             pair_partner[n.net_id] = p
 
-        failed: List[str] = []
+        failed: list[str] = []
         pair_router = DifferentialPairRouter(maze=maze)
 
         for net in nets_sorted:
@@ -121,7 +118,7 @@ class RouterEngine:
                 failed.append(net.net_id)
 
         # ---- rip-up & reroute des échecs
-        reroute_info: Dict[str, object] = {}
+        reroute_info: dict[str, object] = {}
         if failed:
             reroute_info = rip_up_and_reroute(g, failed, attempts=3, maze=maze,
                                               widths=widths, layers=layers)
@@ -130,7 +127,7 @@ class RouterEngine:
         # ---- égalisation des longueurs par groupe apparié
         groups = sorted({n.matched_group for n in g.nets.values()
                          if n.matched_group and n.routed})
-        matched: Dict[str, Dict[str, float]] = {}
+        matched: dict[str, dict[str, float]] = {}
         for grp in groups:
             matched[str(grp)] = length_match(g, str(grp))
 

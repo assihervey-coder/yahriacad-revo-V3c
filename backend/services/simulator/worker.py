@@ -6,9 +6,10 @@ pas bloquer la boucle) et publie SIMULATION_COMPLETED avec les résultats.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
-from shared.events import Event, EventTypes, EventBus, get_event_bus, make_event
+from shared.events import Event, EventBus, EventTypes, get_event_bus, make_event
 from shared.utilities import get_logger, new_id
 
 from services.simulator.base import BaseSim
@@ -23,7 +24,7 @@ log = get_logger("simulator.worker")
 SIM_REQUEST_TOPIC = "sim.requested"
 
 
-def default_worker_sims() -> List[BaseSim]:
+def default_worker_sims() -> list[BaseSim]:
     """Jeu complet de sims exécutées par le worker."""
     return [ThermalSim(), EMIProxySim(), SignalIntegritySim(),
             PowerIntegritySim(), MechanicalSim()]
@@ -32,10 +33,10 @@ def default_worker_sims() -> List[BaseSim]:
 class SimulationWorker:
     """Consomme les demandes de simulation et publie les résultats."""
 
-    def __init__(self, bus: Optional[EventBus] = None,
-                 sims: Optional[Sequence[BaseSim]] = None) -> None:
+    def __init__(self, bus: EventBus | None = None,
+                 sims: Sequence[BaseSim] | None = None) -> None:
         self.bus = bus or get_event_bus()
-        self.sims: List[BaseSim] = list(sims) if sims else default_worker_sims()
+        self.sims: list[BaseSim] = list(sims) if sims else default_worker_sims()
         self._running = False
 
     # ------------------------------------------------------------------ cycle
@@ -68,7 +69,7 @@ class SimulationWorker:
     # ---------------------------------------------------------------- handler
     async def _on_request(self, event: Event) -> None:
         """Exécute les sims en thread (CPU/numpy) et publie SIMULATION_COMPLETED."""
-        payload: Dict[str, Any] = dict(event.payload or {})
+        payload: dict[str, Any] = dict(event.payload or {})
         graph = payload.get("graph")
         if graph is None:
             log.warning("sim.requested sans 'graph' (event %s) — ignoré", event.event_id)
@@ -85,9 +86,9 @@ class SimulationWorker:
             correlation_id=event.correlation_id or new_id("sim"),
         ))
 
-    def _run_sims(self, graph) -> Dict[str, Any]:
+    def _run_sims(self, graph) -> dict[str, Any]:
         """Exécution synchrone des sims → dict sérialisable."""
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         for sim in self.sims:
             try:
                 out[sim.sim_kind] = sim.run(graph).to_dict()

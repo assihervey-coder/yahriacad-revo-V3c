@@ -9,13 +9,14 @@ Lancement autonome :  python -m orchestrator.workflow_engine.runner
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict
+from typing import Any
+
+from shared.events import get_event_bus
+from shared.utilities import configure_logging, get_logger
 
 from orchestrator.common import register_main_loop
 from orchestrator.workflow_engine.engine import WorkflowEngine
 from orchestrator.workflow_engine.tasks import TaskSpec, get_task_queue
-from shared.events import get_event_bus
-from shared.utilities import configure_logging, get_logger
 
 log = get_logger("workflow.runner")
 
@@ -28,7 +29,7 @@ def handle_chat_command(event: Any) -> None:
     Si l'API a déjà soumis la tâche (payload.task_id présent), on ignore
     (l'event sert alors uniquement de trace de corrélation).
     """
-    payload: Dict[str, Any] = dict(event.payload or {})
+    payload: dict[str, Any] = dict(event.payload or {})
     message = str(payload.get("message") or "").strip()
     if not message:
         return

@@ -1,8 +1,6 @@
 """Contraintes de fabrication : limites d'assemblage (nombre de composants)."""
 from __future__ import annotations
 
-from typing import List
-
 from services.design_core.constraint_engine.engine import BaseConstraint, Violation
 from services.design_core.design_graph.graph import DesignGraph
 
@@ -21,7 +19,7 @@ class MaxComponentCount(BaseConstraint):
         )
         self.max_components = max_components
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
+    def check(self, graph: DesignGraph) -> list[Violation]:
         count = len(graph.components)
         if count > self.max_components:
             return [self.violation(

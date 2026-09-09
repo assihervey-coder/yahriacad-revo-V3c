@@ -4,14 +4,12 @@ hotspots éloignés des cristaux et capteurs sensibles.
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional, Tuple
 
 from shared.utilities import get_logger
 
 from services.design_core import Component, DesignGraph
-
 from services.placement_engine.constraint_placement import find_free_spot, resolve_overlaps
-from services.router.topological import classify_component, clamp_to_board
+from services.router.topological import clamp_to_board, classify_component
 
 log = get_logger("placement.thermal")
 
@@ -38,7 +36,7 @@ class ThermalPlacer:
         self.hotspot_clearance_mm = hotspot_clearance_mm
 
     def place(self, graph: DesignGraph,
-              constraints: Optional[Dict] = None) -> DesignGraph:
+              constraints: dict | None = None) -> DesignGraph:
         """Retourne une COPIE du graphe avec les règles thermiques appliquées."""
         g = graph.copy()
         n_edge = self._regulators_to_edges(g)
@@ -82,7 +80,7 @@ class ThermalPlacer:
         hots = [c for c in g.components.values() if c.placed and _is_hot(c)]
         moved = 0
         for _ in range(20):                       # relaxation itérative
-            worst: Optional[Tuple[str, str, float, float, float]] = None
+            worst: tuple[str, str, float, float, float] | None = None
             for i in range(len(hots)):
                 for j in range(i + 1, len(hots)):
                     a, b = hots[i], hots[j]

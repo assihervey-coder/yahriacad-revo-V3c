@@ -6,12 +6,11 @@ somme des power_w des composants alimentés / tension du rail. Droop = R·I.
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph, Net
-
 from services.router.topological import is_power_net, voltage_of_net
 from services.simulator.base import BaseSim, SimResult
 
@@ -35,8 +34,8 @@ class PowerIntegritySim(BaseSim):
 
     def run(self, graph: DesignGraph) -> SimResult:
         t0 = time.perf_counter()
-        notes: List[str] = []
-        rails: Dict[str, Dict[str, Any]] = {}
+        notes: list[str] = []
+        rails: dict[str, dict[str, Any]] = {}
         worst_mv = 0.0
         worst_rail: str | None = None
 
@@ -84,7 +83,7 @@ class PowerIntegritySim(BaseSim):
         passed = all(r["passed"] for r in rails.values()) if rails else True
         if not rails:
             notes.append("aucun rail d'alimentation à 2+ pins : rien à vérifier")
-        metrics: Dict[str, Any] = {
+        metrics: dict[str, Any] = {
             "worst_ir_drop_mv": round(worst_mv, 2),
             "worst_rail": worst_rail,
             "limit_mv": self.ir_drop_limit_mv,

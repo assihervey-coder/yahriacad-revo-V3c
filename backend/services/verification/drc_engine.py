@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from shared.geometry.geometry import Point, Segment
 from shared.utilities import get_logger
+
 from services.design_core.design_graph.graph import DesignGraph
 from services.verification.design_rules import DesignRules
 
@@ -24,16 +25,16 @@ class DRCViolation:
     code: str
     message: str
     severity: str = "error"
-    location: Dict[str, Any] = field(default_factory=dict)
+    location: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"code": self.code, "message": self.message,
                 "severity": self.severity, "location": self.location}
 
 
 @dataclass
 class DRCReport:
-    violations: List[DRCViolation] = field(default_factory=list)
+    violations: list[DRCViolation] = field(default_factory=list)
     checked: int = 0
 
     @property
@@ -48,7 +49,7 @@ class DRCReport:
         penalty += 0.5 * sum(1.0 for v in self.violations if v.severity == "warning")
         return max(0.0, 1.0 - penalty / max(1.0, self.checked))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"passed": self.passed, "score": self.score, "checked": self.checked,
                 "violations": [v.to_dict() for v in self.violations]}
 
@@ -70,7 +71,7 @@ class DRCEngine:
         rules = self.rules
 
         # 1. Traces trop fines
-        segments: List[Tuple[Segment, str, str]] = []  # (segment, net_id, layer_name)
+        segments: list[tuple[Segment, str, str]] = []  # (segment, net_id, layer_name)
         for net in graph.nets.values():
             path = net.path
             if path is None:
@@ -148,7 +149,7 @@ class DRCEngine:
                         "error", {"ref_a": a.ref, "ref_b": b.ref}))
 
         # 5. Vias trop proches ou trop petits
-        via_points: List[Tuple[Point, str]] = []
+        via_points: list[tuple[Point, str]] = []
         for net in graph.nets.values():
             if net.path is None:
                 continue

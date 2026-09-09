@@ -4,9 +4,10 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
+
 from services.ai_engine.llm_orchestrator.orchestrator import LLMOrchestrator
 
 log = get_logger("ai_engine.opt.proposer")
@@ -17,17 +18,17 @@ class Proposal:
     """Proposition de modification appliquable à un DesignGraph."""
 
     kind: str                     # "move_component" | "rotate" | "swap"
-    params: Dict[str, Any] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
     rationale: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"kind": self.kind, "params": self.params,
                 "rationale": self.rationale}
 
 
-def _net_degree(graph) -> Dict[str, int]:  # noqa: ANN001
+def _net_degree(graph) -> dict[str, int]:  # noqa: ANN001
     """Nombre de nets par composant."""
-    degree: Dict[str, int] = {ref: 0 for ref in graph.components}
+    degree: dict[str, int] = {ref: 0 for ref in graph.components}
     for net in graph.nets.values():
         refs = {str(pin[0]) for pin in (getattr(net, "pins", []) or [])
                 if isinstance(pin, (list, tuple)) and len(pin) >= 2}
@@ -36,7 +37,7 @@ def _net_degree(graph) -> Dict[str, int]:  # noqa: ANN001
     return degree
 
 
-def _neighbor_centroid(graph, ref: str) -> Optional[Tuple[float, float]]:  # noqa: ANN001
+def _neighbor_centroid(graph, ref: str) -> tuple[float, float] | None:  # noqa: ANN001
     """Centroïde des composants connectés à `ref` (via nets/pins)."""
     xs, ys = [], []
     for net in graph.nets.values():
@@ -57,7 +58,7 @@ def _neighbor_centroid(graph, ref: str) -> Optional[Tuple[float, float]]:  # noq
     return sum(xs) / len(xs), sum(ys) / len(ys)
 
 
-def _nets_of(graph, ref: str) -> List[str]:  # noqa: ANN001
+def _nets_of(graph, ref: str) -> list[str]:  # noqa: ANN001
     """Identifiants des nets contenant `ref`."""
     out = []
     for net_id, net in graph.nets.items():
@@ -105,7 +106,7 @@ class _Ghost:
         self.x, self.y = x, y
 
 
-def _heuristic_proposals(graph, k: int) -> List[Proposal]:  # noqa: ANN001
+def _heuristic_proposals(graph, k: int) -> list[Proposal]:  # noqa: ANN001
     """Heuristique greedy : déplace les composants vers le centroïde de leurs
     connexions (calculé depuis pins/nets), triés par GAIN HPWL estimé.
 
@@ -113,7 +114,7 @@ def _heuristic_proposals(graph, k: int) -> List[Proposal]:  # noqa: ANN001
     réduisent le HPWL sont proposés, les meilleurs d'abord.
     """
     degree = _net_degree(graph)
-    scored: List[tuple[float, str, int, float, float]] = []
+    scored: list[tuple[float, str, int, float, float]] = []
     for ref, deg in degree.items():
         comp = graph.components.get(ref)
         if comp is None:
@@ -141,12 +142,12 @@ def _heuristic_proposals(graph, k: int) -> List[Proposal]:  # noqa: ANN001
 class ProposerLLM:
     """Propose des modifications : LLM si dispo, sinon heuristique centroïde."""
 
-    def __init__(self, orchestrator: Optional[LLMOrchestrator] = None) -> None:
+    def __init__(self, orchestrator: LLMOrchestrator | None = None) -> None:
         self.orchestrator = orchestrator
 
     def propose(self, graph,  # noqa: ANN001
                 eval_result,  # noqa: ANN001 — EvalResult
-                k: int = 3) -> List[Proposal]:
+                k: int = 3) -> list[Proposal]:
         """Retourne jusqu'à k propositions ordonnées."""
         heur = _heuristic_proposals(graph, k)
         if self.orchestrator is None:
@@ -161,7 +162,7 @@ class ProposerLLM:
             log.warning("proposition LLM échouée (%s) → heuristique", exc)
         return heur
 
-    def _llm_propose(self, graph, eval_result, k: int) -> List[Proposal]:  # noqa: ANN001
+    def _llm_propose(self, graph, eval_result, k: int) -> list[Proposal]:  # noqa: ANN001
         assert self.orchestrator is not None
         comps = {ref: {"x": c.x, "y": c.y, "nets": _net_degree(graph).get(ref, 0)}
                  for ref, c in list(graph.components.items())[:30]}
@@ -184,7 +185,7 @@ class ProposerLLM:
         if txt.startswith("```"):
             txt = re.sub(r"^```[a-zA-Z]*\s*|\s*```$", "", txt)
         data = json.loads(txt)
-        out: List[Proposal] = []
+        out: list[Proposal] = []
         for item in data if isinstance(data, list) else []:
             kind = str(item.get("kind", "move_component"))
             if kind not in ("move_component", "rotate", "swap"):

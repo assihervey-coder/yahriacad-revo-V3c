@@ -8,7 +8,7 @@ sinon estimations analytiques inline :
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -21,13 +21,13 @@ _CROSSTALK_WARN_DIST_MM = 3.0
 _IR_DROP_WARN_V = 0.15
 
 
-def _try_simulator(graph, nets_hs: List[str]) -> List[Dict[str, Any]]:
+def _try_simulator(graph, nets_hs: list[str]) -> list[dict[str, Any]]:
     """Délègue aux simulateurs si services.simulator est disponible."""
     try:
         from services import simulator  # type: ignore
     except ImportError:
         return []
-    issues: List[Dict[str, Any]] = []
+    issues: list[dict[str, Any]] = []
     for fn_name, kind in (("run_thermal", "thermal_proxy"),
                           ("thermal_proxy", "thermal_proxy"),
                           ("run_si", "si_proxy"),
@@ -44,9 +44,9 @@ def _try_simulator(graph, nets_hs: List[str]) -> List[Dict[str, Any]]:
     return issues
 
 
-def _normalize_simulator_output(result: Any, kind: str) -> List[Dict[str, Any]]:
+def _normalize_simulator_output(result: Any, kind: str) -> list[dict[str, Any]]:
     """Normalise divers formats de sortie simulateur en liste d'issues."""
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     if isinstance(result, dict):
         if "issues" in result and isinstance(result["issues"], list):
             out.extend(result["issues"])
@@ -59,9 +59,9 @@ def _normalize_simulator_output(result: Any, kind: str) -> List[Dict[str, Any]]:
     return out
 
 
-def _high_speed_nets(graph) -> List[str]:  # noqa: ANN001
+def _high_speed_nets(graph) -> list[str]:  # noqa: ANN001
     """Nets à haut débit (impédance cible définie ou classe high_speed)."""
-    out: List[str] = []
+    out: list[str] = []
     for net_id, net in dict(getattr(graph, "nets", {}) or {}).items():
         if getattr(net, "impedance_target_ohm", None) or \
                 str(getattr(net, "class_name", "")).lower() in ("high_speed", "hs"):
@@ -69,12 +69,12 @@ def _high_speed_nets(graph) -> List[str]:  # noqa: ANN001
     return out
 
 
-def _component_position(graph, ref: str) -> Tuple[float, float] | None:  # noqa: ANN001
+def _component_position(graph, ref: str) -> tuple[float, float] | None:  # noqa: ANN001
     comp = graph.components.get(ref)
     return (comp.x, comp.y) if comp else None
 
 
-def check_physical(graph, quick: bool = True) -> List[Dict[str, Any]]:  # noqa: ANN001
+def check_physical(graph, quick: bool = True) -> list[dict[str, Any]]:  # noqa: ANN001
     """Proxies physiques : thermique, crosstalk (SI), IR drop."""
     issues = _try_simulator(graph, _high_speed_nets(graph))
     if issues or not quick:

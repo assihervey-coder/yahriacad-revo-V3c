@@ -18,10 +18,10 @@ from __future__ import annotations
 
 import os
 from collections import deque
-from typing import Any, Deque, Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 log = get_logger("ai_engine.rl.world_model")
@@ -31,7 +31,7 @@ CONFIDENCE_RAMP = 200          # transitions pour atteindre la confiance max
 MAX_CONFIDENCE = 0.85          # poids max du modèle appris vs heuristique
 
 
-def state_from_graph(graph) -> Dict:  # noqa: ANN001 — duck-typing DesignGraph
+def state_from_graph(graph) -> dict:  # noqa: ANN001 — duck-typing DesignGraph
     """Construit un dict d'état standard depuis un DesignGraph."""
     comps = list(getattr(graph, "components", {}).values())
     nets = list(getattr(graph, "nets", {}).values())
@@ -72,9 +72,9 @@ class _MLP:
         self.b1 = np.zeros(n_hidden)
         self.W2 = rng.standard_normal((n_out, n_hidden)) * np.sqrt(2.0 / n_hidden)
         self.b2 = np.zeros(n_out)
-        self.loss_history: List[float] = []
+        self.loss_history: list[float] = []
 
-    def forward(self, Xs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def forward(self, Xs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         hidden = np.tanh(Xs @ self.W1.T + self.b1)
         out = hidden @ self.W2.T + self.b2
         return out, hidden
@@ -144,24 +144,24 @@ class WorldModel:
         self.b: np.ndarray = np.zeros(feature_dim, dtype=np.float64)
         self.violation_weight: float = 10.0
         # ensemble de dynamiques + réseau de récompense (best-to-have)
-        self._ens: List[_MLP] = [
+        self._ens: list[_MLP] = [
             _MLP(feature_dim, hidden, feature_dim, seed=seed * 97 + k)
             for k in range(self.ensemble_size)
         ]
         self._reward = _MLP(feature_dim, hidden, 1, seed=seed * 131 + 7)
-        self._buf: Deque[Tuple[np.ndarray, np.ndarray, float]] = deque(maxlen=5000)
+        self._buf: deque[tuple[np.ndarray, np.ndarray, float]] = deque(maxlen=5000)
         self._dyn_trained = False
         self._reward_trained = False
         self._n_transitions_ref = 0      # référence de confiance (persistée)
-        self.last_uncertainty: Dict[str, float] = {}
-        self._torch_model: Optional[object] = None
+        self.last_uncertainty: dict[str, float] = {}
+        self._torch_model: object | None = None
         self.stats = {"dynamics_calls": 0, "rollouts": 0, "transitions": 0,
                       "train_calls": 0}
 
     # -------------------------------------------------------------- encoder
-    def encoder(self, state: Dict) -> np.ndarray:
+    def encoder(self, state: dict) -> np.ndarray:
         """Vectorise un état → np.ndarray[feature_dim]."""
-        comps: List[Dict] = state.get("components", [])
+        comps: list[dict] = state.get("components", [])
         board_w = float(state.get("board_w", 60.0)) or 1.0
         board_h = float(state.get("board_h", 40.0)) or 1.0
         n = max(1, state.get("n_components", len(comps)))
@@ -197,7 +197,7 @@ class WorldModel:
         return feats[:self.feature_dim]
 
     # ------------------------------------------------------------- dynamics
-    def _apply_action_heuristic(self, state: Dict, action) -> Dict:  # noqa: ANN001
+    def _apply_action_heuristic(self, state: dict, action) -> dict:  # noqa: ANN001
         """Effet mécanique attendu de l'action (avant correction apprise)."""
         nxt = {k: (v.copy() if isinstance(v, list) else v)
                for k, v in state.items()}
@@ -217,7 +217,7 @@ class WorldModel:
             nxt["wire_length"] = max(0.0, nxt.get("wire_length", 0.0) * 0.995)
         return nxt
 
-    def _blend_learned(self, f_actioned: np.ndarray) -> Tuple[np.ndarray, float]:
+    def _blend_learned(self, f_actioned: np.ndarray) -> tuple[np.ndarray, float]:
         """Mélange prior heuristique ↔ prédiction d'ensemble. Retourne (f, α)."""
         if not self._dyn_trained:
             return f_actioned, 0.0
@@ -234,13 +234,13 @@ class WorldModel:
         return (1.0 - alpha) * f_actioned + alpha * f_mean, alpha
 
     @staticmethod
-    def _write_back(state: Dict, f: np.ndarray) -> None:
+    def _write_back(state: dict, f: np.ndarray) -> None:
         """Réinjecte wire_length / violations depuis le vecteur de features."""
         n_nets = max(1, state.get("n_nets", 1))
         state["wire_length"] = max(0.0, float(f[3]) * 10.0 * n_nets)
         state["violations"] = max(0, int(round(float(f[4]) * 20.0)))
 
-    def dynamics(self, state: Dict, action) -> Dict:  # noqa: ANN001
+    def dynamics(self, state: dict, action) -> dict:  # noqa: ANN001
         """Prochain état imaginé : heuristique d'action + correction d'ensemble.
 
         Après appel, `self.last_uncertainty` porte l'écart-type inter-membres
@@ -254,7 +254,7 @@ class WorldModel:
         return nxt
 
     # ---------------------------------------------------- reward predictor
-    def reward_predictor(self, state: Dict) -> float:  # noqa: ANN001
+    def reward_predictor(self, state: dict) -> float:  # noqa: ANN001
         """Récompense prédite : réseau appris si entraîné, sinon analytique."""
         f = self.encoder(state)
         if self._reward_trained:
@@ -264,16 +264,16 @@ class WorldModel:
         return -(wl_norm + viol * self.violation_weight)
 
     # ------------------------------------------------------------- planning
-    def rollout(self, state: Dict, actions: Sequence,  # noqa: ANN001
+    def rollout(self, state: dict, actions: Sequence,  # noqa: ANN001
                 depth: int = 2, gamma: float = 0.95,
-                noise: Optional[float] = None) -> List[Tuple[Any, float]]:
+                noise: float | None = None) -> list[tuple[Any, float]]:
         """Imagine chaque action candidate sur `depth` pas (chaîne glissante
         simple : répétition de la même action) et retourne [(action, valeur)]
         triée par valeur décroissante. Bruit d'observation optionnel."""
         self.stats["rollouts"] += 1
         sigma = self.rollout_noise if noise is None else float(noise)
         rng = np.random.default_rng(0)
-        scored: List[Tuple[Any, float]] = []
+        scored: list[tuple[Any, float]] = []
         for action in actions:
             cur = state
             value = 0.0
@@ -289,14 +289,14 @@ class WorldModel:
         scored.sort(key=lambda t: t[1], reverse=True)
         return scored
 
-    def plan(self, state: Dict, actions: Sequence, depth: int = 2,  # noqa: ANN001
-             gamma: float = 0.95) -> Optional[Any]:
+    def plan(self, state: dict, actions: Sequence, depth: int = 2,  # noqa: ANN001
+             gamma: float = 0.95) -> Any | None:
         """Meilleure action selon le rollout (MPC greedy)."""
         scored = self.rollout(state, actions, depth=depth, gamma=gamma)
         return scored[0][0] if scored else None
 
     # -------------------------------------------------------------- learning
-    def record_transition(self, state: Dict, action, next_state: Dict,  # noqa: ANN001
+    def record_transition(self, state: dict, action, next_state: dict,  # noqa: ANN001
                           reward: float) -> None:
         """Enregistre une transition réelle (f_actioned → f_next, reward)."""
         f_a = self.encoder(self._apply_action_heuristic(state, action))
@@ -306,7 +306,7 @@ class WorldModel:
         self.stats["transitions"] = len(self._buf)
 
     def train(self, epochs: int = 80, lr: float = 2e-3,
-              batch: int = 32) -> Dict[str, float]:
+              batch: int = 32) -> dict[str, float]:
         """Entraîne l'ensemble (bagging par membre) + la récompense.
 
         Retourne {dyn_mse_k, dyn_mse_mean, reward_mse, n_transitions}.
@@ -318,9 +318,9 @@ class WorldModel:
         X = np.stack([t[0] for t in self._buf])
         Y = np.stack([t[1] for t in self._buf])
         R = np.array([t[2] for t in self._buf], dtype=np.float64)
-        out: Dict[str, float] = {"n_transitions": float(len(self._buf))}
+        out: dict[str, float] = {"n_transitions": float(len(self._buf))}
         rng = np.random.default_rng(0)
-        losses: List[float] = []
+        losses: list[float] = []
         for k, member in enumerate(self._ens):
             idx = rng.integers(0, len(X), size=len(X))     # bootstrap (bagging)
             mse = member.fit(X[idx], Y[idx], epochs=epochs, lr=lr, batch=batch)
@@ -347,7 +347,7 @@ class WorldModel:
         return float(np.mean(err ** 2))
 
     # ----------------------------------------------------------- explainabilité
-    def feature_attribution(self, state: Dict) -> Dict[str, float]:  # noqa: ANN001
+    def feature_attribution(self, state: dict) -> dict[str, float]:  # noqa: ANN001
         """Attribution gradient×input de la récompense par feature (top dict).
         Retourne un dict {index: importance} normalisé (somme = 1)."""
         f = self.encoder(state)
@@ -363,7 +363,7 @@ class WorldModel:
     def save(self, path: str) -> None:
         """Sauvegarde prior linéaire + ensemble + récompense en npz."""
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        payload: Dict[str, np.ndarray] = {"W": self.W, "b": self.b}
+        payload: dict[str, np.ndarray] = {"W": self.W, "b": self.b}
         for k, m in enumerate(self._ens):
             payload[f"W1_{k}"] = m.W1
             payload[f"b1_{k}"] = m.b1

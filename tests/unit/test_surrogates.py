@@ -5,10 +5,10 @@ from pathlib import Path
 
 sys.path[:0] = [str(Path(__file__).resolve().parents[2]), str(Path(__file__).resolve().parents[2] / "backend")]
 
-import numpy as np
-import pytest
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
 
-from services.simulator.surrogate_models import (
+from services.simulator.surrogate_models import (  # noqa: E402
     FastPredictor,
     NeuralSurrogate,
     SurrogateDataset,
@@ -100,7 +100,7 @@ def test_fast_predictor_priorite_manager(thermal_data, tmp_path):
     mgr = SurrogateManager(min_samples=25, data_root=str(tmp_path / "ds"))
     mgr._datasets["thermal"] = thermal_data
     mgr.maybe_train("thermal")
-    from services.design_core import DesignGraph
+    from services.design_core import DesignGraph  # noqa: E402
 
     g = DesignGraph(project_id="t", name="t", board_size=(60.0, 40.0))
     g.add_component(ref="U1", footprint="QFN-16_0.5mm", x=10, y=20, power_w=2.0)

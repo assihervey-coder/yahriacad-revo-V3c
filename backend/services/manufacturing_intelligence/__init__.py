@@ -1,5 +1,5 @@
 """manufacturing_intelligence — profils usine, devis, coût, yield, feedback DFM."""
-from typing import Any, Dict
+from typing import Any
 
 from shared.utilities import get_logger
 
@@ -41,7 +41,7 @@ __all__ = [
 log = get_logger(__name__)
 
 
-def _mini_dfm_report(graph: Any, profile: FactoryProfile) -> Dict[str, Any]:
+def _mini_dfm_report(graph: Any, profile: FactoryProfile) -> dict[str, Any]:
     """Mini-check DFM interne (traces/vias) pour alimenter la boucle de feedback."""
     violations: list = []
     for net in graph.nets.values():
@@ -64,7 +64,7 @@ class ManufacturingIntelligence:
     def __init__(self, factory: str = "jlcpcb") -> None:
         self.factory = factory
 
-    def analyze(self, graph: Any, factory: str = "") -> Dict[str, Any]:
+    def analyze(self, graph: Any, factory: str = "") -> dict[str, Any]:
         """Analyse complète : profile, cost, yield, suggestions, feedback DFM."""
         profile = get_profile(factory or self.factory)
         cost = CostEstimator(profile).estimate(graph)
@@ -123,6 +123,6 @@ class ManufacturingIntelligence:
         return report
 
 
-def analyze(graph: Any, factory: str = "jlcpcb") -> Dict[str, Any]:
+def analyze(graph: Any, factory: str = "jlcpcb") -> dict[str, Any]:
     """Raccourci module-level : ManufacturingIntelligence(factory).analyze(graph)."""
     return ManufacturingIntelligence(factory).analyze(graph)

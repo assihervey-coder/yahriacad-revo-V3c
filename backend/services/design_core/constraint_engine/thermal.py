@@ -1,8 +1,6 @@
 """Contraintes thermiques : hotspots de densité de puissance locale."""
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
-
 from services.design_core.constraint_engine.engine import BaseConstraint, Violation
 from services.design_core.design_graph.graph import DesignGraph
 
@@ -24,14 +22,14 @@ class ThermalHotspot(BaseConstraint):
         self.threshold_w_per_mm2 = threshold_w_per_mm2
         self.cell_mm = cell_mm
 
-    def check(self, graph: DesignGraph) -> List[Violation]:
+    def check(self, graph: DesignGraph) -> list[Violation]:
         cell = max(0.1, self.cell_mm)
-        cells: Dict[Tuple[int, int], float] = {}
+        cells: dict[tuple[int, int], float] = {}
         for comp in graph.placed_components():
             key = (int(comp.x // cell), int(comp.y // cell))
             cells[key] = cells.get(key, 0.0) + comp.power_w
         cell_area = cell * cell
-        violations: List[Violation] = []
+        violations: list[Violation] = []
         for (cx, cy), power in cells.items():
             density = power / cell_area
             if density > self.threshold_w_per_mm2:

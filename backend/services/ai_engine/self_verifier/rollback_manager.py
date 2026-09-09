@@ -1,10 +1,11 @@
 """RollbackManager — retour à la dernière révision valide (event bus)."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from shared.utilities import get_logger, new_id
 from shared.events import EventTypes, make_event
+from shared.utilities import get_logger
+
 from services.ai_engine._event_helpers import publish_nowait
 from services.ai_engine.self_verifier.verifier import SelfVerifier
 
@@ -20,19 +21,19 @@ class RollbackManager:
     """
 
     def __init__(self, versioning,  # noqa: ANN001 — DesignVersioning
-                 verifier: Optional[SelfVerifier] = None) -> None:
+                 verifier: SelfVerifier | None = None) -> None:
         self.versioning = versioning
         self.verifier = verifier or SelfVerifier(emit_events=False)
-        self._valid: Dict[str, Dict[str, Any]] = {}
-        self._invalid: Dict[str, Dict[str, Any]] = {}
+        self._valid: dict[str, dict[str, Any]] = {}
+        self._invalid: dict[str, dict[str, Any]] = {}
 
     # -------------------------------------------------------------- registre
-    def mark_valid(self, rev: str, info: Optional[Dict[str, Any]] = None) -> None:
+    def mark_valid(self, rev: str, info: dict[str, Any] | None = None) -> None:
         """Marque une révision comme valide."""
         self._valid[rev] = info or {}
         self._invalid.pop(rev, None)
 
-    def mark_invalid(self, rev: str, info: Optional[Dict[str, Any]] = None) -> None:
+    def mark_invalid(self, rev: str, info: dict[str, Any] | None = None) -> None:
         """Marque une révision comme invalide."""
         self._invalid[rev] = info or {}
         self._valid.pop(rev, None)
@@ -41,14 +42,14 @@ class RollbackManager:
         return rev in self._valid
 
     # -------------------------------------------------------------- rollback
-    def _revision_list_backwards(self) -> List[str]:
+    def _revision_list_backwards(self) -> list[str]:
         """Liste des révisions de la plus récente à la plus ancienne."""
         try:
             revisions = self.versioning.list()
         except Exception as exc:
             log.warning("versioning.list() échoué: %s", exc)
             return []
-        revs: List[str] = []
+        revs: list[str] = []
         for item in revisions:
             rev = getattr(item, "rev", None)
             if rev is None and isinstance(item, dict):
@@ -57,7 +58,7 @@ class RollbackManager:
                 revs.append(str(rev))
         return list(reversed(revs))
 
-    def _reverify(self, rev: str) -> Tuple[bool, Optional[object]]:
+    def _reverify(self, rev: str) -> tuple[bool, object | None]:
         """Restaure temporairement une révision et la re-vérifie."""
         try:
             graph = self.versioning.restore(rev)
@@ -71,8 +72,8 @@ class RollbackManager:
             log.warning("re-vérification de %s échouée: %s", rev, exc)
             return False, graph
 
-    def rollback_to_last_valid(self, current_rev: Optional[str] = None
-                               ) -> Tuple[bool, Optional[int]]:
+    def rollback_to_last_valid(self, current_rev: str | None = None
+                               ) -> tuple[bool, int | None]:
         """Restaure la première révision valide en remontant le temps.
 
         Retourne (success, rev_index | None) — rev_index = position dans la

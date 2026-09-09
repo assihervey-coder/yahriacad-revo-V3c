@@ -6,20 +6,20 @@ judiciariser un pipeline dfm_only même hors-ligne.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from orchestrator.common import get_field, overlapping_components
 
 
-def local_checks(graph: Any, clearance_mm: float = 0.2) -> Dict[str, Any]:
+def local_checks(graph: Any, clearance_mm: float = 0.2) -> dict[str, Any]:
     """Exécute des contrôles géométriques/électriques locaux -> rapport normalisé."""
-    issues: List[str] = []
+    issues: list[str] = []
 
     comps = get_field(graph, "components", default={}) or {}
     nets = get_field(graph, "nets", default={}) or {}
 
     # 1) Recouvrements de composants
-    overlaps: List[Tuple[str, str]] = []
+    overlaps: list[tuple[str, str]] = []
     try:
         overlaps = overlapping_components(graph, clearance_mm)
     except Exception:
@@ -28,7 +28,7 @@ def local_checks(graph: Any, clearance_mm: float = 0.2) -> Dict[str, Any]:
         issues.append(f"overlap: composants {ref_a} et {ref_b} se recouvrent")
 
     # 2) Nets non routés
-    unrouted: List[str] = []
+    unrouted: list[str] = []
     for net_id, net in nets.items():
         if not bool(get_field(net, "routed", default=False)):
             unrouted.append(str(net_id))
@@ -43,7 +43,7 @@ def local_checks(graph: Any, clearance_mm: float = 0.2) -> Dict[str, Any]:
 
     # 4) Nets d'alimentation manquants
     for power_net in ("GND", "VCC"):
-        if power_net not in {str(k) for k in nets.keys()}:
+        if power_net not in {str(k) for k in nets}:
             issues.append(f"power: net d'alimentation {power_net} absent")
 
     # 5) Composants hors carte

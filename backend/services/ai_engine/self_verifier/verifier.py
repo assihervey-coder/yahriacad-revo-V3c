@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from shared.utilities import get_logger, new_id
 from shared.events import EventTypes, make_event
+from shared.utilities import get_logger, new_id
+
 from services.ai_engine._event_helpers import publish_nowait
 from services.ai_engine.self_verifier.confidence import ConfidenceScorer
 from services.ai_engine.self_verifier.deterministic import check_deterministic
@@ -19,12 +20,12 @@ class VerificationReport:
     """Rapport de vérification consolidé."""
 
     passed: bool
-    issues: List[Dict[str, Any]] = field(default_factory=list)
+    issues: list[dict[str, Any]] = field(default_factory=list)
     confidence: float = 0.0
-    checked_by: List[str] = field(default_factory=list)
+    checked_by: list[str] = field(default_factory=list)
     report_id: str = field(default_factory=lambda: new_id("ver"))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Sérialisation."""
         return {
             "report_id": self.report_id, "passed": self.passed,
@@ -43,19 +44,19 @@ class SelfVerifier:
     MIN_CONFIDENCE = 0.6
 
     def __init__(self, versioning=None,  # noqa: ANN001 — DesignVersioning|None
-                 scorer: Optional[ConfidenceScorer] = None,
+                 scorer: ConfidenceScorer | None = None,
                  emit_events: bool = True) -> None:
         self.versioning = versioning
         self.scorer = scorer or ConfidenceScorer()
         self.emit_events = emit_events
 
     def verify(self, graph,  # noqa: ANN001 — DesignGraph
-               context: Optional[Dict[str, Any]] = None,
+               context: dict[str, Any] | None = None,
                quick: bool = True) -> VerificationReport:
         """Vérifie un graphe et retourne un rapport + event bus."""
         context = context or {}
-        issues: List[Dict[str, Any]] = []
-        checked_by: List[str] = []
+        issues: list[dict[str, Any]] = []
+        checked_by: list[str] = []
 
         issues.extend(check_deterministic(graph))
         checked_by.append("deterministic")
@@ -91,7 +92,7 @@ class SelfVerifier:
 
     # ------------------------------------------------------------- events
     def _emit(self, passed: bool, report: VerificationReport,
-              context: Dict[str, Any]) -> None:
+              context: dict[str, Any]) -> None:
         if not self.emit_events:
             return
         try:

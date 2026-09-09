@@ -4,8 +4,9 @@ Conversions sûres mm ↔ mil/inch/cm/µm, Dimension avec unité explicite.
 """
 from __future__ import annotations
 
-import pytest
+import dataclasses
 
+import pytest
 from shared.units import Dimension, LengthUnit, copper_thickness_um, from_mm, mil, to_mm
 
 
@@ -59,5 +60,5 @@ class TestDimension:
 
     def test_immuable(self) -> None:
         d = Dimension.of(1.0, LengthUnit.MM)
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             d.value_mm = 99.0  # type: ignore[misc]  # frozen dataclass

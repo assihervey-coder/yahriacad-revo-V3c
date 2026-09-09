@@ -8,17 +8,17 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from shared.utilities import get_logger
 
 from api_gateway.deps import get_tenant, load_project_graph
 from api_gateway.routes.chat import submit_chat_command
-from orchestrator.common import get_field, graph_stats, try_import
+from orchestrator.common import graph_stats
 from orchestrator.state_manager import ProjectState, get_agent_state_store
 from orchestrator.workflow_engine.engine import WorkflowEngine  # noqa: F401 (type only)
-from shared.utilities import get_logger
 
 log = get_logger("api.graphql")
 
@@ -37,7 +37,7 @@ except Exception:  # pragma: no cover - environnement sans strawberry
 # Résolveurs (partagés par les deux moteurs)
 # ---------------------------------------------------------------------------
 
-def _design_data(project_id: str, tenant: str = "default") -> Dict[str, Any]:
+def _design_data(project_id: str, tenant: str = "default") -> dict[str, Any]:
     graph, revision = load_project_graph(project_id, tenant)
     if graph is None:
         return {"name": project_id, "revision": 0,
@@ -52,9 +52,9 @@ def _design_data(project_id: str, tenant: str = "default") -> Dict[str, Any]:
 
 def _agents_data(project_id: str, tenant: str = "default") -> list:
     """État des 10 agents : live (agent_state) sinon registre statique."""
-    live: Dict[str, Dict[str, Any]] = {}
+    live: dict[str, dict[str, Any]] = {}
     store = get_agent_state_store()
-    for task_id, roles in store._data.items():  # accès interne volontaire
+    for _task_id, roles in store._data.items():  # accès interne volontaire
         for role, entry in roles.items():
             previous = live.get(role)
             if previous is None or float(entry.get("ts", 0)) >= float(previous.get("ts", 0)):
@@ -63,7 +63,7 @@ def _agents_data(project_id: str, tenant: str = "default") -> list:
     try:
         from api_gateway.deps import get_engine
 
-        roles = [role.value for role in get_engine().agents.keys()]
+        roles = [role.value for role in get_engine().agents]
     except Exception:
         from shared.contracts import AgentRole
 
@@ -78,7 +78,7 @@ def _agents_data(project_id: str, tenant: str = "default") -> list:
     return agents
 
 
-def _run_command(message: str, tenant: str = "default", project_id: str = "") -> Dict[str, Any]:
+def _run_command(message: str, tenant: str = "default", project_id: str = "") -> dict[str, Any]:
     result = submit_chat_command(message=message, project_id=project_id, tenant=tenant)
     return {"accepted": bool(result["accepted"]), "jobId": result["job_id"],
             "intent": result["intent"], "projectId": result["project_id"]}
@@ -88,8 +88,8 @@ def _run_command(message: str, tenant: str = "default", project_id: str = "") ->
 # Moteur de repli (JSON) — queries connues parsées par regex
 # ---------------------------------------------------------------------------
 
-def execute_query(query: str, variables: Optional[Dict[str, Any]] = None,
-                  tenant: str = "default") -> Dict[str, Any]:
+def execute_query(query: str, variables: dict[str, Any] | None = None,
+                  tenant: str = "default") -> dict[str, Any]:
     variables = variables or {}
     for key, value in variables.items():
         query = query.replace(f"${key}", json.dumps(value) if not isinstance(value, str) else value)
@@ -177,7 +177,7 @@ async def graphql_post(request: Request) -> JSONResponse:
     if STRAWBERRY_SCHEMA is not None:
         try:
             result = STRAWBERRY_SCHEMA.execute_sync(query, variable_values=variables)
-            payload: Dict[str, Any] = {}
+            payload: dict[str, Any] = {}
             if result.errors:
                 payload["errors"] = [{"message": str(error)} for error in result.errors]
             if result.data is not None:
@@ -189,7 +189,7 @@ async def graphql_post(request: Request) -> JSONResponse:
 
 
 @router.get("/graphql")
-async def graphql_get() -> Dict[str, Any]:
+async def graphql_get() -> dict[str, Any]:
     """Description de l'endpoint GraphQL."""
     return {
         "graphql": "ready",

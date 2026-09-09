@@ -3,21 +3,21 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
+from shared.utilities import get_logger, get_settings
 
 from api_gateway.deps import get_tenant
-from shared.utilities import get_logger, get_settings
 
 log = get_logger("api.billing")
 
 router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
 
 _LOCK = threading.Lock()
-_CREDITS: Dict[str, int] = {}
-_LEDGER: Dict[str, list] = {}
+_CREDITS: dict[str, int] = {}
+_LEDGER: dict[str, list] = {}
 
 
 def _balance(tenant: str) -> int:
@@ -27,7 +27,7 @@ def _balance(tenant: str) -> int:
 
 
 @router.get("/credits/{tenant}")
-async def get_credits(tenant: str, request: Request) -> Dict[str, Any]:
+async def get_credits(tenant: str, request: Request) -> dict[str, Any]:
     """Solde de crédits d'un tenant (free tier depuis Settings)."""
     with _LOCK:
         balance = _balance(tenant)
@@ -42,7 +42,7 @@ class ConsumeRequest(BaseModel):
 
 
 @router.post("/consume")
-async def consume_credits(payload: ConsumeRequest, request: Request) -> Dict[str, Any]:
+async def consume_credits(payload: ConsumeRequest, request: Request) -> dict[str, Any]:
     """Débite des crédits — 402 si le solde est insuffisant."""
     tenant = payload.tenant or get_tenant(request)
     with _LOCK:
@@ -64,7 +64,7 @@ async def consume_credits(payload: ConsumeRequest, request: Request) -> Dict[str
 
 
 @router.get("/ledger/{tenant}")
-async def get_ledger(tenant: str, request: Request) -> Dict[str, Any]:
+async def get_ledger(tenant: str, request: Request) -> dict[str, Any]:
     """Journal de consommation du tenant."""
     with _LOCK:
         entries = list(_LEDGER.get(tenant, []))

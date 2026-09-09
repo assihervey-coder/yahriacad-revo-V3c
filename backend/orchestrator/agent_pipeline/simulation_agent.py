@@ -1,12 +1,13 @@
 """SimulationAgent — thermique + SI + PI (+ CEM) via services.simulator."""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
+
+from shared.contracts import AgentRole
+from shared.schemas import AgentResultSchema
 
 from orchestrator.agent_pipeline.base import BaseAgent
 from orchestrator.common import call_probe, get_field, try_import
-from shared.contracts import AgentRole
-from shared.schemas import AgentResultSchema
 
 _KIND_CLASSES = [
     ("thermal", "services.simulator", "ThermalSim"),
@@ -28,14 +29,14 @@ class SimulationAgent(BaseAgent):
     def supports(self, action: str) -> bool:
         return action in ("simulate_all", "simulate", "")
 
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         graph = context.get("graph")
         if graph is None:
             return self.failed(context, "aucun DesignGraph dans le contexte")
         params = context.get("params") or {}
         requested = params.get("kinds") or ["thermal", "si", "pi", "em"]
 
-        results: Dict[str, Dict[str, Any]] = {}
+        results: dict[str, dict[str, Any]] = {}
         all_passed = True
         ran_any = False
 
@@ -70,7 +71,7 @@ class SimulationAgent(BaseAgent):
                     sim_result = call_probe(sim, "run", (graph,))
                 metrics = get_field(sim_result, "metrics", default={}) or {}
                 passed = bool(get_field(sim_result, "passed", default=True))
-                entry: Dict[str, Any] = {"metrics": _jsonable(metrics),
+                entry: dict[str, Any] = {"metrics": _jsonable(metrics),
                                          "passed": passed, "skipped": False}
                 if beta_used:
                     entry["beta"] = True
@@ -99,7 +100,7 @@ class SimulationAgent(BaseAgent):
                               confidence=0.85 if all_passed else 0.4,
                               rationale=f"simulations: {summary}")
 
-    def _local_thermal(self, graph: Any) -> Dict[str, Any]:
+    def _local_thermal(self, graph: Any) -> dict[str, Any]:
         """Estimation thermique grossière (repli) : T_max ≈ 25°C + ΣP · 30 °C/W."""
         comps = get_field(graph, "components", default={}) or {}
         total_power = 0.0

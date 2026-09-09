@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
-from typing import Any, Dict
+from typing import Any
 
 from shared.utilities import get_logger
 
 log = get_logger(__name__)
 
 # Profils embarqués (fallback) — remplacés par configs/factories/*.yaml si présents.
-_EMBEDDED: Dict[str, Dict[str, Any]] = {
+_EMBEDDED: dict[str, dict[str, Any]] = {
     "jlcpcb": {
         "name": "JLCPCB",
         "min_trace_mm": 0.127,
@@ -38,9 +38,9 @@ _EMBEDDED: Dict[str, Dict[str, Any]] = {
 }
 
 
-def _try_load_yaml_profiles() -> Dict[str, Dict[str, Any]]:
+def _try_load_yaml_profiles() -> dict[str, dict[str, Any]]:
     """Charge configs/factories/*.yaml si pyyaml disponible, sinon fallback embarqué."""
-    profiles: Dict[str, Dict[str, Any]] = {}
+    profiles: dict[str, dict[str, Any]] = {}
     cfg_dir = os.path.join(os.getcwd(), "configs", "factories")
     try:
         import yaml  # optional
@@ -48,7 +48,7 @@ def _try_load_yaml_profiles() -> Dict[str, Dict[str, Any]]:
         if os.path.isdir(cfg_dir):
             for fname in os.listdir(cfg_dir):
                 if fname.endswith((".yaml", ".yml")):
-                    with open(os.path.join(cfg_dir, fname), "r", encoding="utf-8") as f:
+                    with open(os.path.join(cfg_dir, fname), encoding="utf-8") as f:
                         data = yaml.safe_load(f) or {}
                     key = fname.rsplit(".", 1)[0].lower()
                     if isinstance(data, dict):
@@ -61,7 +61,7 @@ def _try_load_yaml_profiles() -> Dict[str, Dict[str, Any]]:
 
 
 @lru_cache(maxsize=1)
-def _profiles() -> Dict[str, Dict[str, Any]]:
+def _profiles() -> dict[str, dict[str, Any]]:
     return _try_load_yaml_profiles()
 
 
@@ -69,7 +69,7 @@ class ManufacturingRules:
     """Accès aux règles par usine + helpers de comparaison design ↔ usine."""
 
     @staticmethod
-    def get(factory: str = "jlcpcb") -> Dict[str, Any]:
+    def get(factory: str = "jlcpcb") -> dict[str, Any]:
         key = factory.lower().strip()
         profiles = _profiles()
         if key not in profiles:
@@ -78,7 +78,7 @@ class ManufacturingRules:
         return dict(profiles[key])
 
     @staticmethod
-    def list_profiles() -> Dict[str, Dict[str, Any]]:
+    def list_profiles() -> dict[str, dict[str, Any]]:
         return {k: dict(v) for k, v in _profiles().items()}
 
     @staticmethod

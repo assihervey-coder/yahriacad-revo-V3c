@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 from shared.geometry import Point, RoutePath
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph, Net
-
 from services.router.geometrical import MazeRouter
 from services.router.topological import (
     build_net_topology,
@@ -34,10 +33,10 @@ def route_net_segments(graph: DesignGraph, net: Net, maze: MazeRouter,
                              width_mm=width_mm, vias=[])
         net.routed = True
         return True
-    points: List[Point] = []
-    vias: List[Tuple[Point, int, int]] = []
+    points: list[Point] = []
+    vias: list[tuple[Point, int, int]] = []
     for a, b in build_net_topology(graph, net):
-        path: Optional[List[Point]] = None
+        path: list[Point] | None = None
         used_layer = layers[0] if layers else 0
         for lyr in layers:
             path = maze.route_pair(graph, net, a, b, lyr, width_mm)
@@ -61,7 +60,7 @@ def route_net_segments(graph: DesignGraph, net: Net, maze: MazeRouter,
     return True
 
 
-def _corridor(graph: DesignGraph, net_id: str, inflate: float = 2.0) -> Optional[Tuple[float, float, float, float]]:
+def _corridor(graph: DesignGraph, net_id: str, inflate: float = 2.0) -> tuple[float, float, float, float] | None:
     """BBox gonflée des pads d'un net — couloir de routage approximatif."""
     pos = [p for _, p in net_pad_positions(graph, graph.nets[net_id])]
     if not pos:
@@ -72,15 +71,15 @@ def _corridor(graph: DesignGraph, net_id: str, inflate: float = 2.0) -> Optional
 
 
 def _blocking_nets(graph: DesignGraph, failed_ids: Sequence[str],
-                   max_per_net: int = 6) -> List[str]:
+                   max_per_net: int = 6) -> list[str]:
     """Nets routés dont les traces traversent le couloir des nets en échec."""
-    blockers: List[str] = []
+    blockers: list[str] = []
     for fid in failed_ids:
         rect = _corridor(graph, fid)
         if rect is None:
             continue
         x0, y0, x1, y1 = rect
-        near: List[Tuple[float, str]] = []
+        near: list[tuple[float, str]] = []
         for other in graph.nets.values():
             if other.net_id == fid or not other.routed or other.path is None:
                 continue
@@ -98,9 +97,9 @@ def _blocking_nets(graph: DesignGraph, failed_ids: Sequence[str],
 
 
 def rip_up_and_reroute(graph: DesignGraph, failed_nets: Sequence[str],
-                       attempts: int = 3, maze: Optional[MazeRouter] = None,
-                       widths: Optional[Dict[str, float]] = None,
-                       layers: Sequence[int] = (0, 1)) -> Dict[str, object]:
+                       attempts: int = 3, maze: MazeRouter | None = None,
+                       widths: dict[str, float] | None = None,
+                       layers: Sequence[int] = (0, 1)) -> dict[str, object]:
     """Dé-route les nets en échec + leurs bloqueurs, re-route dans un ordre
     différent (longueur croissante, rotation par tentative) et garde la meilleure
     configuration globale (nb de nets routés, puis longueur totale minimale).
@@ -117,18 +116,18 @@ def rip_up_and_reroute(graph: DesignGraph, failed_nets: Sequence[str],
         net.path = None
         net.routed = False
 
-    def snapshot() -> Dict[str, Tuple[Optional[RoutePath], bool]]:
+    def snapshot() -> dict[str, tuple[RoutePath | None, bool]]:
         return {nid: (n.path, n.routed) for nid, n in graph.nets.items()}
 
-    def restore(state: Dict[str, Tuple[Optional[RoutePath], bool]]) -> None:
+    def restore(state: dict[str, tuple[RoutePath | None, bool]]) -> None:
         for nid, (path, routed) in state.items():
             net = graph.nets[nid]
             net.path, net.routed = path, routed
 
     order_base = sorted(failed_ids, key=lambda nid: net_length_estimate(graph, graph.nets[nid]))
-    best_state: Optional[Dict[str, Tuple[Optional[RoutePath], bool]]] = None
-    best_score: Tuple[int, float] = (-1, -math.inf)
-    best_routed: List[str] = []
+    best_state: dict[str, tuple[RoutePath | None, bool]] | None = None
+    best_score: tuple[int, float] = (-1, -math.inf)
+    best_routed: list[str] = []
 
     for attempt in range(max(1, attempts)):
         # 1) rip-up : nets en échec + bloqueurs
@@ -142,7 +141,7 @@ def rip_up_and_reroute(graph: DesignGraph, failed_nets: Sequence[str],
         # 2) re-route les nets en échec (ordre tourné : longueur croissante)
         rot = attempt % max(1, len(order_base))
         order = order_base[rot:] + order_base[:rot]
-        routed_now: List[str] = []
+        routed_now: list[str] = []
         for nid in order:
             net = graph.nets[nid]
             width = (widths or {}).get(nid, net.path.width_mm if net.path else 0.2)

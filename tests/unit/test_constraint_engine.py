@@ -9,8 +9,6 @@ import pytest
 from services.design_core import ConstraintEngine, DesignGraph
 from services.design_core.constraint_engine import MinTraceWidth
 from services.design_core.constraint_engine.cost import MaxCostUSD
-from services.design_core.constraint_engine.mechanical import MinClearance
-from services.design_core.constraint_engine.thermal import ThermalHotspot
 
 
 def _moteur() -> ConstraintEngine:

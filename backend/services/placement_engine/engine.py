@@ -4,13 +4,11 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 from shared.events import EventTypes, get_event_bus, make_event
 from shared.utilities import get_logger, new_id
 
 from services.design_core import DesignGraph
-
 from services.placement_engine.constraint_placement import ConstraintPlacer
 from services.placement_engine.initial_placement import InitialPlacer
 from services.placement_engine.mechanical_placement import MechanicalPlacer
@@ -32,7 +30,7 @@ class PlacementResult:
     iterations: int
     duration_ms: float
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "strategy_used": self.strategy_used,
             "score_mm": round(self.score, 2),
@@ -63,7 +61,7 @@ class PlacementEngine:
         self.seed = seed
 
     def place_all(self, graph: DesignGraph, strategy: str = "auto",
-                  constraints: Optional[Dict] = None,
+                  constraints: dict | None = None,
                   iterations: int = 100) -> PlacementResult:
         """Place tous les composants sur une COPIE du graphe et retourne le résultat."""
         t0 = time.perf_counter()

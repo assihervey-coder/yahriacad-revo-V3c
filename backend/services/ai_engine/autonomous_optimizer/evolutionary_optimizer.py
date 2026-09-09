@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import random
-from typing import Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
 
 from shared.utilities import get_logger
 
@@ -27,12 +27,12 @@ class EvolutionaryOptimizer:
         self.mutation_mm = mutation_mm
         self.crossover = crossover if crossover in ("mean", "uniform") else "mean"
         self.rng = random.Random(seed)
-        self.population: List[object] = []
-        self._scores: List[float] = []
+        self.population: list[object] = []
+        self._scores: list[float] = []
         self.generation = 0
 
     # ------------------------------------------------------------------ seed
-    def seed(self, graph) -> List[object]:  # noqa: ANN001
+    def seed(self, graph) -> list[object]:  # noqa: ANN001
         """Initialise la population : copies du graphe avec mutations."""
         self.population = [graph.copy()]
         for _ in range(self.pop_size - 1):
@@ -45,7 +45,7 @@ class EvolutionaryOptimizer:
         return self.population
 
     # ------------------------------------------------------------------ step
-    def step(self, evaluate_fn: EvalFn) -> Tuple[object, float]:
+    def step(self, evaluate_fn: EvalFn) -> tuple[object, float]:
         """Une génération : évaluation → sélection → crossover → mutation."""
         if not self.population:
             raise RuntimeError("EvolutionaryOptimizer: appelez seed() d'abord")
@@ -55,7 +55,7 @@ class EvolutionaryOptimizer:
                         reverse=True)
         elites = [self.population[i] for i in ranked[:self.elite]]
 
-        next_pop: List[object] = [e.copy() for e in elites]
+        next_pop: list[object] = [e.copy() for e in elites]
         while len(next_pop) < self.pop_size:
             parent_a = self._tournament()
             parent_b = self._tournament()
@@ -72,10 +72,10 @@ class EvolutionaryOptimizer:
         return elites[0], best_score
 
     # ------------------------------------------------------------- operators
-    def _positions(self, graph) -> Dict[str, Tuple[float, float]]:  # noqa: ANN001
+    def _positions(self, graph) -> dict[str, tuple[float, float]]:  # noqa: ANN001
         return {ref: (c.x, c.y) for ref, c in graph.components.items()}
 
-    def _set_positions(self, graph, positions: Dict[str, Tuple[float, float]]) -> None:  # noqa: ANN001
+    def _set_positions(self, graph, positions: dict[str, tuple[float, float]]) -> None:  # noqa: ANN001
         for ref, (x, y) in positions.items():
             if ref in graph.components:
                 graph.place(ref, x, y)
@@ -109,8 +109,8 @@ class EvolutionaryOptimizer:
         return self.population[best]
 
     # -------------------------------------------------------------- best
-    def best(self, evaluate_fn: Optional[EvalFn] = None
-             ) -> Tuple[object, float]:
+    def best(self, evaluate_fn: EvalFn | None = None
+             ) -> tuple[object, float]:
         """Meilleur individu courant (ré-évalue si evaluate_fn fourni)."""
         if evaluate_fn is not None:
             self._scores = [float(evaluate_fn(ind)) for ind in self.population]

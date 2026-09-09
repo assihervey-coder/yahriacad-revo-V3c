@@ -12,12 +12,11 @@ Chaque entrée porte `source`, `beta` (True pour la voie neuronale) et
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph
-
 from services.router.topological import hpwl_wire_length
 from services.simulator.surrogate_models.manager import FEATURE_NAMES, SurrogateManager
 from services.simulator.surrogate_models.neural_surrogates import NeuralSurrogate
@@ -30,12 +29,12 @@ __all__ = ["FastPredictor", "FEATURE_NAMES"]
 class FastPredictor:
     """Prédicteur hybride : manager β → surrogate direct → analytique."""
 
-    def __init__(self, surrogates: Optional[Dict[str, NeuralSurrogate]] = None,
-                 manager: Optional[SurrogateManager] = None) -> None:
+    def __init__(self, surrogates: dict[str, NeuralSurrogate] | None = None,
+                 manager: SurrogateManager | None = None) -> None:
         self.surrogates = surrogates or {}
         self.manager = manager
 
-    def features(self, graph: DesignGraph) -> Dict[str, float]:
+    def features(self, graph: DesignGraph) -> dict[str, float]:
         """Vecteur de features du design (nommé, ordre stable)."""
         n_comp = len(graph.components)
         bw, bh = graph.board_size
@@ -43,13 +42,13 @@ class FastPredictor:
         power_sum = sum(c.power_w for c in graph.components.values())
         wire_length = hpwl_wire_length(graph)
         return dict(zip(FEATURE_NAMES, (float(n_comp), float(density),
-                                        float(power_sum), float(wire_length))))
+                                        float(power_sum), float(wire_length)), strict=False))
 
-    def predict(self, graph: DesignGraph) -> Dict[str, Dict[str, Any]]:
+    def predict(self, graph: DesignGraph) -> dict[str, dict[str, Any]]:
         """{sim_kind: {"value", "source", "passed"?, "beta"?, "latency_ms"?}}."""
         feats = self.features(graph)
         x = [feats[k] for k in FEATURE_NAMES]
-        out: Dict[str, Dict[str, Any]] = {}
+        out: dict[str, dict[str, Any]] = {}
 
         for sim_kind in ("thermal", "si", "pi", "emi"):
             # 1) voie manager β (recommandée : latence mesurée + statut central)
@@ -83,7 +82,7 @@ class FastPredictor:
     # ----------------------------------------------------------------- private
     @staticmethod
     def _analytic(sim_kind: str, graph: DesignGraph,
-                  feats: Dict[str, float]) -> tuple:
+                  feats: dict[str, float]) -> tuple:
         """Formules analytiques simplifiées (fallback sans surrogate)."""
         power_sum = feats["power_sum"]
         if sim_kind == "thermal":

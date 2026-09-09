@@ -9,10 +9,10 @@ import os
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+
+from shared.utilities import get_logger, new_id
 
 from orchestrator.common import data_root
-from shared.utilities import get_logger, new_id
 
 log = get_logger("state.project")
 
@@ -39,7 +39,7 @@ class ProjectState:
         return self.dir / "state.json"
 
     # -- persistance ---------------------------------------------------------
-    def save(self) -> "ProjectState":
+    def save(self) -> ProjectState:
         self.dir.mkdir(parents=True, exist_ok=True)
         for sub in ("design", "jobs", "exports", "simulations", "checkpoints"):
             (self.dir / sub).mkdir(exist_ok=True)
@@ -50,7 +50,7 @@ class ProjectState:
 
     @classmethod
     def load(cls, project_id: str, tenant_id: str = "default",
-             user_id: str = "default") -> Optional["ProjectState"]:
+             user_id: str = "default") -> ProjectState | None:
         path = data_root() / tenant_id / user_id / project_id / "state.json"
         if not path.is_file():
             return None
@@ -71,7 +71,7 @@ class ProjectState:
 
     @classmethod
     def create(cls, name: str, tenant_id: str = "default", user_id: str = "default",
-               project_id: Optional[str] = None) -> "ProjectState":
+               project_id: str | None = None) -> ProjectState:
         state = cls(
             project_id=project_id or new_id("proj"),
             tenant_id=tenant_id or "default",
@@ -94,10 +94,10 @@ class ProjectState:
         return False
 
     @classmethod
-    def list_projects(cls, tenant_id: str = "default") -> List["ProjectState"]:
+    def list_projects(cls, tenant_id: str = "default") -> list[ProjectState]:
         """Liste les projets d'un tenant (tous users confondus)."""
         base = data_root() / tenant_id
-        projects: List[ProjectState] = []
+        projects: list[ProjectState] = []
         if not base.is_dir():
             return projects
         for user_dir in sorted(base.iterdir()):
@@ -124,5 +124,5 @@ class ProjectState:
         return projects
 
     # -- helpers ---------------------------------------------------------
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return asdict(self)

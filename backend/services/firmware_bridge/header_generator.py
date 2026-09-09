@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List
 
 from shared.utilities import get_logger
 
@@ -11,7 +10,7 @@ log = get_logger(__name__)
 _NON_ALNUM = re.compile(r"[^A-Za-z0-9]+")
 
 
-def _macro(net_name: str, used: Dict[str, int]) -> str:
+def _macro(net_name: str, used: dict[str, int]) -> str:
     """Nom de macro stable : /SDA → PIN_SDA (dédupliqué si collision)."""
     base = "PIN_" + (_NON_ALNUM.sub("_", (net_name or "NET")).strip("_").upper() or "NET")
     if base in used:
@@ -21,10 +20,10 @@ def _macro(net_name: str, used: Dict[str, int]) -> str:
     return base
 
 
-def generate_c_header(pin_map: Dict[str, Dict[str, dict]], name: str = "pins") -> str:
+def generate_c_header(pin_map: dict[str, dict[str, dict]], name: str = "pins") -> str:
     """Génère un header C complet : garde d'inclusion, #define, enum des nets."""
     guard = _NON_ALNUM.sub("_", name).strip("_").upper() or "PINS"
-    lines: List[str] = [
+    lines: list[str] = [
         "/*",
         " * pins.h — généré par PCB_AI_DESIGNER_V3 (firmware_bridge)",
         " * NE PAS ÉDITER À LA MAIN — régénéré à chaque export firmware.",
@@ -35,8 +34,8 @@ def generate_c_header(pin_map: Dict[str, Dict[str, dict]], name: str = "pins") -
         "#include <stdint.h>",
         "",
     ]
-    used: Dict[str, int] = {}
-    enum_entries: List[str] = []
+    used: dict[str, int] = {}
+    enum_entries: list[str] = []
     for ref in sorted(pin_map):
         pins = pin_map[ref]
         lines.append(f"/* ---- {ref} ---- */")

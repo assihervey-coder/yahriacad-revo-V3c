@@ -12,6 +12,7 @@ le pipeline d'agents :
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import importlib
 import inspect
 import json
@@ -20,8 +21,9 @@ import os
 import threading
 import time
 import zipfile
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any
 
 from shared.events import Event, get_event_bus, make_event
 from shared.utilities import get_logger, new_id
@@ -40,23 +42,23 @@ def data_root() -> Path:
 # Boucle principale + publication d'événements thread-safe
 # ---------------------------------------------------------------------------
 
-_MAIN_LOOP: Optional[asyncio.AbstractEventLoop] = None
+_MAIN_LOOP: asyncio.AbstractEventLoop | None = None
 _LOOP_LOCK = threading.Lock()
 
 
-def register_main_loop(loop: Optional[asyncio.AbstractEventLoop]) -> None:
+def register_main_loop(loop: asyncio.AbstractEventLoop | None) -> None:
     """Enregistre la boucle principale (API / runner) pour publier depuis les threads."""
     global _MAIN_LOOP
     with _LOOP_LOCK:
         _MAIN_LOOP = loop
 
 
-def get_main_loop() -> Optional[asyncio.AbstractEventLoop]:
+def get_main_loop() -> asyncio.AbstractEventLoop | None:
     with _LOOP_LOCK:
         return _MAIN_LOOP
 
 
-def _running_loop() -> Optional[asyncio.AbstractEventLoop]:
+def _running_loop() -> asyncio.AbstractEventLoop | None:
     try:
         return asyncio.get_running_loop()
     except RuntimeError:
@@ -87,7 +89,7 @@ def publish_event(event: Event) -> None:
         log.debug("publish_event erreur", exc_info=True)
 
 
-def publish(event_type: str, payload: Dict[str, Any] | None = None, **kwargs: Any) -> Event:
+def publish(event_type: str, payload: dict[str, Any] | None = None, **kwargs: Any) -> Event:
     """Construit et publie un event en une ligne."""
     event = make_event(event_type, payload or {}, **kwargs)
     publish_event(event)
@@ -97,9 +99,9 @@ def publish(event_type: str, payload: Dict[str, Any] | None = None, **kwargs: An
 # Sondage défensif d'attributs (interfaces services développées en parallèle)
 # ---------------------------------------------------------------------------
 
-def try_import(module_name: str, attr_names: Iterable[str]) -> Dict[str, Any]:
+def try_import(module_name: str, attr_names: Iterable[str]) -> dict[str, Any]:
     """Importe un module et retourne {attr: objet|None} sans jamais lever."""
-    out: Dict[str, Any] = {a: None for a in attr_names}
+    out: dict[str, Any] = {a: None for a in attr_names}
     try:
         module = importlib.import_module(module_name)
     except Exception as exc:  # service pas encore écrit par l'agent parallèle
@@ -132,10 +134,8 @@ def set_field(obj: Any, key: str, value: Any) -> None:
     if isinstance(obj, dict):
         obj[key] = value
         return
-    try:
+    with contextlib.suppress(Exception):
         setattr(obj, key, value)
-    except Exception:
-        pass
 
 
 def as_float(value: Any, default: float = 0.0) -> float:
@@ -197,7 +197,7 @@ def flex_call(func: Any, *args: Any, **kwargs: Any) -> Any:
 # Révisions
 # ---------------------------------------------------------------------------
 
-def extract_rev(revision: Any) -> Optional[int]:
+def extract_rev(revision: Any) -> int | None:
     """Extrait un numéro de révision d'un int / str / Revision / tuple."""
     if revision is None or isinstance(revision, bool):
         return None
@@ -216,14 +216,14 @@ def extract_rev(revision: Any) -> Optional[int]:
     return None
 
 
-def revisions_list(versioning: Any) -> List[Dict[str, Any]]:
+def revisions_list(versioning: Any) -> list[dict[str, Any]]:
     """versioning.list() -> liste normalisée [{rev, message, author, ts}]."""
     if versioning is None:
         return []
     items = call_probe(versioning, "list")
     if not items:
         return []
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for item in items:
         out.append({
             "rev": extract_rev(item),
@@ -237,7 +237,7 @@ def revisions_list(versioning: Any) -> List[Dict[str, Any]]:
 # Géométrie défensive (bbox, pads, stats)
 # ---------------------------------------------------------------------------
 
-_FOOTPRINT_SIZES: Dict[str, Tuple[float, float]] = {
+_FOOTPRINT_SIZES: dict[str, tuple[float, float]] = {
     "0402": (1.0, 0.5), "0603": (1.6, 0.8), "0805": (2.0, 1.25), "1206": (3.2, 1.6),
     "sot-23": (2.9, 1.6), "sot23": (2.9, 1.6), "soic-8": (5.0, 4.0), "soic8": (5.0, 4.0),
     "qfn-32": (5.0, 5.0), "qfn32": (5.0, 5.0), "qfp-64": (10.0, 10.0),
@@ -246,7 +246,7 @@ _FOOTPRINT_SIZES: Dict[str, Tuple[float, float]] = {
 }
 
 
-def component_bbox(comp: Any) -> Tuple[float, float]:
+def component_bbox(comp: Any) -> tuple[float, float]:
     """(largeur, hauteur) estimée d'un composant, tolérante au format."""
     bbox = get_field(comp, "bbox_mm", "bbox", "size", default=None)
     if isinstance(bbox, (tuple, list)) and len(bbox) >= 2:
@@ -264,14 +264,14 @@ def component_bbox(comp: Any) -> Tuple[float, float]:
     return (2.0, 1.2)
 
 
-def pad_names(comp: Any) -> List[str]:
+def pad_names(comp: Any) -> list[str]:
     """Liste des noms de pads d'un composant (dicts, str ou objets)."""
     pads = get_field(comp, "pads", default=None)
     if not pads:
         return []
-    names: List[str] = []
+    names: list[str] = []
     if isinstance(pads, dict):
-        return [str(k) for k in pads.keys()]
+        return [str(k) for k in pads]
     for pad in pads:
         if isinstance(pad, dict):
             names.append(str(pad.get("name") or pad.get("pad") or ""))
@@ -282,19 +282,19 @@ def pad_names(comp: Any) -> List[str]:
     return [n for n in names if n]
 
 
-def _rect_of(comp: Any) -> Tuple[float, float, float, float]:
+def _rect_of(comp: Any) -> tuple[float, float, float, float]:
     x = as_float(get_field(comp, "x", "x_mm", "pos_x", default=0.0))
     y = as_float(get_field(comp, "y", "y_mm", "pos_y", default=0.0))
     w, h = component_bbox(comp)
     return (x - w / 2.0, y - h / 2.0, x + w / 2.0, y + h / 2.0)
 
 
-def overlapping_components(graph: Any, clearance_mm: float = 0.2) -> List[Tuple[str, str]]:
+def overlapping_components(graph: Any, clearance_mm: float = 0.2) -> list[tuple[str, str]]:
     """Détecte les recouvrements de boîtes englobantes (contrôle ERC local)."""
     comps = get_field(graph, "components", default={}) or {}
     refs = list(comps.keys())
     rects = {ref: _rect_of(comps[ref]) for ref in refs}
-    overlaps: List[Tuple[str, str]] = []
+    overlaps: list[tuple[str, str]] = []
     for i, ref_a in enumerate(refs):
         for ref_b in refs[i + 1:]:
             a, b = rects[ref_a], rects[ref_b]
@@ -307,7 +307,7 @@ def overlapping_components(graph: Any, clearance_mm: float = 0.2) -> List[Tuple[
 # Sérialisation de graphes
 # ---------------------------------------------------------------------------
 
-def _dump_component(ref: str, comp: Any) -> Dict[str, Any]:
+def _dump_component(ref: str, comp: Any) -> dict[str, Any]:
     pads = []
     for name in pad_names(comp):
         pads.append({"name": name})
@@ -326,9 +326,9 @@ def _dump_component(ref: str, comp: Any) -> Dict[str, Any]:
     }
 
 
-def _dump_net(net_id: str, net: Any) -> Dict[str, Any]:
+def _dump_net(net_id: str, net: Any) -> dict[str, Any]:
     pins_raw = get_field(net, "pins", default=[]) or []
-    pins: List[List[str]] = []
+    pins: list[list[str]] = []
     for pin in pins_raw:
         if isinstance(pin, dict):
             pins.append([str(pin.get("ref", "")), str(pin.get("pad", ""))])
@@ -345,7 +345,7 @@ def _dump_net(net_id: str, net: Any) -> Dict[str, Any]:
     }
 
 
-def serialize_graph(graph: Any) -> Dict[str, Any]:
+def serialize_graph(graph: Any) -> dict[str, Any]:
     """Convertit un DesignGraph (réel ou duck-typé) en dict JSON-safe."""
     if graph is None:
         return {}
@@ -372,7 +372,7 @@ def serialize_graph(graph: Any) -> Dict[str, Any]:
     return out
 
 
-def graph_stats(graph: Any) -> Dict[str, Any]:
+def graph_stats(graph: Any) -> dict[str, Any]:
     """Statistiques d'un graphe, en passant par graph.stats() si disponible."""
     if graph is None:
         return {"components": 0, "nets": 0}
@@ -388,7 +388,7 @@ def graph_stats(graph: Any) -> Dict[str, Any]:
     return {"components": len(comps), "nets": len(nets), "unrouted": unrouted}
 
 
-def deserialize_graph(data: Optional[Dict[str, Any]]) -> Any:
+def deserialize_graph(data: dict[str, Any] | None) -> Any:
     """Reconstruit un graphe depuis un dict (DesignGraph réel si dispo, sinon duck-typé).
 
     Deux formats de snapshot coexistent et sont TOUS DEUX acceptés :
@@ -423,33 +423,25 @@ def deserialize_graph(data: Optional[Dict[str, Any]]) -> Any:
                 try:
                     flex_call(graph.add_component, ref, comp)
                 except Exception:
-                    try:
+                    with contextlib.suppress(Exception):
                         graph.add_component(ref)
-                    except Exception:
-                        pass
             for net_id, net in nets.items():
                 payload = {k: v for k, v in (net or {}).items()
                            if k not in ("pins", "routed", "net_id")}
                 try:
                     flex_call(graph.add_net, net_id, payload)
                 except Exception:
-                    try:
+                    with contextlib.suppress(Exception):
                         graph.add_net(net_id)
-                    except Exception:
-                        pass
             for ref, comp in comps.items():
-                try:
+                with contextlib.suppress(Exception):
                     graph.place(ref, as_float(get_field(comp, "x", default=0.0)),
                                 as_float(get_field(comp, "y", default=0.0)),
                                 as_float(get_field(comp, "rotation", default=0.0)))
-                except Exception:
-                    pass
             for net_id, net in nets.items():
                 for pin in (net or {}).get("pins") or []:
-                    try:
+                    with contextlib.suppress(Exception):
                         graph.connect(str(pin[0]), str(pin[1]), str(net_id))
-                    except Exception:
-                        pass
             return graph
         except Exception:
             log.debug("reconstruction DesignGraph impossible — fallback duck-typé", exc_info=True)
@@ -468,19 +460,19 @@ class SimpleDesignGraph:
     n'est pas encore disponible (agents en parallèle) ou pour les tests.
     """
 
-    def __init__(self, components: Optional[Dict[str, Dict[str, Any]]] = None,
-                 nets: Optional[Dict[str, Dict[str, Any]]] = None,
-                 board_size: Tuple[float, float] = (100.0, 80.0),
+    def __init__(self, components: dict[str, dict[str, Any]] | None = None,
+                 nets: dict[str, dict[str, Any]] | None = None,
+                 board_size: tuple[float, float] = (100.0, 80.0),
                  layers: int = 2, project_id: str = "") -> None:
-        self.components: Dict[str, Dict[str, Any]] = components or {}
-        self.nets: Dict[str, Dict[str, Any]] = nets or {}
+        self.components: dict[str, dict[str, Any]] = components or {}
+        self.nets: dict[str, dict[str, Any]] = nets or {}
         self.board_size = (float(board_size[0]), float(board_size[1]))
         self.layers = int(layers)
         self.project_id = project_id
 
     # -- construction ------------------------------------------------------
-    def add_component(self, ref: str, payload: Any = None, **kw: Any) -> Dict[str, Any]:
-        comp: Dict[str, Any] = {
+    def add_component(self, ref: str, payload: Any = None, **kw: Any) -> dict[str, Any]:
+        comp: dict[str, Any] = {
             "ref": ref, "value": "", "footprint": "", "mpn": "",
             "x": 0.0, "y": 0.0, "rotation": 0.0, "side": "top",
             "pads": ["1", "2"], "power_w": 0.0, "price_usd": 0.0,
@@ -493,8 +485,8 @@ class SimpleDesignGraph:
         self.components[ref] = comp
         return comp
 
-    def add_net(self, net_id: str, payload: Any = None, **kw: Any) -> Dict[str, Any]:
-        net: Dict[str, Any] = {
+    def add_net(self, net_id: str, payload: Any = None, **kw: Any) -> dict[str, Any]:
+        net: dict[str, Any] = {
             "net_id": net_id, "name": net_id, "class_name": "default",
             "pins": [], "routed": False,
         }
@@ -526,13 +518,13 @@ class SimpleDesignGraph:
         comp["x"], comp["y"], comp["rotation"] = float(x), float(y), float(rotation)
 
     # -- requêtes ----------------------------------------------------------
-    def unrouted_nets(self) -> List[Dict[str, Any]]:
+    def unrouted_nets(self) -> list[dict[str, Any]]:
         return [n for n in self.nets.values() if not n.get("routed")]
 
     def total_wire_length(self) -> float:
         total = 0.0
         for net in self.nets.values():
-            points: List[Tuple[float, float]] = []
+            points: list[tuple[float, float]] = []
             for ref, _pad in net.get("pins", []):
                 comp = self.components.get(ref)
                 if comp:
@@ -541,7 +533,7 @@ class SimpleDesignGraph:
                 total += math.dist(points[i - 1], points[i])
         return round(total, 3)
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         return {
             "components": len(self.components),
             "nets": len(self.nets),
@@ -552,11 +544,11 @@ class SimpleDesignGraph:
         }
 
     # -- cycle de vie ------------------------------------------------------
-    def copy(self) -> "SimpleDesignGraph":
+    def copy(self) -> SimpleDesignGraph:
         clone = json.loads(json.dumps(self.to_dict()))
         return SimpleDesignGraph.from_dict(clone)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "project_id": self.project_id,
             "board_size": list(self.board_size),
@@ -566,7 +558,7 @@ class SimpleDesignGraph:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SimpleDesignGraph":
+    def from_dict(cls, data: dict[str, Any]) -> SimpleDesignGraph:
         data = data or {}
         raw_comps = data.get("components") or {}
         comps = {}
@@ -606,7 +598,7 @@ class SimpleDesignGraph:
 # Versioning + SharedMentalModel — instanciation défensive via le contexte
 # ---------------------------------------------------------------------------
 
-def ensure_versioning(context: Dict[str, Any]) -> Any:
+def ensure_versioning(context: dict[str, Any]) -> Any:
     """Obtient (et met en cache dans le contexte) le DesignVersioning du projet."""
     if context.get("versioning") is not None:
         return context["versioning"]
@@ -626,7 +618,7 @@ def ensure_versioning(context: Dict[str, Any]) -> Any:
     return versioning
 
 
-def ensure_smm(context: Dict[str, Any]) -> Any:
+def ensure_smm(context: dict[str, Any]) -> Any:
     """Obtient (et met en cache) le SharedMentalModel lié au graphe courant."""
     if context.get("smm") is not None:
         return context["smm"]
@@ -648,7 +640,7 @@ def ensure_smm(context: Dict[str, Any]) -> Any:
     return smm
 
 
-def record_smm(context: Dict[str, Any], method: str, *argsets: tuple) -> None:
+def record_smm(context: dict[str, Any], method: str, *argsets: tuple) -> None:
     """Enregistre une décision/trade-off dans le SMM (tolérant aux signatures)."""
     smm = ensure_smm(context)
     if smm is None:
@@ -670,12 +662,12 @@ def _to_bytes(content: Any) -> bytes:
         return str(content).encode("utf-8")
 
 
-def persist_export(export_id: str, tenant: str, project: str, result: Dict[str, Any],
-                   fmt: str = "gerber", factory: str = "jlcpcb") -> Dict[str, Any]:
+def persist_export(export_id: str, tenant: str, project: str, result: dict[str, Any],
+                   fmt: str = "gerber", factory: str = "jlcpcb") -> dict[str, Any]:
     """Écrit les fichiers d'un résultat d'export sur disque + zip. -> {files, dir, zip}."""
     base = data_root() / (tenant or "default") / (project or "sans-projet") / "exports" / export_id
     base.mkdir(parents=True, exist_ok=True)
-    files: Dict[str, bytes] = {}
+    files: dict[str, bytes] = {}
     files_field = result.get("files") if isinstance(result, dict) else None
     if isinstance(files_field, dict):
         for name, content in files_field.items():
@@ -691,7 +683,7 @@ def persist_export(export_id: str, tenant: str, project: str, result: Dict[str, 
             files[path.name] = path.read_bytes()
     if not files:
         files["result.json"] = _to_bytes(result)
-    safe_files: Dict[str, bytes] = {}
+    safe_files: dict[str, bytes] = {}
     for name, content in files.items():
         safe = name.replace("/", "_").replace("\\", "_").replace("..", "_")
         safe_files[safe] = content

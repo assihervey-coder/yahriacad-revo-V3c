@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 INTENT_KINDS = ("functional", "constraint", "quality", "business")
 INTENT_STATUSES = ("open", "in_progress", "done", "rejected")
@@ -16,12 +16,12 @@ class Intent:
     description: str
     kind: str = "functional"       # functional | constraint | quality | business
     priority: int = 5              # 1 = plus haute priorité
-    parent_id: Optional[str] = None
-    children: List[str] = field(default_factory=list)
+    parent_id: str | None = None
+    children: list[str] = field(default_factory=list)
     status: str = "open"           # open | in_progress | done | rejected
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id, "description": self.description, "kind": self.kind,
             "priority": self.priority, "parent_id": self.parent_id,
@@ -30,7 +30,7 @@ class Intent:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Intent":
+    def from_dict(cls, d: dict[str, Any]) -> Intent:
         return cls(
             id=str(d.get("id", "I0")),
             description=str(d.get("description", "")),
@@ -48,7 +48,7 @@ class IntentGraph:
 
     def __init__(self, project_id: str = "") -> None:
         self.project_id = project_id
-        self._intents: Dict[str, Intent] = {}
+        self._intents: dict[str, Intent] = {}
 
     # ------------------------------------------------------------------ mutations
     def add_intent(
@@ -56,8 +56,8 @@ class IntentGraph:
         description: str,
         kind: str = "functional",
         priority: int = 5,
-        parent_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        parent_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Intent:
         """Ajoute une intention (ID auto "I1", "I2"...) et la rattache à son parent."""
         if kind not in INTENT_KINDS:
@@ -92,39 +92,39 @@ class IntentGraph:
         return intent
 
     # -------------------------------------------------------------------- lecture
-    def root(self) -> Optional[Intent]:
+    def root(self) -> Intent | None:
         """Racine = intention sans parent la plus prioritaire (None si vide)."""
         roots = [i for i in self._intents.values() if i.parent_id is None]
         if not roots:
             return None
         return min(roots, key=lambda i: (i.priority, i.id))
 
-    def intents(self) -> List[Intent]:
+    def intents(self) -> list[Intent]:
         """Toutes les intentions (ordre d'insertion)."""
         return list(self._intents.values())
 
-    def by_priority(self) -> List[Intent]:
+    def by_priority(self) -> list[Intent]:
         """Intentions triées par priorité croissante (1 = plus critique)."""
         return sorted(self._intents.values(), key=lambda i: (i.priority, i.id))
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Synthèse : total, par kind, par statut."""
-        by_kind: Dict[str, int] = {}
-        by_status: Dict[str, int] = {}
+        by_kind: dict[str, int] = {}
+        by_status: dict[str, int] = {}
         for i in self._intents.values():
             by_kind[i.kind] = by_kind.get(i.kind, 0) + 1
             by_status[i.status] = by_status.get(i.status, 0) + 1
         return {"total": len(self._intents), "by_kind": by_kind, "by_status": by_status}
 
     # ------------------------------------------------------------- sérialisation
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "project_id": self.project_id,
             "intents": [i.to_dict() for i in self._intents.values()],
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "IntentGraph":
+    def from_dict(cls, d: dict[str, Any]) -> IntentGraph:
         ig = cls(project_id=str(d.get("project_id", "") or ""))
         for raw in d.get("intents", []):
             intent = Intent.from_dict(raw)

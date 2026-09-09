@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import Any, Dict, List, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from shared.utilities import get_logger
 
@@ -39,7 +39,7 @@ def _extract_question(user: str) -> str:
     return user.strip()
 
 
-def _guess_tool_arguments(tool_name: str, user: str) -> Dict[str, Any]:
+def _guess_tool_arguments(tool_name: str, user: str) -> dict[str, Any]:
     """Devine des arguments plausibles pour un outil (mode déterministe)."""
     low = tool_name.lower()
     question = _extract_question(user)
@@ -80,7 +80,7 @@ class MockLLMProvider:
 
     def __init__(self, history_size: int = 200) -> None:
         self.model = "mock-deterministic-v3"
-        self.history: List[Dict[str, Any]] = []
+        self.history: list[dict[str, Any]] = []
         self._history_size = history_size
         self.call_count = 0
 

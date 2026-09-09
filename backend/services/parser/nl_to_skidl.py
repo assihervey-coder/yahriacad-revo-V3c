@@ -15,7 +15,7 @@ import json
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from shared.utilities import get_logger, new_id
 
@@ -40,8 +40,8 @@ class SkidlScript:
     """Script SKIDL généré : code lisible + structures exploitables + DSL embarqué."""
 
     code: str
-    components: List[Dict[str, Any]] = field(default_factory=list)
-    nets: List[Dict[str, Any]] = field(default_factory=list)
+    components: list[dict[str, Any]] = field(default_factory=list)
+    nets: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _net_class(name: str) -> str:
@@ -56,10 +56,10 @@ class _TemplateBuilder:
     """Constructeur déterministe de composants/nets à partir de mots-clés."""
 
     def __init__(self) -> None:
-        self.components: List[Dict[str, Any]] = []
-        self._pins: Dict[str, List[List[str]]] = {}
-        self._order: List[str] = []
-        self._counters: Dict[str, int] = defaultdict(int)
+        self.components: list[dict[str, Any]] = []
+        self._pins: dict[str, list[list[str]]] = {}
+        self._order: list[str] = []
+        self._counters: dict[str, int] = defaultdict(int)
 
     def ref(self, prefix: str) -> str:
         self._counters[prefix] += 1
@@ -73,7 +73,7 @@ class _TemplateBuilder:
         mpn: str = "",
         power_w: float = 0.0,
         price_usd: float = 0.0,
-        pin_nets: Optional[Dict[str, str]] = None,
+        pin_nets: dict[str, str] | None = None,
     ) -> str:
         """Ajoute un composant et raccorde ses pads aux nets demandés."""
         ref = self.ref(prefix)
@@ -91,7 +91,7 @@ class _TemplateBuilder:
             self._order.append(net_name)
         self._pins[net_name].append([ref, pad])
 
-    def nets(self) -> List[Dict[str, Any]]:
+    def nets(self) -> list[dict[str, Any]]:
         return [
             {"name": name, "class_name": _net_class(name), "pins": self._pins[name]}
             for name in self._order
@@ -210,7 +210,7 @@ def _template(natural_language: str) -> SkidlScript:
 def _render(b: _TemplateBuilder, natural_language: str) -> SkidlScript:
     """Produit le code pseudo-SKIDL lisible + le DSL JSON embarqué en commentaire."""
     dsl = {"components": b.components, "nets": b.nets()}
-    lines: List[str] = [
+    lines: list[str] = [
         f'# SKIDL généré par NLToSkidl — demande : "{natural_language}"',
         "from skidl import Part, Net",
         "",
@@ -245,7 +245,7 @@ class NLToSkidl:
         "avec des références fabricant réalistes et les nets PWR/GND nécessaires."
     )
 
-    def __init__(self, llm: Optional[LLMOrchestrator] = None) -> None:  # type: ignore[name-defined]
+    def __init__(self, llm: LLMOrchestrator | None = None) -> None:  # type: ignore[name-defined]
         self.llm = llm
 
     # ------------------------------------------------------------------ public

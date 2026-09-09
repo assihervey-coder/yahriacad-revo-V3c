@@ -1,8 +1,6 @@
 """Ingénierie de prompts — prompts système par rôle, contexte design, few-shot."""
 from __future__ import annotations
 
-from typing import Dict, List
-
 # Règles de sécurité design communes à tous les rôles
 _SAFETY_RULES = (
     "RÈGLES DE SÉCURITÉ (non négociables) :\n"
@@ -15,7 +13,7 @@ _SAFETY_RULES = (
     "- Signaler explicitement toute approximation ou incertitude."
 )
 
-SYSTEM_PROMPTS: Dict[str, str] = {
+SYSTEM_PROMPTS: dict[str, str] = {
     "planner": (
         "Tu es l'agent PLANNER d'une plateforme EDA AI-native. Tu décomposes la "
         "demande utilisateur en un plan d'exécution ordonné (sélection, placement, "
@@ -67,7 +65,7 @@ SYSTEM_PROMPTS: Dict[str, str] = {
     ),
 }
 
-FEW_SHOT_NL_TO_SKIDL: List[Dict[str, str]] = [
+FEW_SHOT_NL_TO_SKIDL: list[dict[str, str]] = [
     {
         "user": "Je veux une carte capteur de température avec un ESP32, "
                 "alimentée en 3.3V par USB.",

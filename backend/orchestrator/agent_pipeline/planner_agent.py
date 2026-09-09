@@ -1,15 +1,14 @@
 """PlannerAgent — transforme l'intention utilisateur en plan de délégations."""
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
+
+from shared.contracts import AgentRole
+from shared.schemas import AgentResultSchema
 
 from orchestrator.agent_pipeline.base import BaseAgent
 from orchestrator.common import get_field, try_import
 from orchestrator.super_agent.planning.planner import Planner
-from shared.contracts import AgentRole
-from shared.schemas import AgentResultSchema
-from shared.schemas.agent_schemas import AgentStatus
-from shared.utilities import new_id
 
 
 class PlannerAgent(BaseAgent):
@@ -22,16 +21,16 @@ class PlannerAgent(BaseAgent):
         super().__init__(AgentRole.PLANNER, "planner", orchestrator)
         self._planner = Planner()
 
-    def plan(self, objective: str, context: Dict[str, Any]) -> list[str]:
+    def plan(self, objective: str, context: dict[str, Any]) -> list[str]:
         return ["parser l'intention", "construire le plan", "enregistrer dans le SMM"]
 
     def supports(self, action: str) -> bool:
         return action in ("parse_plan", "parse", "plan", "delegate", "")
 
-    def execute(self, context: Dict[str, Any]) -> AgentResultSchema:
+    def execute(self, context: dict[str, Any]) -> AgentResultSchema:
         message = str(context.get("message") or "")
         intents = context.get("intents")
-        parse_meta: Dict[str, Any] = {"source": "context"}
+        parse_meta: dict[str, Any] = {"source": "context"}
 
         # 1) IntentGraph — créée par IntentParser si absente
         if intents is None:

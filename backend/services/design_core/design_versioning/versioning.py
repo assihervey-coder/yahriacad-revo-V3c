@@ -5,13 +5,14 @@ persist permettent rollback, comparaison et reprise de session.
 """
 from __future__ import annotations
 
+import builtins
 import json
 import logging
 import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from services.design_core.design_graph.graph import DesignGraph
 
@@ -30,10 +31,10 @@ class Revision:
     message: str
     author: str
     ts: float
-    snapshot: Dict[str, Any]
-    parent_rev: Optional[int] = None
+    snapshot: dict[str, Any]
+    parent_rev: int | None = None
 
-    def to_dict(self, include_snapshot: bool = True) -> Dict[str, Any]:
+    def to_dict(self, include_snapshot: bool = True) -> dict[str, Any]:
         d = {
             "rev": self.rev, "message": self.message, "author": self.author,
             "ts": self.ts, "parent_rev": self.parent_rev,
@@ -43,7 +44,7 @@ class Revision:
         return d
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Revision":
+    def from_dict(cls, d: dict[str, Any]) -> Revision:
         return cls(
             rev=int(d.get("rev", 0) or 0),
             message=str(d.get("message", "") or ""),
@@ -60,13 +61,13 @@ class Branch:
 
     name: str
     head_rev: int = 0
-    created_from: Optional[int] = None
+    created_from: int | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"name": self.name, "head_rev": self.head_rev, "created_from": self.created_from}
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Branch":
+    def from_dict(cls, d: dict[str, Any]) -> Branch:
         return cls(
             name=str(d.get("name", "main")),
             head_rev=int(d.get("head_rev", 0) or 0),
@@ -79,9 +80,9 @@ class DesignVersioning:
 
     def __init__(self, project_id: str) -> None:
         self.project_id = project_id
-        self._revisions: Dict[int, Revision] = {}
+        self._revisions: dict[int, Revision] = {}
         self._next_rev: int = 1
-        self._branches: Dict[str, Branch] = {"main": Branch(name="main", head_rev=0, created_from=None)}
+        self._branches: dict[str, Branch] = {"main": Branch(name="main", head_rev=0, created_from=None)}
         self._current_branch: str = "main"
 
     # -------------------------------------------------------------------- commits
@@ -98,7 +99,7 @@ class DesignVersioning:
         log.info("révision r%d committée sur '%s' (%s)", revision.rev, self._current_branch, message)
         return revision
 
-    def current(self) -> Optional[Revision]:
+    def current(self) -> Revision | None:
         """Révision de tête de la branche courante (None si aucun commit)."""
         head = self._branches[self._current_branch].head_rev
         return self._revisions.get(head)
@@ -110,12 +111,12 @@ class DesignVersioning:
         except KeyError:
             raise KeyError(f"révision r{rev} inexistante") from None
 
-    def list(self) -> List[Revision]:
+    def list(self) -> builtins.list[Revision]:
         """Toutes les révisions, triées par numéro."""
         return [self._revisions[r] for r in sorted(self._revisions)]
 
     # ------------------------------------------------------------------- branches
-    def branch(self, name: str, from_rev: Optional[int] = None) -> Branch:
+    def branch(self, name: str, from_rev: int | None = None) -> Branch:
         """Crée une branche pointant sur from_rev (ou la tête courante)."""
         if name in self._branches:
             raise ValueError(f"branche '{name}' existe déjà")
@@ -133,7 +134,7 @@ class DesignVersioning:
         self._current_branch = name
         return self._branches[name]
 
-    def branches(self) -> Dict[str, Branch]:
+    def branches(self) -> dict[str, Branch]:
         """Toutes les branches, par nom."""
         return dict(self._branches)
 
@@ -144,12 +145,12 @@ class DesignVersioning:
         log.info("restore r%d (projet %s)", rev, self.project_id)
         return DesignGraph.from_dict(snapshot)
 
-    def diff(self, a_rev: int, b_rev: int) -> Dict[str, Any]:
+    def diff(self, a_rev: int, b_rev: int) -> dict[str, Any]:
         """Résumé des différences entre deux révisions (composants, nets, board)."""
         sa, sb = self.get(a_rev).snapshot, self.get(b_rev).snapshot
         ca = {c.get("ref", ""): c for c in sa.get("components", [])}
         cb = {c.get("ref", ""): c for c in sb.get("components", [])}
-        moved: Dict[str, Dict[str, List[float]]] = {}
+        moved: dict[str, dict[str, list[float]]] = {}
         for ref in ca.keys() & cb.keys():
             a, b = ca[ref], cb[ref]
             if (a.get("x"), a.get("y"), a.get("rotation")) != (b.get("x"), b.get("y"), b.get("rotation")):
@@ -174,7 +175,7 @@ class DesignVersioning:
         """Chemin de persistance standard : data/projects/<project_id>/versions.json."""
         return DATA_ROOT / (self.project_id or "default") / "versions.json"
 
-    def persist(self, path: Optional[str] = None) -> Path:
+    def persist(self, path: str | None = None) -> Path:
         """Sérialise l'historique complet en JSON (défaut : data/projects/...)."""
         target = Path(path) if path else self.default_path()
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -190,7 +191,7 @@ class DesignVersioning:
         return target
 
     @classmethod
-    def load(cls, path: str) -> "DesignVersioning":
+    def load(cls, path: str) -> DesignVersioning:
         """Recharge un historique persisté (classmethod)."""
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
         versioning = cls(project_id=str(payload.get("project_id", "") or ""))

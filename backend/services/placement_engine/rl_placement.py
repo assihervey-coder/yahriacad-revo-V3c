@@ -9,28 +9,25 @@ from __future__ import annotations
 
 import math
 import random
-from typing import List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import numpy as np
-
 from shared.utilities import get_logger
 
 from services.design_core import DesignGraph
-
 from services.placement_engine.constraint_placement import find_free_spot
 from services.router.topological import (
-    classify_component,
     clamp_to_board,
+    classify_component,
     component_nets,
-    net_centroid,
     hpwl_wire_length,
-    placement_free,
+    net_centroid,
 )
 
 log = get_logger("placement.rl")
 
 # Espace d'actions discrétisé : (dx, dy, drotation_degrés)
-ACTIONS: Tuple[Tuple[float, float, float], ...] = (
+ACTIONS: tuple[tuple[float, float, float], ...] = (
     (0.0, 0.0, 0.0),      # 0 : noop
     (1.0, 0.0, 0.0), (-1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, -1.0, 0.0),
     (2.0, 0.0, 0.0), (-2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, -2.0, 0.0),
