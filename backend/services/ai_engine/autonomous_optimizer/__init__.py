@@ -8,6 +8,7 @@ from services.ai_engine.autonomous_optimizer.rl_optimizer import RLOptimizer
 from services.ai_engine.autonomous_optimizer.evolutionary_optimizer import EvolutionaryOptimizer
 from services.ai_engine.autonomous_optimizer.bayesian_optimizer import BayesianOptimizer
 from services.ai_engine.autonomous_optimizer.optimizer import AutonomousOptimizer, OptimizationResult
+from services.ai_engine.autonomous_optimizer.world_model_proposer import WorldModelProposer
 
 __all__ = [
     "FastEvaluator",
@@ -20,4 +21,5 @@ __all__ = [
     "BayesianOptimizer",
     "AutonomousOptimizer",
     "OptimizationResult",
+    "WorldModelProposer",
 ]

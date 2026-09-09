@@ -95,6 +95,13 @@ export default function SettingsPage() {
               <option value="openai">openai</option>
               <option value="zai">zai</option>
             </select>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-ink-dim">
+              Côté backend, définir <code className="text-cyan-300">LLM_PROVIDER=openai</code> et{" "}
+              <code className="text-cyan-300">LLM_API_KEY=sk-…</code> (+{" "}
+              <code className="text-cyan-300">LLM_MODEL=gpt-4o-mini</code> au besoin) puis{" "}
+              <code className="text-cyan-300">make dev</code>. Le provider{" "}
+              <code>mock</code> reste déterministe pour les tests et la démo.
+            </p>
           </div>
           <div>
             <label className="label" htmlFor="rl-device">Device RL</label>

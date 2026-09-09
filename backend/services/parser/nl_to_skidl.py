@@ -102,7 +102,8 @@ def _add_esp32(b: _TemplateBuilder) -> None:
     b.add("U", "ESP32-WROOM-32E", "ESP32-WROOM-32E", "ESP32-WROOM-32E-N8",
           power_w=0.5, price_usd=2.90,
           pin_nets={"VDD": "PWR", "GND": "GND", "EN": "RESET", "IO0": "BOOT",
-                    "TXD0": "UART_TX", "RXD0": "UART_RX", "IO21": "I2C_SDA", "IO22": "I2C_SCL"})
+                    "TXD0": "UART_TX", "RXD0": "UART_RX", "IO21": "I2C_SDA", "IO22": "I2C_SCL",
+                    "IO19": "USB_DM", "IO20": "USB_DP"})          # USB natif (paire diff)
     b.add("C", "100nF", "0402", "CL05B104KO5NNNC", price_usd=0.004,
           pin_nets={"1": "PWR", "2": "GND"})                       # découplage
     b.add("R", "10k", "0402", "RC0402FR-0710KL", price_usd=0.004,

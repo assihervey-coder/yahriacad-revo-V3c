@@ -1,6 +1,8 @@
 """Composants et pads — briques du design graph (source de vérité)."""
 from __future__ import annotations
 
+import math
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -30,13 +32,58 @@ FOOTPRINT_BBOX: Dict[str, Tuple[float, float]] = {
 
 DEFAULT_BBOX: Tuple[float, float] = (1.0, 0.5)
 
+# --- inférence paramétrique par nom d'empreinte (QFN-16, TSSOP-20, BGA-64…)
+_RE_PIN_COUNT = re.compile(r"(?:^|[^0-9])(\d{1,3})(?:[^0-9]|$)")
+_RE_PITCH = re.compile(r"0\.(5|4|65|8)(?:mm)?\b")
+
+
+def _infer_bbox_from_name(footprint: str) -> Optional[Tuple[float, float]]:
+    """Déduit (w, h) depuis le nom : QFN-16_0.5mm → (4.5, 4.5), TSSOP-20 →
+    (6.5, 4.4), BGA-64 → (8.0, 8.0). Retourne None si non déductible."""
+    fp = (footprint or "").lower()
+    m = _RE_PIN_COUNT.search(fp)
+    n = int(m.group(1)) if m else 0
+    if n <= 0:
+        return None
+    mp = _RE_PITCH.search(fp)
+    pitch = float(f"0.{mp.group(1)}") if mp else 0.5
+
+    if any(k in fp for k in ("qfn", "dfn", "mlf")):
+        per_side = max(2, (n + 3) // 4)
+        side = (per_side - 1) * pitch + 2.0        # pads + marge de corps
+        return (round(side, 1), round(side, 1))
+    if any(k in fp for k in ("qfp", "lqfp", "mqfp")):
+        per_side = max(2, (n + 3) // 4)
+        side = (per_side - 1) * max(pitch, 0.65) + 2.6
+        return (round(side, 1), round(side, 1))
+    if "bga" in fp:
+        side = max(3.0, math.ceil(math.sqrt(n)) * pitch + 1.5)
+        return (round(side, 1), round(side, 1))
+    if any(k in fp for k in ("tssop", "ssop", "msop", "sop", "soic", "so")):
+        width = 6.5 if "tssop" in fp or "ssop" in fp else 4.9
+        family_pitch = 0.65 if ("tssop" in fp or "ssop" in fp or "msop" in fp) else 1.27
+        per_row = max(2, (n + 1) // 2)
+        length = max(3.9, (per_row - 1) * family_pitch + 2.6)
+        return (round(length, 1), round(width - 1.0, 1))
+    if "dip" in fp:
+        rows = max(2, (n + 1) // 2)
+        return (round(max(9.2, (rows - 1) * 2.54 + 2.5), 1), 6.4)
+    return None
+
 
 def default_bbox_for_footprint(footprint: str) -> Tuple[float, float]:
-    """Déduit une bbox (w, h) mm plausible à partir du nom d'empreinte."""
+    """Déduit une bbox (w, h) mm plausible à partir du nom d'empreinte.
+
+    Ordre : table explicite → inférence paramétrique (boîtier + nombre de
+    pads + pas) → bbox générique.
+    """
     fp = (footprint or "").lower()
     for key, bbox in FOOTPRINT_BBOX.items():
         if key.lower() in fp:
             return bbox
+    inferred = _infer_bbox_from_name(footprint)
+    if inferred is not None:
+        return inferred
     return DEFAULT_BBOX
 
 

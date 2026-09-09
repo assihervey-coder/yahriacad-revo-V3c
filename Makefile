@@ -7,7 +7,7 @@ PIP := $(VENV)/bin/pip
 PYV := $(VENV)/bin/python
 export PYTHONPATH := $(CURDIR):$(CURDIR)/backend
 
-.PHONY: help setup dev backend frontend worker test test-ai lint format typecheck benchmark docker-up docker-down logs clean
+.PHONY: help setup dev backend frontend worker test test-ai test-all demo smoke lint format typecheck benchmark docker-up docker-down logs clean
 
 help: ## Affiche l'aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -37,6 +37,12 @@ test-ai: ## Évaluation des agents IA
 
 test-all: ## Tous les tests
 	$(PYV) -m pytest tests
+
+demo: ## Pipeline E2E réel : NL → SKIDL → placement → routage → DRC → β → Gerber
+	$(PYV) scripts/e2e_check.py
+
+smoke: ## Smoke test des enrichissements (diff pairs, world model, surrogates, corrector)
+	$(PYV) scripts/smoke_enrichments.py
 
 lint: ## Ruff check
 	$(VENV)/bin/ruff check backend shared tests

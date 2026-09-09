@@ -111,7 +111,7 @@ class RouterEngine:
                 if partner.routed:
                     continue
                 width = widths.get(net.net_id, 0.2)
-                if pair_router.route_pair(g, net, partner, width):
+                if pair_router.route_pair(g, net, partner, width, layers=layers):
                     continue
                 failed.extend((net.net_id, partner.net_id))
                 continue
@@ -155,6 +155,7 @@ class RouterEngine:
                 "widths_mm": {k: round(v, 3) for k, v in widths.items()},
                 "failed_nets": failed,
                 "differential_pairs": [[p.net_id, n.net_id] for p, n in pairs],
+                "differential_pairs_quality": [r.to_dict() for r in pair_router.reports],
                 "matched_groups": {k: {nid: round(v, 2) for nid, v in val.items()}
                                    for k, val in matched.items()},
                 "vias_saved_by_minimizer": vias_saved,

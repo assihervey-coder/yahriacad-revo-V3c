@@ -14,6 +14,47 @@ PCB_AI_DESIGNER_V3 est la troisième génération, unifiée et révolutionnaire,
 | V2 | IA (LLM + RL) greffée sur un moteur de routage | Intelligence cloisonnée dans `ai_engine/` |
 | **V3** | **AI-Native EDA : le Design Core est la vérité du projet, tous les cerveaux y accèdent** | — |
 
+## ✨ Enrichissements grade A+++ (V3+)
+
+- **Paires différentielles industrielles** — détection par classe *et* par suffixe
+  (`USB_DP/DM`, `CAN_P/N`), membre N validé géométriquement avec repli A*,
+  appariement de longueur par serpentins itératifs (**skew 0.0 mm** mesuré),
+  `PairQualityReport` (gap min/moyen, longueur couplée, ratio de couplage ~93 %).
+- **World Model RL complet** — encodeur 16 features, dynamique en *ensemble de
+  MLP* (numpy pur, gradients manuels) avec **incertitude épistémique**
+  (écart-type inter-membres), récompense **apprise** des transitions réelles,
+  **planification par rollout MPC** (`rollout`/`plan`), attribution de features
+  gradient×input, persistance npz rétro-compatible.
+- **Surrogates neuronaux β** — collecte JSONL → entraînement automatique dès
+  25 échantillons (MAE/R² de validation) → **inférence en ~20 µs** au lieu du
+  solveur complet (**speedup mesuré ×129** dans le benchmark intégré) ;
+  `SurrogateManager.status_all()` alimente le dashboard.
+- **AutonomousOptimizer accéléré** — après verdict **VALID**, le corrector
+  construit un vrai optimizer combinant propositions **LLM + RL + world model**
+  (le world model *imagine* les mouvements par MPC et ne propose que le top-k
+  à l'évaluateur réel ; le keeper valide toujours sur évaluation exacte).
+- **Corrector fine-pitch** — chaîne de stratégies DRC : neck-down vers le
+  minimum de fabrication (0.127 mm), re-routage à clearance renforcée, rollback
+  si dégradation (mesuré : **4 → 0 violations** sur un cas USB-C 0.5 mm).
+- **A* à closed-set** — correction majeure du maze router : ré-expansions
+  éliminées, routage complet d'une carte 10 composants / 13 nets en **~0.5 s**
+  (13/13 nets, DRC 0 violation).
+- **Viewer 3D WebGL enrichi** — stack physique multicouche éclatable (slider
+  *éclaté*), traces de cuivre **extrudées et fusionnées** par classe, vias
+  dorés, composants colorés par famille avec **hover/selection au raycaster**,
+  capture PNG intégrée, grille de référence.
+- **Fournisseurs LLM réels** — `LLM_PROVIDER=openai` + `OPENAI_API_KEY` (ou
+  `LLM_API_KEY`), modèle via `LLM_MODEL` ; le provider `mock` déterministe
+  reste la valeur par défaut pour tests et démo.
+
+### Démarrage rapide des enrichissements
+```bash
+make setup && make dev     # plateforme complète
+make demo                  # E2E réel : NL → SKIDL → placement → routage → DRC → β → Gerber
+make smoke                 # smoke test diff pairs + world model + surrogates + corrector
+```
+
+
 ### Les 3 principes fondateurs
 
 1. **🔥 Le Design Core est le centre du système.** `shared_mental_model` quitte `ai_engine/` pour intégrer `design_core/`. LLM, RL, Router, Simulator, DRC, DFM, Human Editor et Manufacturing Engine partagent le même modèle mental du design.

@@ -35,6 +35,7 @@ const SIDE_BOTTOM = "rgba(148,163,184,0.35)";
 export function PcbViewer3D({ design, layersVisible = {}, autoRotate = true, onModeChange, children }: PcbViewer3DProps) {
   const [mode, setMode] = useState<ViewerMode>("3d");
   const [threeFailed, setThreeFailed] = useState(false);
+  const [exploded, setExploded] = useState(0);
   const effective: ViewerMode = threeFailed ? "2d" : mode;
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export function PcbViewer3D({ design, layersVisible = {}, autoRotate = true, onM
           design={design}
           layersVisible={layersVisible}
           autoRotate={autoRotate}
+          exploded={exploded}
           onError={() => setThreeFailed(true)}
         />
       ) : (
@@ -126,7 +128,23 @@ export function PcbViewer3D({ design, layersVisible = {}, autoRotate = true, onM
       )}
 
       {/* Toolbar mode */}
-      <div className="absolute right-3 top-3 flex gap-1.5">
+      <div className="absolute left-3 top-3 flex items-center gap-2">
+        {effective === "3d" && (
+          <label className="flex items-center gap-1.5 rounded-lg border border-panel-border bg-panel/90 px-2 py-1 text-[10px] text-ink-dim">
+            éclaté
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(exploded * 100)}
+              onChange={(e) => setExploded(Number(e.target.value) / 100)}
+              className="h-1 w-20 accent-cyan-400"
+              title="Sépare les couches du stack (vue éclatée)"
+            />
+          </label>
+        )}
+      </div>
+      <div className="absolute right-3 top-12 flex gap-1.5">
         <button
           type="button"
           onClick={() => setMode("3d")}

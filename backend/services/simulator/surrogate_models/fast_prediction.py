@@ -1,11 +1,17 @@
 """FastPredictor — prédiction instantanée des résultats de simulation.
 
-Utilise les surrogates entraînés quand ils existent, sinon des formules
-analytiques simplifiées (fallback déterministe).
+Ordre de priorité :
+  1. SurrogateManager β (surrogate neuronal entraîné, inférence ~µs, latence
+     mesurée, erreur de validation attachée) ;
+  2. surrogate NeuralSurrogate direct (compat) ;
+  3. formules analytiques simplifiées (fallback déterministe).
+
+Chaque entrée porte `source`, `beta` (True pour la voie neuronale) et
+`latency_ms` quand mesurée — le dashboard peut afficher la vitesse.
 """
 from __future__ import annotations
 
-import math
+import time
 from typing import Any, Dict, Optional
 
 from shared.utilities import get_logger
@@ -13,18 +19,21 @@ from shared.utilities import get_logger
 from services.design_core import DesignGraph
 
 from services.router.topological import hpwl_wire_length
+from services.simulator.surrogate_models.manager import FEATURE_NAMES, SurrogateManager
 from services.simulator.surrogate_models.neural_surrogates import NeuralSurrogate
 
 log = get_logger("simulator.fast_predict")
 
-FEATURE_NAMES = ("n_comp", "density", "power_sum", "wire_length")
+__all__ = ["FastPredictor", "FEATURE_NAMES"]
 
 
 class FastPredictor:
-    """Prédicteur hybride : surrogate ML si entraîné, sinon analytique."""
+    """Prédicteur hybride : manager β → surrogate direct → analytique."""
 
-    def __init__(self, surrogates: Optional[Dict[str, NeuralSurrogate]] = None) -> None:
+    def __init__(self, surrogates: Optional[Dict[str, NeuralSurrogate]] = None,
+                 manager: Optional[SurrogateManager] = None) -> None:
         self.surrogates = surrogates or {}
+        self.manager = manager
 
     def features(self, graph: DesignGraph) -> Dict[str, float]:
         """Vecteur de features du design (nommé, ordre stable)."""
@@ -37,20 +46,37 @@ class FastPredictor:
                                         float(power_sum), float(wire_length))))
 
     def predict(self, graph: DesignGraph) -> Dict[str, Dict[str, Any]]:
-        """{sim_kind: {"value": ..., "source": "surrogate"|"analytic", "passed": ...}}."""
+        """{sim_kind: {"value", "source", "passed"?, "beta"?, "latency_ms"?}}."""
         feats = self.features(graph)
         x = [feats[k] for k in FEATURE_NAMES]
         out: Dict[str, Dict[str, Any]] = {}
 
         for sim_kind in ("thermal", "si", "pi", "emi"):
+            # 1) voie manager β (recommandée : latence mesurée + statut central)
+            if self.manager is not None:
+                fast = self.manager.predict_fast(sim_kind, feats)
+                if fast.get("trained") and fast.get("value") is not None:
+                    out[sim_kind] = {
+                        "value": round(float(fast["value"]), 4),
+                        "source": "surrogate",
+                        "beta": True,
+                        "latency_ms": round(float(fast["latency_ms"]), 4),
+                    }
+                    continue
+            # 2) surrogate direct (compat ascendante)
             surrogate = self.surrogates.get(sim_kind)
             if surrogate is not None and surrogate.trained:
+                t0 = time.perf_counter()
                 value = float(surrogate.predict(x)[0])
-                out[sim_kind] = {"value": round(value, 4), "source": "surrogate"}
-            else:
-                value, passed = self._analytic(sim_kind, graph, feats)
-                out[sim_kind] = {"value": round(value, 4), "source": "analytic",
-                                 "passed": passed}
+                latency_ms = (time.perf_counter() - t0) * 1000.0
+                out[sim_kind] = {"value": round(value, 4), "source": "surrogate",
+                                 "beta": True,
+                                 "latency_ms": round(latency_ms, 4)}
+                continue
+            # 3) fallback analytique
+            value, passed = self._analytic(sim_kind, graph, feats)
+            out[sim_kind] = {"value": round(value, 4), "source": "analytic",
+                             "passed": passed}
         log.debug("fast_predict : %s", {k: v["value"] for k, v in out.items()})
         return out
 

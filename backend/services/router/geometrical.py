@@ -9,6 +9,7 @@ from __future__ import annotations
 import heapq
 import itertools
 import math
+import time
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -274,6 +275,7 @@ class MazeRouter:
         départ/arrivée et les pads du net sont forcément libres.
         """
         self._stats["calls"] += 1
+        t0_all = time.perf_counter()
         step = self.grid_step
         # adapte le pas si la fenêtre dépasse le budget mémoire
         span_x = abs(b.x - a.x) + 2 * self.margin
@@ -287,6 +289,7 @@ class MazeRouter:
         grid = _Grid(x0=x0, y0=y0, step=step, nx=nx, ny=ny)
 
         blocked, hard = self._build_blocked(graph, net, grid, layer, width_mm)
+        t_build = time.perf_counter()
         (sx, sy), (gx, gy) = grid.index_of(a), grid.index_of(b)
         # force-unblock départ/arrivée + voisins — JAMAIS sur du cuivre ennemi
         for (ux, uy) in ((sx, sy), (gx, gy)):
@@ -301,8 +304,9 @@ class MazeRouter:
             return [Point(a.x, a.y), Point(b.x, b.y)]
 
         # A* 4-connexe — g, parents, heap
-        g_cost = np.full((nx, ny), np.inf, dtype=np.float32)
+        g_cost = np.full((nx, ny), np.inf, dtype=np.float64)
         parent = np.full((nx, ny), -1, dtype=np.int64)
+        closed = np.zeros((nx, ny), dtype=bool)
         g_cost[sx, sy] = 0.0
         counter = itertools.count()
         h0 = (abs(gx - sx) + abs(gy - sy)) * step
@@ -314,16 +318,19 @@ class MazeRouter:
             if (cx_, cy_) == (gx, gy):
                 found = True
                 break
+            if closed[cx_, cy_]:
+                continue                      # déjà optimal (A* cohérent)
             g_here = float(g_cost[cx_, cy_])
             # entrée périmée (déjà replanifiée moins chère)
             if f > g_here + (abs(gx - cx_) + abs(gy - cy_)) * step + 1e-6:
                 continue
+            closed[cx_, cy_] = True
             explored += 1
             for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                 nx_, ny_ = cx_ + dx, cy_ + dy
                 if not (0 <= nx_ < nx and 0 <= ny_ < ny) or blocked[nx_, ny_]:
                     continue
-                if parent[nx_, ny_] >= 0 and g_cost[nx_, ny_] <= g_here:
+                if closed[nx_, ny_]:
                     continue
                 wx = grid.x0 + nx_ * step
                 wy = grid.y0 + ny_ * step
@@ -334,6 +341,13 @@ class MazeRouter:
                     heapq.heappush(heap, (ng + (abs(gx - nx_) + abs(gy - ny_)) * step,
                                           next(counter), nx_, ny_))
         self._stats["cells_explored"] += explored
+        _dur = time.perf_counter() - t0_all
+        if _dur > 1.0:
+            log.warning(
+                "A* lent : %s (%.1f,%.1f)->(%.1f,%.1f) L%d — grille %dx%d, "
+                "exploré %d, build %.2fs, total %.2fs",
+                net.net_id, a.x, a.y, b.x, b.y, layer, nx, ny, explored,
+                t_build - t0_all, _dur)
         if not found:
             return None
 
