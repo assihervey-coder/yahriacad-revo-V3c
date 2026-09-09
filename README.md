@@ -4,8 +4,6 @@
 
 > **AI-Native Electronic Design Automation Platform** — De l'intention en langage naturel au package de fabrication (Gerber / ODB++ / IPC-2581).
 
-> ℹ️ *Dépôt privé : le badge CI n'est visible que pour les collaborateurs authentifiés (il s'affichera automatiquement pour tous si le dépôt devient public).*
-
 PCB_AI_DESIGNER_V3 est la troisième génération, unifiée et révolutionnaire, de la plateforme : elle fusionne la rigueur structurelle de la V1 avec toutes les capacités différenciantes de la V2, autour d'un noyau central unique — le **Design Core**.
 
 ---
